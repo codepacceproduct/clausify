@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { logout } from "@/lib/auth"
+import Image from "next/image"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -86,14 +87,15 @@ export function AppSidebar({
       >
         <div className="relative flex items-center justify-between px-6 py-6 sm:px-5 sm:py-5 border-b border-sidebar-border/50">
           <div className={cn("flex items-center gap-3", isCollapsed && "md:justify-center md:w-full")}>
-            <div className="flex h-12 w-12 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/25">
-              <Scale className="h-7 w-7 sm:h-6 sm:w-6 text-white" />
+            {/* Replaced text and icon with the new logo image */}
+            <div className={cn("relative transition-all duration-300", isCollapsed ? "w-10 h-10" : "w-32 h-10")}>
+              <Image
+                src="/images/clausify-logo.png"
+                alt="Clausify"
+                fill
+                className="object-contain"
+              />
             </div>
-            {!isCollapsed && (
-              <div className="flex flex-col md:block">
-                <span className="text-xl sm:text-base font-bold text-sidebar-foreground">Clausify</span>
-              </div>
-            )}
           </div>
 
           <button

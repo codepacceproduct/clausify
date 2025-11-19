@@ -106,13 +106,15 @@ export default function LoginPage() {
       <div className="flex-1 flex items-stretch lg:items-center justify-center bg-[#0f1419] overflow-y-auto">
         <div className="w-full max-w-md space-y-6 sm:space-y-8 px-6 py-8 sm:px-8 sm:py-4">
           <div className="flex justify-center">
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                <Scale className="w-8 h-8 sm:w-7 sm:h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl sm:text-2xl font-bold text-white">Clausify</h1>
-              </div>
+            {/* Replaced text and icon with the new logo image */}
+            <div className="relative w-48 h-16">
+              <Image
+                src="/images/clausify-logo.png"
+                alt="Clausify Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
 
