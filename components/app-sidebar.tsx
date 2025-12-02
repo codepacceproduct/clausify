@@ -26,7 +26,7 @@ import { logout } from "@/lib/auth"
 import Image from "next/image"
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
   { name: "Portfólio", href: "/portfolio", icon: FolderOpen },
   { name: "Aprovações", href: "/aprovacoes", icon: CheckSquare },
