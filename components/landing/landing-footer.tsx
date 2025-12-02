@@ -3,28 +3,28 @@ import Image from "next/image"
 
 const footerLinks = {
   produto: [
-    { label: "Funcionalidades", href: "#features" },
-    { label: "Preços", href: "#pricing" },
-    { label: "Integrações", href: "#" },
-    { label: "Changelog", href: "#" },
+    { label: "Funcionalidades", href: "/funcionalidades" },
+    { label: "Preços", href: "/precos" },
+    { label: "Integrações", href: "/integracoes" },
+    { label: "Changelog", href: "/changelog" },
   ],
   empresa: [
-    { label: "Sobre nós", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Carreiras", href: "#" },
-    { label: "Contato", href: "#" },
+    { label: "Sobre nós", href: "/sobre" },
+    { label: "Blog", href: "/blog" },
+    { label: "Carreiras", href: "/carreiras" },
+    { label: "Contato", href: "/contato" },
   ],
   recursos: [
-    { label: "Documentação", href: "#" },
-    { label: "Guias", href: "#" },
-    { label: "API", href: "#" },
-    { label: "Suporte", href: "#" },
+    { label: "Documentação", href: "/documentacao" },
+    { label: "Guias", href: "/guias" },
+    { label: "API", href: "/api-docs" },
+    { label: "Suporte", href: "/suporte" },
   ],
   legal: [
-    { label: "Privacidade", href: "#" },
-    { label: "Termos de Uso", href: "#" },
-    { label: "LGPD", href: "#" },
-    { label: "Cookies", href: "#" },
+    { label: "Privacidade", href: "/privacidade" },
+    { label: "Termos de Uso", href: "/termos" },
+    { label: "LGPD", href: "/lgpd" },
+    { label: "Cookies", href: "/cookies" },
   ],
 }
 

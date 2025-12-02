@@ -113,7 +113,7 @@ export function LandingHero() {
           </div>
 
           {/* Floating Cards */}
-          <div className="absolute left-0 lg:left-10 top-1/4 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
+          <div className="absolute left-0 lg:left-10 top-1/2 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-emerald-400" />
@@ -125,7 +125,7 @@ export function LandingHero() {
             </div>
           </div>
 
-          <div className="absolute right-0 lg:right-10 top-1/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
+          <div className="absolute right-0 lg:right-10 top-2/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Zap className="w-5 h-5 text-blue-400" />
