@@ -1,0 +1,167 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { ArrowRight, Play, Shield, Zap, FileCheck, Sparkles } from "lucide-react"
+
+export function LandingHero() {
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    setIsVisible(true)
+  }, [])
+
+  return (
+    <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0">
+        {/* Gradient Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[150px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-emerald-400/10 rounded-full blur-[120px] animate-pulse delay-1000" />
+
+        {/* Grid Pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: "100px 100px",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div
+          className={`text-center space-y-8 transition-all duration-1000 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}
+        >
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-4 py-2 text-sm">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span className="text-gray-300">Powered by AI</span>
+            <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-xs font-medium">
+              Novo
+            </span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight max-w-5xl mx-auto leading-[1.1]">
+            <span className="text-white">Análise jurídica</span>
+            <br />
+            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent">
+              inteligente
+            </span>
+          </h1>
+
+          {/* Subheadline */}
+          <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            Revolucione sua prática jurídica com IA. Analise contratos em minutos, identifique riscos automaticamente e
+            tome decisões estratégicas com confiança.
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            <Link href="/login">
+              <Button
+                size="lg"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 h-14 text-base font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all hover:scale-105"
+              >
+                Começar Gratuitamente
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/10 text-white hover:bg-white/5 rounded-full px-8 h-14 text-base font-medium bg-transparent"
+            >
+              <Play className="mr-2 w-5 h-5 fill-current" />
+              Ver Demo
+            </Button>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span>Dados 100% seguros</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-emerald-500" />
+              <span>Análise em minutos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-emerald-500" />
+              <span>+5.000 contratos analisados</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Preview */}
+        <div
+          className={`mt-20 relative transition-all duration-1000 delay-300 ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"
+          }`}
+        >
+          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-1">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent z-10 pointer-events-none" />
+            <div className="rounded-xl overflow-hidden bg-[#0f1419]">
+              <div className="flex items-center gap-2 px-4 py-3 bg-[#0a0a0a] border-b border-white/5">
+                <div className="w-3 h-3 rounded-full bg-red-500" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <span className="ml-4 text-xs text-gray-500">clausify.app/dashboard</span>
+              </div>
+              <div className="aspect-[16/9] bg-gradient-to-br from-[#0f1419] to-[#0a1f1a] flex items-center justify-center">
+                <img
+                  src="/modern-legal-contract-analysis-dashboard-with-dark.jpg"
+                  alt="Clausify Dashboard"
+                  className="w-full h-full object-cover opacity-80"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Floating Cards */}
+          <div className="absolute -left-4 top-1/4 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Análise de Risco</p>
+                <p className="text-sm font-semibold text-white">3 cláusulas críticas</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute -right-4 top-1/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Tempo de Análise</p>
+                <p className="text-sm font-semibold text-white">2 min 34 seg</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 4s ease-in-out infinite;
+        }
+        .delay-500 {
+          animation-delay: 0.5s;
+        }
+      `}</style>
+    </section>
+  )
+}
