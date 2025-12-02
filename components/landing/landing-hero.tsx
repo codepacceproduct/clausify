@@ -104,27 +104,16 @@ export function LandingHero() {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"
           }`}
         >
-          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-1">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent z-10 pointer-events-none" />
-            <div className="rounded-xl overflow-hidden bg-[#0f1419]">
-              <div className="flex items-center gap-2 px-4 py-3 bg-[#0a0a0a] border-b border-white/5">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="ml-4 text-xs text-gray-500">clausify.app/dashboard</span>
-              </div>
-              <div className="aspect-[16/9] bg-gradient-to-br from-[#0f1419] to-[#0a1f1a] flex items-center justify-center">
-                <img
-                  src="/modern-legal-contract-analysis-dashboard-with-dark.jpg"
-                  alt="Clausify Dashboard"
-                  className="w-full h-full object-cover opacity-80"
-                />
-              </div>
-            </div>
+          <div className="relative flex items-center justify-center">
+            <img
+              src="/images/dashboard-preview.png"
+              alt="Clausify Dashboard"
+              className="w-full max-w-5xl h-auto object-contain rounded-2xl shadow-2xl shadow-emerald-500/10"
+            />
           </div>
 
           {/* Floating Cards */}
-          <div className="absolute -left-4 top-1/4 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
+          <div className="absolute left-0 lg:left-10 top-1/4 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-emerald-400" />
@@ -136,7 +125,7 @@ export function LandingHero() {
             </div>
           </div>
 
-          <div className="absolute -right-4 top-1/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
+          <div className="absolute right-0 lg:right-10 top-1/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Zap className="w-5 h-5 text-blue-400" />
