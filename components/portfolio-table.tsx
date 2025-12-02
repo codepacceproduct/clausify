@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, Edit, MoreHorizontal, AlertTriangle, Calendar } from "lucide-react"
+import { Eye, Edit, MoreHorizontal, AlertTriangle, Calendar, GitBranch, CheckSquare, FileSearch } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DropdownMenu,
@@ -109,7 +110,24 @@ const contracts = [
 
 export function PortfolioTable() {
   const [currentPage, setCurrentPage] = useState(1)
+  const router = useRouter()
   const itemsPerPage = 8
+
+  const handleViewVersions = (contractId: string) => {
+    router.push(`/versionamento?contract=${contractId}`)
+  }
+
+  const handleRequestApproval = (contractId: string) => {
+    router.push(`/aprovacoes?contract=${contractId}`)
+  }
+
+  const handleAnalyze = (contractId: string) => {
+    router.push(`/contratos?action=analyze&contract=${contractId}`)
+  }
+
+  const handleAddToCalendar = (contractId: string) => {
+    router.push(`/calendario?add=${contractId}`)
+  }
 
   return (
     <Card>
@@ -207,8 +225,23 @@ export function PortfolioTable() {
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Analisar Novamente</DropdownMenuItem>
-                      <DropdownMenuItem>Comparar Versões</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleAnalyze(contract.id)}>
+                        <FileSearch className="h-4 w-4 mr-2" />
+                        Reanalisar com IA
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewVersions(contract.id)}>
+                        <GitBranch className="h-4 w-4 mr-2" />
+                        Ver Versões
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleRequestApproval(contract.id)}>
+                        <CheckSquare className="h-4 w-4 mr-2" />
+                        Solicitar Aprovação
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAddToCalendar(contract.id)}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Adicionar ao Calendário
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive">Cancelar Contrato</DropdownMenuItem>
                     </DropdownMenuContent>

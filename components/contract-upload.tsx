@@ -9,10 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Upload, FileText, X } from "lucide-react"
+import { Upload, FileText, X, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
-export function ContractUpload() {
+interface ContractUploadProps {
+  onAnalysisStart?: () => void
+}
+
+export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
 
@@ -31,6 +35,7 @@ export function ContractUpload() {
     // Simulate upload
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setUploading(false)
+    onAnalysisStart?.()
   }
 
   return (
@@ -121,8 +126,15 @@ export function ContractUpload() {
             </div>
           )}
 
-          <Button className="w-full" onClick={handleUpload} disabled={files.length === 0 || uploading}>
-            {uploading ? "Analisando..." : "Iniciar Análise"}
+          <Button className="w-full gap-2" onClick={handleUpload} disabled={files.length === 0 || uploading}>
+            {uploading ? (
+              "Processando..."
+            ) : (
+              <>
+                Iniciar Análise
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>

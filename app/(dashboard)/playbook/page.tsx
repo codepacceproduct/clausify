@@ -1,18 +1,23 @@
+"use client"
+
+import { useState } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { PlaybookLibrary } from "@/components/playbook-library"
 import { PlaybookTemplates } from "@/components/playbook-templates"
+import { PlaybookFallbacks } from "@/components/playbook-fallbacks"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function PlaybookPage() {
+  const [activeTab, setActiveTab] = useState("clauses")
+
   return (
     <LayoutWrapper>
-      {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-semibold text-foreground">Playbook Jurídico</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Playbook Jurídico</h1>
         <p className="text-muted-foreground mt-1">Biblioteca de cláusulas e templates aprovados</p>
       </div>
 
-      <Tabs defaultValue="clauses" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>
           <TabsTrigger value="clauses">Cláusulas Padrão</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
@@ -28,7 +33,7 @@ export default function PlaybookPage() {
         </TabsContent>
 
         <TabsContent value="fallbacks" className="space-y-6">
-          <div className="text-center py-12 text-muted-foreground">Cláusulas de fallback serão exibidas aqui</div>
+          <PlaybookFallbacks />
         </TabsContent>
       </Tabs>
     </LayoutWrapper>

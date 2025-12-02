@@ -1,8 +1,24 @@
 "use client"
 
-import { LayoutDashboard, FileText, BookOpen, GitCompare, FolderOpen, Shield, CreditCard, Settings, LogOut, ChevronRight, Moon, Sun, X, Scale } from 'lucide-react'
+import {
+  LayoutDashboard,
+  FileText,
+  BookOpen,
+  FolderOpen,
+  Shield,
+  CreditCard,
+  Settings,
+  LogOut,
+  ChevronRight,
+  Moon,
+  Sun,
+  X,
+  CheckSquare,
+  Calendar,
+  GitBranch,
+} from "lucide-react"
 import Link from "next/link"
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
@@ -12,20 +28,22 @@ import Image from "next/image"
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
-  { name: "Playbook", href: "/playbook", icon: BookOpen },
-  { name: "Comparador", href: "/comparador", icon: GitCompare },
   { name: "Portfólio", href: "/portfolio", icon: FolderOpen },
+  { name: "Aprovações", href: "/aprovacoes", icon: CheckSquare },
+  { name: "Calendário", href: "/calendario", icon: Calendar },
+  { name: "Versionamento", href: "/versionamento", icon: GitBranch },
+  { name: "Playbook", href: "/playbook", icon: BookOpen },
   { name: "Segurança", href: "/seguranca", icon: Shield },
   { name: "Assinaturas", href: "/assinaturas", icon: CreditCard },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 
-export function AppSidebar({ 
-  isMobileOpen, 
-  setIsMobileOpen 
-}: { 
+export function AppSidebar({
+  isMobileOpen,
+  setIsMobileOpen,
+}: {
   isMobileOpen?: boolean
-  setIsMobileOpen?: (open: boolean) => void 
+  setIsMobileOpen?: (open: boolean) => void
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -70,10 +88,7 @@ export function AppSidebar({
   return (
     <>
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden" 
-          onClick={closeMobileMenu} 
-        />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden" onClick={closeMobileMenu} />
       )}
 
       <aside
@@ -87,14 +102,8 @@ export function AppSidebar({
       >
         <div className="relative flex items-center justify-between px-6 py-6 sm:px-5 sm:py-5 border-b border-sidebar-border/50">
           <div className={cn("flex items-center gap-3", isCollapsed && "md:justify-center md:w-full")}>
-            {/* Replaced text and icon with the new logo image */}
             <div className={cn("relative transition-all duration-300", isCollapsed ? "w-10 h-10" : "w-32 h-10")}>
-              <Image
-                src="/images/clausify-logo.png"
-                alt="Clausify"
-                fill
-                className="object-contain"
-              />
+              <Image src="/images/clausify-logo.png" alt="Clausify" fill className="object-contain" />
             </div>
           </div>
 
