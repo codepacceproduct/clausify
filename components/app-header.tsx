@@ -12,18 +12,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { logout, getUserEmail } from "@/lib/auth"
 
 export function AppHeader() {
   const router = useRouter()
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userEmail] = useState<string | null>(() => getUserEmail())
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
 
   useEffect(() => {
-    setUserEmail(getUserEmail())
-  }, [])
+    const load = async () => {
+      if (!userEmail) return
+      try {
+        const res = await fetch(`/api/settings/profile?email=${encodeURIComponent(userEmail)}`)
+        if (!res.ok) return
+        const { profile } = await res.json()
+        if (profile?.avatar_url) setAvatarSrc(profile.avatar_url)
+      } catch {}
+    }
+    load()
+  }, [userEmail])
 
   const handleLogout = () => {
     logout()
@@ -86,7 +96,7 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0">
               <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0">
-                <AvatarImage src="/placeholder.svg?height=36&width=36" alt="User" />
+                <AvatarImage src={avatarSrc ?? "/placeholder.svg?height=36&width=36"} alt="User" />
                 <AvatarFallback className="bg-emerald-600 text-white font-semibold text-xs sm:text-sm">
                   {getUserInitials()}
                 </AvatarFallback>

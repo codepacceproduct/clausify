@@ -201,7 +201,7 @@ export function VersionTimeline() {
 
               {/* Events */}
               <div className="space-y-6">
-                {timelineData.map((event, index) => (
+                {timelineData.map((event, _index) => (
                   <div key={event.id} className="relative flex gap-4">
                     {/* Icon */}
                     <div

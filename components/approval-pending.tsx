@@ -183,7 +183,6 @@ const pendingApprovals: PendingApproval[] = [
 ]
 
 export function ApprovalPending() {
-  const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null)
   const [comment, setComment] = useState("")
   const [isApproving, setIsApproving] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
@@ -192,7 +191,6 @@ export function ApprovalPending() {
     setIsApproving(true)
     await new Promise((resolve) => setTimeout(resolve, 1500))
     setIsApproving(false)
-    setSelectedApproval(null)
     setComment("")
   }
 
@@ -200,7 +198,6 @@ export function ApprovalPending() {
     setIsRejecting(true)
     await new Promise((resolve) => setTimeout(resolve, 1500))
     setIsRejecting(false)
-    setSelectedApproval(null)
     setComment("")
   }
 
@@ -364,7 +361,7 @@ export function ApprovalPending() {
 
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button onClick={() => setSelectedApproval(approval)}>
+                      <Button>
                         Revisar
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Button>

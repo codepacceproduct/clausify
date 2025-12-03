@@ -70,7 +70,7 @@ export function LandingTestimonials() {
 
             {/* Quote */}
             <blockquote className="text-xl sm:text-2xl text-white leading-relaxed mb-8 relative z-10">
-              "{testimonials[currentIndex].quote}"
+              {testimonials[currentIndex].quote}
             </blockquote>
 
             {/* Author */}

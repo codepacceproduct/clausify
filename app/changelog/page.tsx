@@ -143,7 +143,6 @@ export default function ChangelogPage() {
                 <div className="space-y-4">
                   {release.changes.map((change, i) => {
                     const config = typeConfig[change.type as keyof typeof typeConfig]
-                    const Icon = config.icon
                     return (
                       <div key={i} className="p-4 bg-white/[0.02] border border-white/5 rounded-xl">
                         <div className="flex items-start gap-4">

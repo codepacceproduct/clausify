@@ -18,7 +18,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     } else if (isAuthenticated() && isPublicRoute) {
       router.push("/")
     } else {
-      setIsChecking(false)
+      Promise.resolve().then(() => setIsChecking(false))
     }
   }, [pathname, router])
 

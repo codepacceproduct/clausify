@@ -6,10 +6,12 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2, User, Building2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { login } from "@/lib/auth"
 
 export default function CriarContaPage() {
   const router = useRouter()
@@ -18,12 +20,14 @@ export default function CriarContaPage() {
   const [nome, setNome] = useState("")
   const [email, setEmail] = useState("")
   const [empresa, setEmpresa] = useState("")
+  const [setor, setSetor] = useState("")
+  const [tamanho, setTamanho] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirmPassword) {
       alert("As senhas não coincidem")
@@ -35,10 +39,26 @@ export default function CriarContaPage() {
     }
     setIsLoading(true)
 
-    setTimeout(() => {
-      router.push("/login")
-      setIsLoading(false)
-    }, 500)
+    try {
+      const [firstName, ...rest] = nome.trim().split(" ")
+      const lastName = rest.join(" ")
+      const payload: any = {
+        email,
+        name: firstName || nome,
+        surname: lastName || "",
+        organization: empresa.trim()
+          ? { name: empresa.trim(), industry: setor || null, size: tamanho || null }
+          : null,
+      }
+      await fetch("/api/settings/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      login(email, password)
+      router.push("/dashboard")
+    } catch {}
+    setIsLoading(false)
   }
 
   return (
@@ -179,6 +199,40 @@ export default function CriarContaPage() {
                 />
               </div>
             </div>
+
+            {empresa.trim() && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-base sm:text-sm font-medium text-gray-300">Setor</label>
+                  <Select value={setor || undefined} onValueChange={(v) => setSetor(v)}>
+                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="legal">Jurídico</SelectItem>
+                      <SelectItem value="finance">Financeiro</SelectItem>
+                      <SelectItem value="realestate">Imobiliário</SelectItem>
+                      <SelectItem value="technology">Tecnologia</SelectItem>
+                      <SelectItem value="other">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-base sm:text-sm font-medium text-gray-300">Tamanho da Empresa</label>
+                  <Select value={tamanho || undefined} onValueChange={(v) => setTamanho(v)}>
+                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">1-10 funcionários</SelectItem>
+                      <SelectItem value="medium">11-50 funcionários</SelectItem>
+                      <SelectItem value="large">51-200 funcionários</SelectItem>
+                      <SelectItem value="enterprise">200+ funcionários</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-base sm:text-sm font-medium text-gray-300">Senha</label>

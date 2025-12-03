@@ -99,6 +99,7 @@ async function getMetrics() {
 
 export async function DashboardMetrics() {
   const metrics = await getMetrics()
+  const getDeltaColor = (n: number) => (n < 0 ? "text-destructive" : n === 0 ? "text-amber-600" : "text-success")
   return (
     <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -109,13 +110,13 @@ export async function DashboardMetrics() {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.totalContracts}</div>
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.analisadosDelta >= 0 ? (
-              <TrendingUp className="h-3 w-3 text-success" />
+            {metrics.analisadosDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.analisadosDelta)}`} />
             ) : (
-              <TrendingDown className="h-3 w-3 text-destructive" />
+              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.analisadosDelta)}`} />
             )}
-            <span className={metrics.analisadosDelta >= 0 ? "text-success" : "text-destructive"}>
-              {metrics.analisadosDelta >= 0 ? "+" : ""}{metrics.analisadosDelta}%
+            <span className={getDeltaColor(metrics.analisadosDelta)}>
+              {metrics.analisadosDelta > 0 ? "+" : ""}{metrics.analisadosDelta}%
             </span>
             vs mês anterior
           </p>
@@ -141,13 +142,13 @@ export async function DashboardMetrics() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.riskDelta >= 0 ? (
-              <TrendingUp className="h-3 w-3 text-destructive" />
+            {metrics.riskDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
             ) : (
-              <TrendingDown className="h-3 w-3 text-success" />
+              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
             )}
-            <span className={metrics.riskDelta >= 0 ? "text-destructive" : "text-success"}>
-              {metrics.riskDelta}%
+            <span className={getDeltaColor(metrics.riskDelta)}>
+              {metrics.riskDelta > 0 ? "+" : ""}{metrics.riskDelta}%
             </span>
             vs mês anterior
           </p>
@@ -162,13 +163,13 @@ export async function DashboardMetrics() {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.conformidade}%</div>
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.conformidadeDelta >= 0 ? (
-              <TrendingUp className="h-3 w-3 text-success" />
+            {metrics.conformidadeDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.conformidadeDelta)}`} />
             ) : (
-              <TrendingDown className="h-3 w-3 text-destructive" />
+              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.conformidadeDelta)}`} />
             )}
-            <span className={metrics.conformidadeDelta >= 0 ? "text-success" : "text-destructive"}>
-              {metrics.conformidadeDelta >= 0 ? "+" : ""}{metrics.conformidadeDelta}%
+            <span className={getDeltaColor(metrics.conformidadeDelta)}>
+              {metrics.conformidadeDelta > 0 ? "+" : ""}{metrics.conformidadeDelta}%
             </span>
             este trimestre
           </p>

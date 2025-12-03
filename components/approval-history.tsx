@@ -284,7 +284,7 @@ export function ApprovalHistory() {
                               </div>
                               {approval.comment && (
                                 <p className="text-sm text-muted-foreground mt-1 p-2 bg-muted rounded">
-                                  "{approval.comment}"
+                                  {approval.comment}
                                 </p>
                               )}
                             </div>

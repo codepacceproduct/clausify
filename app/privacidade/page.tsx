@@ -18,7 +18,7 @@ export default function PrivacidadePage() {
               <section>
                 <h2 className="text-2xl font-bold text-white mb-4">1. Introdução</h2>
                 <p>
-                  A Clausify ("nós", "nosso" ou "empresa") está comprometida em proteger a privacidade dos usuários de
+                  A Clausify (&quot;nós&quot;, &quot;nosso&quot; ou &quot;empresa&quot;) está comprometida em proteger a privacidade dos usuários de
                   nossa plataforma. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e
                   protegemos suas informações pessoais.
                 </p>

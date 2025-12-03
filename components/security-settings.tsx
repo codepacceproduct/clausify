@@ -1,11 +1,173 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { logout } from "@/lib/auth"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
+import { getUserEmail } from "@/lib/auth"
+import { Progress } from "@/components/ui/progress"
+import * as Dialog from "@radix-ui/react-dialog"
 
 export function SecuritySettings() {
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [saving, setSaving] = useState(false)
+  const strength = (() => {
+    const pwd = newPassword || ""
+    let score = 0
+    if (pwd.length >= 8) score += 25
+    if (/[A-Z]/.test(pwd)) score += 20
+    if (/[a-z]/.test(pwd)) score += 20
+    if (/[0-9]/.test(pwd)) score += 20
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 15
+    if (score > 100) score = 100
+    const label = score < 50 ? "Fraca" : score < 80 ? "Média" : "Forte"
+    return { score, label }
+  })()
+  const [twoFAEnabled, setTwoFAEnabled] = useState<boolean>(false)
+  const [setupOpen, setSetupOpen] = useState(false)
+  const [otpauthUrl, setOtpauthUrl] = useState<string | null>(null)
+  const [setupToken, setSetupToken] = useState("")
+  const [sessions, setSessions] = useState<Array<{ id: string, ip: string | null, device: string | null, os: string | null, browser: string | null, client_host: string | null, hostname: string | null, last_active: string, active: boolean }>>([])
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [reason, setReason] = useState<string>("")
+  const [details, setDetails] = useState<string>("")
+  const [switchingTo, setSwitchingTo] = useState<string>("")
+  const [satisfaction, setSatisfaction] = useState<number>(3)
+  const [confirmAware, setConfirmAware] = useState<boolean>(false)
+  const [confirmPhrase, setConfirmPhrase] = useState<string>("")
+  const [deleting, setDeleting] = useState(false)
+
+  function formatRelative(iso: string) {
+    const d = new Date(iso)
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000)
+    if (diff < 60) return "Agora"
+    if (diff < 3600) return `Há ${Math.floor(diff / 60)} min`
+    if (diff < 86400) return `Há ${Math.floor(diff / 3600)} h`
+    return `Há ${Math.floor(diff / 86400)} dias`
+  }
+
+  async function loadSessions() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) return
+    const r = await fetch(`/api/sessions/list?email=${encodeURIComponent(email)}`)
+    const j = await r.json().catch(() => ({ sessions: [] }))
+    setSessions(j.sessions || [])
+  }
+
+  async function endSession(id: string) {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, sessionId: id }) })
+    if (r.ok) {
+      toast.success("Sessão encerrada")
+      await loadSessions()
+    }
+  }
+
+  async function endOthers() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, endOthers: true }) })
+    if (r.ok) {
+      toast.success("Outras sessões encerradas")
+      await loadSessions()
+    }
+  }
+
+  async function refreshTwoFA() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) return
+    const r = await fetch(`/api/settings/2fa/status?email=${encodeURIComponent(email)}`)
+    const j = await r.json().catch(() => ({ enabled: false }))
+    setTwoFAEnabled(!!j.enabled)
+  }
+  useEffect(() => {
+    refreshTwoFA()
+    loadSessions()
+  }, [])
+
+  async function openSetup() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) return toast.error("Email ausente")
+    const r = await fetch(`/api/settings/2fa/setup?email=${encodeURIComponent(email)}`)
+    if (!r.ok) return toast.error("Falha ao iniciar configuração")
+    const j = await r.json()
+    setOtpauthUrl(j.otpauth)
+    setSetupOpen(true)
+  }
+
+  async function confirmEnable() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) return toast.error("Email ausente")
+    const r = await fetch(`/api/settings/2fa/enable`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, token: setupToken }),
+    })
+    if (r.ok) {
+      toast.success("2FA ativado")
+      setSetupOpen(false)
+      setTwoFAEnabled(true)
+    } else {
+      const err = await r.json().catch(() => ({}))
+      toast.error(err?.error || "Código inválido")
+    }
+  }
+
+  async function disable2FA() {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) return toast.error("Email ausente")
+    const r = await fetch(`/api/settings/2fa/disable`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
+    if (r.ok) {
+      toast.success("2FA desativado")
+      setTwoFAEnabled(false)
+    } else {
+      toast.error("Falha ao desativar 2FA")
+    }
+  }
+
+  const handlePasswordUpdate = async () => {
+    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!email) {
+      toast.error("Email ausente")
+      return
+    }
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("Senha deve ter ao menos 8 caracteres")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem")
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch("/api/settings/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, currentPassword, newPassword }),
+      })
+      if (res.ok) {
+        toast.success("Senha atualizada")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err?.error || "Falha ao atualizar senha")
+      }
+    } catch {
+      toast.error("Erro ao atualizar senha")
+    } finally {
+      setSaving(false)
+    }
+  }
   return (
     <div className="space-y-6">
       <Card>
@@ -20,18 +182,22 @@ export function SecuritySettings() {
           <form className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Senha Atual</Label>
-              <Input id="currentPassword" type="password" placeholder="••••••••" />
+              <Input id="currentPassword" type="password" placeholder="••••••••" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="newPassword">Nova Senha</Label>
-              <Input id="newPassword" type="password" placeholder="••••••••" />
+              <Input id="newPassword" type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <div className="space-y-2">
+                <Progress value={strength.score} />
+                <div className="text-xs text-muted-foreground">Força: {strength.label}</div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-              <Input id="confirmPassword" type="password" placeholder="••••••••" />
+              <Input id="confirmPassword" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </div>
             <div className="flex justify-end pt-4">
-              <Button>Atualizar Senha</Button>
+              <Button type="button" onClick={handlePasswordUpdate} disabled={saving}>{saving ? "Atualizando..." : "Atualizar Senha"}</Button>
             </div>
           </form>
         </CardContent>
@@ -53,16 +219,38 @@ export function SecuritySettings() {
               </Label>
               <p className="text-sm text-muted-foreground">Requer código adicional ao fazer login</p>
             </div>
-            <Switch id="2fa-enabled" />
+            <Switch id="2fa-enabled" checked={twoFAEnabled} onCheckedChange={(v) => (v ? openSetup() : disable2FA())} />
           </div>
           <div className="p-4 border rounded-lg bg-muted/30">
             <p className="text-sm text-muted-foreground mb-3">
               Configure um aplicativo autenticador para gerar códigos de verificação
             </p>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={openSetup}>
               Configurar Autenticador
             </Button>
           </div>
+          <Dialog.Root open={setupOpen} onOpenChange={setSetupOpen}>
+            <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="bg-card text-card-foreground rounded-xl border shadow-xl w-full max-w-md p-6">
+                <Dialog.Title className="text-lg font-bold mb-2">Configurar 2FA</Dialog.Title>
+                <p className="text-sm text-muted-foreground mb-4">Escaneie o QR no seu autenticador e digite o código para ativar.</p>
+                {otpauthUrl ? (
+                  <div className="flex flex-col items-center gap-3 mb-4">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`} alt="QR Code" className="border rounded" />
+                    <a href={otpauthUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Abrir no autenticador</a>
+                  </div>
+                ) : null}
+                <div className="space-y-2">
+                  <Label htmlFor="setupToken">Código do autenticador</Label>
+                  <Input id="setupToken" placeholder="000000" value={setupToken} onChange={(e) => setSetupToken(e.target.value)} />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button type="button" variant="outline" onClick={() => setSetupOpen(false)}>Cancelar</Button>
+                  <Button type="button" onClick={confirmEnable}>Ativar</Button>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Root>
         </CardContent>
       </Card>
 
@@ -76,36 +264,25 @@ export function SecuritySettings() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-              <div className="flex-1">
-                <div className="font-medium text-foreground flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  Sessão Atual
+            {sessions.map((s) => (
+              <div key={s.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-foreground flex items-center gap-2">
+                    {s.active ? <div className="h-2 w-2 rounded-full bg-green-500" /> : <div className="h-2 w-2 rounded-full bg-muted" />}
+                    {s.browser} em {s.os} ({s.device})
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">{formatRelative(s.last_active)} • Host {s.client_host || s.hostname || '—'} • IP {s.ip || '—'}</div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">Chrome em Windows • São Paulo, SP • Agora</div>
+                {s.active && (
+                  <Button variant="outline" size="sm" onClick={() => endSession(s.id)}>
+                    Encerrar
+                  </Button>
+                )}
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg">
-              <div className="flex-1">
-                <div className="font-medium text-foreground">Safari em MacBook Pro</div>
-                <div className="text-sm text-muted-foreground mt-1">São Paulo, SP • Há 2 dias</div>
-              </div>
-              <Button variant="outline" size="sm">
-                Encerrar
-              </Button>
-            </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg">
-              <div className="flex-1">
-                <div className="font-medium text-foreground">Chrome em iPhone</div>
-                <div className="text-sm text-muted-foreground mt-1">São Paulo, SP • Há 5 dias</div>
-              </div>
-              <Button variant="outline" size="sm">
-                Encerrar
-              </Button>
-            </div>
+            ))}
           </div>
           <div className="mt-4">
-            <Button variant="outline" className="w-full sm:w-auto bg-transparent">
+            <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => endOthers()}>
               Encerrar Todas as Outras Sessões
             </Button>
           </div>
@@ -129,11 +306,78 @@ export function SecuritySettings() {
                   Exclui permanentemente sua conta e todos os dados associados
                 </p>
               </div>
-              <Button variant="destructive" size="sm">
+              <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
                 Excluir Conta
               </Button>
             </div>
           </div>
+          <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="bg-card text-card-foreground rounded-xl border shadow-xl w-full max-w-lg p-6">
+                <Dialog.Title className="text-lg font-bold mb-2">Confirmar Exclusão</Dialog.Title>
+                <Dialog.Description className="mb-4">Antes de excluir, responda rapidamente e confirme.</Dialog.Description>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Motivo principal</Label>
+                    <select id="reason" className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm" value={reason} onChange={(e) => setReason(e.target.value)}>
+                      <option value="" disabled>Selecione...</option>
+                      <option value="nao_preciso">Não preciso mais</option>
+                      <option value="performance">Problemas de performance</option>
+                      <option value="funcionalidades">Falta de funcionalidades</option>
+                      <option value="preco">Preço</option>
+                      <option value="privacidade">Privacidade/Segurança</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="details">Explique melhor (opcional)</Label>
+                    <Textarea id="details" placeholder="Conte-nos mais..." value={details} onChange={(e) => setDetails(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="switching">Vai migrar para outro produto? Qual?</Label>
+                    <Input id="switching" placeholder="Nome do produto" value={switchingTo} onChange={(e) => setSwitchingTo(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Satisfação geral</Label>
+                    <div className="flex items-center gap-3">
+                      {[1,2,3,4,5].map((n) => (
+                        <label key={n} className="flex items-center gap-2">
+                          <input type="radio" name="satisfaction" value={n} checked={satisfaction === n} onChange={() => setSatisfaction(n)} />
+                          {n}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input id="aware" type="checkbox" checked={confirmAware} onChange={(e) => setConfirmAware(e.target.checked)} />
+                    <Label htmlFor="aware">Entendo que esta ação é permanente e não pode ser desfeita.</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPhrase">Digite: desejo excluir minha conta</Label>
+                    <Input id="confirmPhrase" placeholder="desejo excluir minha conta" value={confirmPhrase} onChange={(e) => setConfirmPhrase(e.target.value)} />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+                  <Button type="button" variant="destructive" disabled={deleting || !confirmAware || confirmPhrase.trim().toLowerCase() !== "desejo excluir minha conta"} onClick={async () => {
+                    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+                    if (!email) return
+                    setDeleting(true)
+                    const r = await fetch(`/api/settings/account/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, confirmPhrase, reason, details, switchingTo, satisfaction }) })
+                    setDeleting(false)
+                    if (r.ok) {
+                      toast.success("Conta excluída")
+                      logout()
+                      window.location.href = "/login"
+                    } else {
+                      const err = await r.json().catch(() => ({}))
+                      toast.error(err?.error || "Falha ao excluir")
+                    }
+                  }}>{deleting ? "Excluindo..." : "Excluir Conta"}</Button>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Root>
         </CardContent>
       </Card>
     </div>

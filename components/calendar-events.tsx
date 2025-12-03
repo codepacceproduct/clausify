@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -117,6 +118,7 @@ export function CalendarEvents() {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createDate, setCreateDate] = useState<Date | undefined>(undefined)
 
   const filteredEvents = allEvents.filter((event) => {
     const matchesSearch =
@@ -223,7 +225,7 @@ export function CalendarEvents() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Data</label>
-                      <Input type="date" />
+                      <DatePicker value={createDate} onChange={setCreateDate} />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Hora</label>

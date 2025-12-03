@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/landing/page-header"
 import { LandingFooter } from "@/components/landing/landing-footer"
+import Image from "next/image"
 import { ArrowRight, Clock, User } from "lucide-react"
 
 const featuredPost = {
@@ -105,8 +106,14 @@ export default function BlogPage() {
           <div className="mb-16">
             <div className="group relative rounded-3xl overflow-hidden bg-white/[0.02] border border-white/5 hover:border-emerald-500/30 transition-all">
               <div className="grid md:grid-cols-2 gap-8">
-                <div className="aspect-video md:aspect-auto bg-gradient-to-br from-emerald-500/20 to-teal-500/20">
-                  <img src={featuredPost.image || "/placeholder.svg"} alt="" className="w-full h-full object-cover" />
+                <div className="relative aspect-video md:aspect-auto bg-gradient-to-br from-emerald-500/20 to-teal-500/20">
+                  <Image
+                    src={featuredPost.image || "/placeholder.svg"}
+                    alt={featuredPost.title}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                  />
                 </div>
                 <div className="p-8 flex flex-col justify-center">
                   <span className="text-emerald-400 text-sm font-medium mb-4">{featuredPost.category}</span>

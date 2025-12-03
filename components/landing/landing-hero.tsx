@@ -1,16 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, Shield, Zap, FileCheck, Sparkles } from "lucide-react"
 
 export function LandingHero() {
-  const [isVisible, setIsVisible] = useState(false)
-
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
+  const [isVisible] = useState(true)
 
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
@@ -49,7 +46,7 @@ export function LandingHero() {
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight max-w-5xl mx-auto leading-[1.1]">
             <span className="text-white">Análise jurídica</span>
             <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent font-extrabold">
               inteligente
             </span>
           </h1>
@@ -105,9 +102,11 @@ export function LandingHero() {
           }`}
         >
           <div className="relative flex items-center justify-center">
-            <img
+            <Image
               src="/images/dashboard-preview.png"
               alt="Clausify Dashboard"
+              width={1200}
+              height={700}
               className="w-full max-w-5xl h-auto object-contain rounded-2xl shadow-2xl shadow-emerald-500/10"
             />
           </div>

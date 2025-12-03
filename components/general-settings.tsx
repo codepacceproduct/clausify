@@ -6,29 +6,47 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, Globe, Building2 } from "lucide-react"
+import * as Dialog from "@radix-ui/react-dialog"
 import { useEffect, useState } from "react"
 import { getUserEmail } from "@/lib/auth"
 import { toast } from "sonner"
 
-export function GeneralSettings() {
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
+export function GeneralSettings({ initialProfile, initialOrganization }: { initialProfile?: any; initialOrganization?: any }) {
+  const initialPrefs = initialProfile?.regional_preferences ?? {}
+  const [firstName, setFirstName] = useState(initialProfile?.name ?? "")
+  const [lastName, setLastName] = useState(initialProfile?.surname ?? "")
+  const [email, setEmail] = useState<string>(() => {
+    const local = typeof window !== "undefined" ? getUserEmail() : null
+    return initialProfile?.email ?? local ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+  })
+  const [phone, setPhone] = useState(initialProfile?.phone ?? "")
+  const [avatarUrl, setAvatarUrl] = useState<string>(initialProfile?.avatar_url ?? "")
+  const [avatarFit, setAvatarFit] = useState<string>(initialPrefs?.avatar?.fit ?? "cover")
+  const [avatarPosition, setAvatarPosition] = useState<string>(initialPrefs?.avatar?.position ?? "center")
+  const [avatarZoom, setAvatarZoom] = useState<number>(Number(initialPrefs?.avatar?.zoom ?? 1))
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [tempFit, setTempFit] = useState<string>("cover")
+  const [tempPosition, setTempPosition] = useState<string>("center")
+  const [tempZoom, setTempZoom] = useState<number>(1)
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
+  const [fileInteracted, setFileInteracted] = useState(false)
 
-  const [orgName, setOrgName] = useState("")
-  const [industry, setIndustry] = useState("")
-  const [size, setSize] = useState("")
-  const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [orgName, setOrgName] = useState(initialOrganization?.name ?? "")
+  const [industry, setIndustry] = useState(initialOrganization?.industry ?? "")
+  const [size, setSize] = useState(initialOrganization?.size ?? "")
+  const [organizationId, setOrganizationId] = useState<string | null>(initialProfile?.organization_id ?? null)
 
-  const [language, setLanguage] = useState("")
-  const [timezone, setTimezone] = useState("")
-  const [dateFormat, setDateFormat] = useState("")
+  const [language, setLanguage] = useState(initialOrganization?.locale ?? initialPrefs.language ?? "")
+  const [timezone, setTimezone] = useState(initialOrganization?.timezone ?? initialPrefs.timezone ?? "")
+  const [dateFormat, setDateFormat] = useState(initialPrefs.dateFormat ?? "")
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    const userEmail = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    if (!userEmail) return
+    const needsClientFetch = !initialProfile || initialProfile?.email !== userEmail
+    if (!needsClientFetch) return
     const load = async () => {
-      const userEmail = getUserEmail()
-      if (!userEmail) return
       const res = await fetch(`/api/settings/profile?email=${encodeURIComponent(userEmail)}`)
       if (!res.ok) return
       const { profile, organization } = await res.json()
@@ -38,42 +56,60 @@ export function GeneralSettings() {
         setEmail(profile.email ?? userEmail)
         setPhone(profile.phone ?? "")
         setOrganizationId(profile.organization_id ?? null)
+        setAvatarUrl(profile.avatar_url ?? "")
         const prefs = profile.regional_preferences ?? {}
         setLanguage(prefs.language ?? "pt-br")
         setTimezone(prefs.timezone ?? "america-saopaulo")
         setDateFormat(prefs.dateFormat ?? "dd-mm-yyyy")
+        if (prefs.avatar) {
+          setAvatarFit(prefs.avatar.fit ?? "cover")
+          setAvatarPosition(prefs.avatar.position ?? "center")
+          setAvatarZoom(Number(prefs.avatar.zoom ?? 1))
+        }
       }
       if (organization) {
         setOrgName(organization.name ?? "")
         setIndustry(organization.industry ?? "")
         setSize(organization.size ?? "")
-        setTimezone(organization.timezone ?? timezone)
-        setLanguage(organization.locale ?? language)
+        setTimezone(organization.timezone ?? "america-saopaulo")
+        setLanguage(organization.locale ?? "pt-br")
       }
     }
     load()
-  }, [])
+  }, [initialProfile])
 
   const handleSave = async () => {
+    if (!email) {
+      toast.error("Email ausente")
+      return
+    }
+    setSaving(true)
     const payload = {
       email,
       name: firstName,
       surname: lastName,
       phone,
-      regional_preferences: { language, timezone, dateFormat },
+      regional_preferences: { language, timezone, dateFormat, avatar: { fit: avatarFit, position: avatarPosition, zoom: avatarZoom } },
       organization: orgName.trim()
         ? { id: organizationId ?? undefined, name: orgName, industry, size, timezone, locale: language }
         : null,
+      avatar_url: avatarUrl || undefined,
     }
-    const res = await fetch(`/api/settings/profile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (res.ok) {
-      toast.success("Configurações salvas")
-    } else {
-      toast.error("Falha ao salvar configurações")
+    try {
+      const res = await fetch(`/api/settings/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        toast.success("Configurações salvas")
+      } else {
+        toast.error("Falha ao salvar configurações")
+      }
+    } catch {
+      toast.error("Erro ao atualizar")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -89,14 +125,82 @@ export function GeneralSettings() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden border">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full"
+                    style={{ objectFit: avatarFit as any, objectPosition: avatarPosition as any, transform: `scale(${avatarZoom})` }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted" />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="avatarInput">Escolha sua imagem</Label>
+                <input
+                  id="avatarInput"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]
+                    if (!f) {
+                      setSelectedFileName(null)
+                      return
+                    }
+                    setSelectedFileName(f.name)
+                    const localUrl = URL.createObjectURL(f)
+                    setAvatarUrl(localUrl)
+                    if (!email) return
+                    const fd = new FormData()
+                    fd.append("email", email)
+                    fd.append("file", f)
+                    try {
+                      const r = await fetch("/api/settings/avatar", { method: "POST", body: fd })
+                      const data = await r.json().catch(() => null)
+                      if (r.ok && data && data.url) {
+                        setAvatarUrl((prev) => data.url || prev)
+                        toast.success("Foto atualizada")
+                      } else {
+                        toast.error("Falha no upload")
+                      }
+                    } catch {
+                      toast.error("Erro no upload")
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setFileInteracted(true)
+                      document.getElementById("avatarInput")?.click()
+                    }}
+                  >
+                    Escolher arquivo
+                  </Button>
+                  {selectedFileName ? (
+                    <span className="text-sm text-muted-foreground">{selectedFileName}</span>
+                  ) : fileInteracted ? (
+                    <span className="text-sm text-muted-foreground">Sem arquivo escolhido</span>
+                  ) : null}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => { setTempFit(avatarFit); setTempPosition(avatarPosition); setTempZoom(avatarZoom); setIsEditorOpen(true) }}>Editar encaixe</Button>
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">Nome</Label>
-                <Input id="firstName" placeholder="João" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                <Input id="firstName" placeholder="Seu nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Sobrenome</Label>
-                <Input id="lastName" placeholder="Silva" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                <Input id="lastName" placeholder="Seu sobrenome" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
@@ -107,6 +211,7 @@ export function GeneralSettings() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled
               />
             </div>
             <div className="space-y-2">
@@ -114,12 +219,74 @@ export function GeneralSettings() {
               <Input id="phone" placeholder="(11) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline">Cancelar</Button>
-              <Button onClick={handleSave}>Salvar Alterações</Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Alterações"}</Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      <Dialog.Root open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-card text-card-foreground rounded-xl border shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Dialog.Title className="text-lg font-bold">Editar encaixe</Dialog.Title>
+              <Dialog.Close asChild>
+                <Button variant="ghost" size="sm">Fechar</Button>
+              </Dialog.Close>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-32 h-32 rounded-full overflow-hidden border">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full"
+                    style={{ objectFit: tempFit as any, objectPosition: tempPosition as any, transform: `scale(${tempZoom})` }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-muted" />
+                )}
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="fitSel">Encaixe</Label>
+                  <select id="fitSel" className="h-9 px-3 py-2 border rounded-md bg-background" value={tempFit} onChange={(e) => setTempFit(e.target.value)}>
+                    <option value="cover">Preencher (cover)</option>
+                    <option value="contain">Conter (contain)</option>
+                    <option value="fill">Esticar (fill)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="posSel">Posição</Label>
+                  <select id="posSel" className="h-9 px-3 py-2 border rounded-md bg-background" value={tempPosition} onChange={(e) => setTempPosition(e.target.value)}>
+                    <option value="center">Centro</option>
+                    <option value="top">Topo</option>
+                    <option value="bottom">Base</option>
+                    <option value="left">Esquerda</option>
+                    <option value="right">Direita</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="zoomRange">Zoom</Label>
+                  <input id="zoomRange" type="range" min="1" max="2" step="0.01" value={tempZoom} onChange={(e) => setTempZoom(Number(e.target.value))} />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Dialog.Close asChild>
+                <Button variant="outline">Cancelar</Button>
+              </Dialog.Close>
+              <Button onClick={async () => {
+                setAvatarFit(tempFit)
+                setAvatarPosition(tempPosition)
+                setAvatarZoom(tempZoom)
+                setIsEditorOpen(false)
+                await handleSave()
+              }}>Salvar</Button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
 
       <Card>
         <CardHeader>
@@ -167,8 +334,7 @@ export function GeneralSettings() {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline">Cancelar</Button>
-              <Button onClick={handleSave}>Salvar Alterações</Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Alterações"}</Button>
             </div>
           </form>
         </CardContent>
@@ -226,8 +392,7 @@ export function GeneralSettings() {
               </Select>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline">Cancelar</Button>
-              <Button onClick={handleSave}>Salvar Alterações</Button>
+              <Button type="button" onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar Alterações"}</Button>
             </div>
           </form>
         </CardContent>

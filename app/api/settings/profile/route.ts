@@ -5,38 +5,30 @@ export async function GET(req: Request) {
   const email = url.searchParams.get("email")
   if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
 
-  const { data: authUsers, error: authErr } = await supabaseServer
-    .from("auth.users")
-    .select("id, email")
-    .eq("email", email)
-    .limit(1)
-  if (authErr) return new Response(JSON.stringify({ error: authErr.message }), { status: 500 })
-  const authUser = authUsers?.[0]
-
   let profile = null as any
-  if (authUser) {
+  {
     const { data: profiles } = await supabaseServer
       .from("profiles")
-      .select("id, email, phone, name, surname, regional_preferences, organization_id")
-      .eq("id", authUser.id)
+      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url")
+      .eq("email", email)
       .limit(1)
     profile = profiles?.[0] ?? null
-    if (!profile) {
-      // If profile missing, create a minimal one linked to auth.users
+  }
+
+  if (!profile) {
+    const { data: authUsers } = await supabaseServer
+      .from("auth.users")
+      .select("id, email")
+      .eq("email", email)
+      .limit(1)
+    const authUser = authUsers?.[0]
+    if (authUser) {
       const { data: created } = await supabaseServer
         .from("profiles")
         .upsert({ id: authUser.id, email: authUser.email }, { onConflict: "id" })
         .select()
       profile = created?.[0] ?? null
     }
-  } else {
-    // No auth user found; try email match on profiles
-    const { data: profiles } = await supabaseServer
-      .from("profiles")
-      .select("id, email, phone, name, surname, regional_preferences, organization_id")
-      .eq("email", email)
-      .limit(1)
-    profile = profiles?.[0] ?? null
   }
 
   let organization = null as any
@@ -54,7 +46,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, name, surname, phone, regional_preferences, organization } = body
+  const { email, name, surname, phone, regional_preferences, organization, avatar_url } = body
   if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
 
   const { data: authUsers } = await supabaseServer
@@ -79,6 +71,7 @@ export async function POST(req: Request) {
   if (regional_preferences) {
     upsertPayload.regional_preferences = regional_preferences
   }
+  if (avatar_url) upsertPayload.avatar_url = avatar_url
   if (userId) upsertPayload.id = userId
 
   const { error: upErr } = await supabaseServer
@@ -109,6 +102,33 @@ export async function POST(req: Request) {
         }
       }
     }
+  }
+
+  return Response.json({ ok: true })
+}
+
+export async function PUT(req: Request) {
+  const body = await req.json()
+  const { email, name, surname, phone, regional_preferences, organization, avatar_url } = body
+  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+
+  const updatePayload: any = { name, surname, phone }
+  if (regional_preferences) updatePayload.regional_preferences = regional_preferences
+  if (avatar_url) updatePayload.avatar_url = avatar_url
+
+  const { error: updErr } = await supabaseServer
+    .from("profiles")
+    .update(updatePayload)
+    .eq("email", email)
+  if (updErr) return new Response(JSON.stringify({ error: updErr.message }), { status: 500 })
+
+  if (organization && organization.id) {
+    const { id, name: orgName, industry, size, timezone, locale } = organization
+    const { error: orgUpdateErr } = await supabaseServer
+      .from("organizations")
+      .update({ name: orgName, industry, size, timezone, locale })
+      .eq("id", id)
+    if (orgUpdateErr) return new Response(JSON.stringify({ error: orgUpdateErr.message }), { status: 500 })
   }
 
   return Response.json({ ok: true })

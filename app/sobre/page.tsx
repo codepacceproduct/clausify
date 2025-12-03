@@ -3,6 +3,7 @@ import { LandingFooter } from "@/components/landing/landing-footer"
 import { Button } from "@/components/ui/button"
 import { Target, Eye, Heart, Users, Globe } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 const values = [
   {
@@ -123,9 +124,11 @@ export default function SobrePage() {
               {team.map((member, index) => (
                 <div key={index} className="text-center">
                   <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-white/5">
-                    <img
+                    <Image
                       src={member.image || "/placeholder.svg"}
                       alt={member.name}
+                      width={128}
+                      height={128}
                       className="w-full h-full object-cover"
                     />
                   </div>

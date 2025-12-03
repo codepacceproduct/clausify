@@ -11,6 +11,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2 } from "
 import Link from "next/link"
 import { login } from "@/lib/auth"
 import Image from "next/image"
+import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,16 +21,44 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState("")
+
+  async function checkTwoFA(emailToCheck: string) {
+    const r = await fetch(`/api/settings/2fa/status?email=${encodeURIComponent(emailToCheck)}`)
+    const j = await r.json().catch(() => ({ enabled: false }))
+    setTwoFAEnabled(!!j.enabled)
+    return !!j.enabled
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    setTimeout(() => {
-      if (login(email, password)) {
-        router.push("/dashboard")
+    const needs2fa = await checkTwoFA(email)
+    if (needs2fa) {
+      if (!twoFactorCode) {
+        setIsLoading(false)
+        return
       }
-      setIsLoading(false)
-    }, 500)
+      const r = await fetch(`/api/settings/2fa/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, token: twoFactorCode }) })
+      if (!r.ok) {
+        setIsLoading(false)
+        return
+      }
+    }
+    if (login(email, password)) {
+      try {
+        const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+        // very naive parser
+        const os = /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iOS' : 'Desconhecido'
+        const browser = /Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : /Firefox/i.test(ua) ? 'Firefox' : 'Outro'
+        const device = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop'
+        const host = typeof window !== 'undefined' ? `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` : null
+        await fetch('/api/sessions/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, userAgent: ua, device, os, browser, clientHost: host, hostname: null }) })
+      } catch {}
+      router.push("/dashboard")
+    }
+    setIsLoading(false)
   }
 
   return (
@@ -162,6 +191,12 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+            {twoFAEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="twoFactor">Código 2FA</Label>
+                <Input id="twoFactor" placeholder="000000" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} />
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
               <div className="flex items-center gap-2">

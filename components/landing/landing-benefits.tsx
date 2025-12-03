@@ -3,6 +3,7 @@
 import { CheckCircle2, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 const benefits = [
   {
@@ -59,11 +60,13 @@ export function LandingBenefits() {
             >
               {/* Image */}
               <div className="flex-1 w-full">
-                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-white/5 to-transparent">
-                  <img
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-br from-white/5 to-transparent">
+                  <Image
                     src={benefit.image || "/placeholder.svg"}
                     alt={benefit.title}
-                    className="w-full aspect-[4/3] object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 50vw, 100vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/50 to-transparent" />
                 </div>

@@ -43,7 +43,7 @@ export function AppSidebar({
   setIsMobileOpen,
 }: {
   isMobileOpen?: boolean
-  setIsMobileOpen?: (open: boolean) => void
+  setIsMobileOpen?: (_open: boolean) => void
 }) {
   const pathname = usePathname()
   const router = useRouter()
