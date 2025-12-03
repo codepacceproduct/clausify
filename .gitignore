@@ -1,0 +1,14 @@
+node_modules
+.next
+dist
+build
+coverage
+*.log
+
+# Env files (keep example only)
+.env*
+!.env.example
+
+# OS / Editor
+.DS_Store
+Thumbs.db

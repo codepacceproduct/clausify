@@ -1,51 +1,40 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { supabase } from "@/lib/supabase"
 
-const contracts = [
-  {
-    client: "Empresa Alpha Tech",
-    type: "Prestação de Serviços",
-    risk: "low" as const,
-    date: "Há 2 horas",
-    value: "R$ 250.000",
-    status: "Aprovado",
-  },
-  {
-    client: "Construtora Beta",
-    type: "Contrato de Obra",
-    risk: "medium" as const,
-    date: "Há 5 horas",
-    value: "R$ 1.800.000",
-    status: "Em Análise",
-  },
-  {
-    client: "Imobiliária Gamma",
-    type: "Locação Comercial",
-    risk: "low" as const,
-    date: "Há 8 horas",
-    value: "R$ 45.000",
-    status: "Aprovado",
-  },
-  {
-    client: "Indústria Delta",
-    type: "Fornecimento",
-    risk: "high" as const,
-    date: "Há 1 dia",
-    value: "R$ 3.200.000",
-    status: "Revisão",
-  },
-  {
-    client: "Startup Epsilon",
-    type: "Investimento",
-    risk: "medium" as const,
-    date: "Há 2 dias",
-    value: "R$ 500.000",
-    status: "Em Análise",
-  },
-]
+type Risk = "low" | "medium" | "high"
 
-export function RecentContracts() {
+async function fetchRecentContracts() {
+  const { data } = await supabase
+    .from("contract_versions")
+    .select("contract_name, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5)
+
+  // Map DB statuses to risk tags heuristically
+  const statusToRisk: Record<string, Risk> = {
+    approved: "low",
+    active: "low",
+    review: "medium",
+    draft: "medium",
+    expired: "high",
+  }
+
+  return (
+    data?.map((row) => ({
+      client: row.contract_name ?? "Contrato",
+      type: row.status ?? "—",
+      risk: statusToRisk[row.status ?? "review"] ?? "medium",
+      date: new Date(row.created_at).toLocaleString("pt-BR"),
+      value: "—",
+      status: row.status ?? "—",
+    })) ?? []
+  )
+}
+
+export async function RecentContracts() {
+  const contracts = await fetchRecentContracts()
   return (
     <Card>
       <CardHeader>
@@ -54,6 +43,9 @@ export function RecentContracts() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {contracts.length === 0 && (
+            <p className="text-sm text-muted-foreground">No momento não há dados.</p>
+          )}
           {contracts.map((contract, index) => (
             <div
               key={index}

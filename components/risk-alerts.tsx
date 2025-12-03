@@ -1,38 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Info, AlertCircle } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
-const alerts = [
-  {
-    type: "high" as const,
-    title: "Cláusula de Garantia",
-    contract: "Indústria Delta",
-    description: "Garantia excessiva identificada",
-    time: "Há 1 hora",
-  },
-  {
-    type: "medium" as const,
-    title: "Prazo de Vigência",
-    contract: "Construtora Beta",
-    description: "Prazo indeterminado requer atenção",
-    time: "Há 3 horas",
-  },
-  {
-    type: "low" as const,
-    title: "Atualização Monetária",
-    contract: "Imobiliária Gamma",
-    description: "Índice de correção sugerido",
-    time: "Há 5 horas",
-  },
-  {
-    type: "medium" as const,
-    title: "Rescisão Antecipada",
-    contract: "Startup Epsilon",
-    description: "Multa não especificada",
-    time: "Há 1 dia",
-  },
-]
+type AlertType = "low" | "medium" | "high"
 
-export function RiskAlerts() {
+async function fetchAlerts() {
+  const { data } = await supabase
+    .from("approvals")
+    .select("contract_name, priority, submitted_at")
+    .order("submitted_at", { ascending: false })
+    .limit(10)
+
+  return (
+    data?.map((row) => ({
+      type: (row.priority ?? "medium") as AlertType,
+      title: "Aprovação em destaque",
+      contract: row.contract_name ?? "Contrato",
+      description: row.priority === "high"
+        ? "Prioridade alta"
+        : row.priority === "low"
+          ? "Prioridade baixa"
+          : "Prioridade média",
+      time: new Date(row.submitted_at).toLocaleString("pt-BR"),
+    })) ?? []
+  )
+}
+
+export async function RiskAlerts() {
+  const alerts = await fetchAlerts()
   return (
     <Card>
       <CardHeader>
@@ -41,6 +36,9 @@ export function RiskAlerts() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {alerts.length === 0 && (
+            <p className="text-sm text-muted-foreground">No momento não há dados.</p>
+          )}
           {alerts.map((alert, index) => (
             <div key={index} className="flex gap-3 pb-4 border-b last:border-0">
               <div className="flex-shrink-0">

@@ -3,16 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts"
 
-const data = [
-  { month: "Jan", analisados: 186, pendentes: 42 },
-  { month: "Fev", analisados: 205, pendentes: 38 },
-  { month: "Mar", analisados: 237, pendentes: 31 },
-  { month: "Abr", analisados: 273, pendentes: 45 },
-  { month: "Mai", analisados: 209, pendentes: 28 },
-  { month: "Jun", analisados: 214, pendentes: 35 },
-]
+type ActivityDatum = { month: string; analisados: number; pendentes: number }
 
-export function ContractActivityChart() {
+export function ContractActivityChart({ data }: { data: ActivityDatum[] }) {
   return (
     <Card>
       <CardHeader>

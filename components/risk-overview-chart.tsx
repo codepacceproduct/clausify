@@ -3,13 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Cell, Pie, PieChart, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
-const data = [
-  { name: "Risco Baixo", value: 542, color: "#10b981" },
-  { name: "Risco Médio", value: 438, color: "#f59e0b" },
-  { name: "Risco Alto", value: 304, color: "#ef4444" },
-]
+type RiskDatum = { name: string; value: number; color: string }
 
-export function RiskOverviewChart() {
+export function RiskOverviewChart({ data }: { data: RiskDatum[] }) {
   return (
     <Card>
       <CardHeader>

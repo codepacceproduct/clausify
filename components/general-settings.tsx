@@ -1,12 +1,82 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { User, Globe, Building2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { getUserEmail } from "@/lib/auth"
+import { toast } from "sonner"
 
 export function GeneralSettings() {
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+
+  const [orgName, setOrgName] = useState("")
+  const [industry, setIndustry] = useState("")
+  const [size, setSize] = useState("")
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
+
+  const [language, setLanguage] = useState("")
+  const [timezone, setTimezone] = useState("")
+  const [dateFormat, setDateFormat] = useState("")
+
+  useEffect(() => {
+    const load = async () => {
+      const userEmail = getUserEmail()
+      if (!userEmail) return
+      const res = await fetch(`/api/settings/profile?email=${encodeURIComponent(userEmail)}`)
+      if (!res.ok) return
+      const { profile, organization } = await res.json()
+      if (profile) {
+        setFirstName(profile.name ?? "")
+        setLastName(profile.surname ?? "")
+        setEmail(profile.email ?? userEmail)
+        setPhone(profile.phone ?? "")
+        setOrganizationId(profile.organization_id ?? null)
+        const prefs = profile.regional_preferences ?? {}
+        setLanguage(prefs.language ?? "pt-br")
+        setTimezone(prefs.timezone ?? "america-saopaulo")
+        setDateFormat(prefs.dateFormat ?? "dd-mm-yyyy")
+      }
+      if (organization) {
+        setOrgName(organization.name ?? "")
+        setIndustry(organization.industry ?? "")
+        setSize(organization.size ?? "")
+        setTimezone(organization.timezone ?? timezone)
+        setLanguage(organization.locale ?? language)
+      }
+    }
+    load()
+  }, [])
+
+  const handleSave = async () => {
+    const payload = {
+      email,
+      name: firstName,
+      surname: lastName,
+      phone,
+      regional_preferences: { language, timezone, dateFormat },
+      organization: orgName.trim()
+        ? { id: organizationId ?? undefined, name: orgName, industry, size, timezone, locale: language }
+        : null,
+    }
+    const res = await fetch(`/api/settings/profile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) {
+      toast.success("Configurações salvas")
+    } else {
+      toast.error("Falha ao salvar configurações")
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -22,11 +92,11 @@ export function GeneralSettings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">Nome</Label>
-                <Input id="firstName" placeholder="João" defaultValue="Roberto" />
+                <Input id="firstName" placeholder="João" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Sobrenome</Label>
-                <Input id="lastName" placeholder="Silva" defaultValue="Oliveira" />
+                <Input id="lastName" placeholder="Silva" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
@@ -35,25 +105,17 @@ export function GeneralSettings() {
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
-                defaultValue="roberto@oliveira-advogados.com.br"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
-              <Input id="phone" placeholder="(11) 99999-9999" defaultValue="(11) 98765-4321" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                placeholder="Conte um pouco sobre você"
-                rows={3}
-                defaultValue="Advogado especializado em direito corporativo e imobiliário com mais de 15 anos de experiência."
-              />
+              <Input id="phone" placeholder="(11) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline">Cancelar</Button>
-              <Button>Salvar Alterações</Button>
+              <Button onClick={handleSave}>Salvar Alterações</Button>
             </div>
           </form>
         </CardContent>
@@ -71,12 +133,12 @@ export function GeneralSettings() {
           <form className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="orgName">Nome da Organização</Label>
-              <Input id="orgName" placeholder="Nome da Empresa" defaultValue="Oliveira Advogados Associados" />
+              <Input id="orgName" placeholder="Nome da Empresa" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="industry">Setor</Label>
-                <Select defaultValue="legal">
+                <Select value={industry || undefined} onValueChange={(v) => setIndustry(v)}>
                   <SelectTrigger id="industry">
                     <SelectValue />
                   </SelectTrigger>
@@ -91,7 +153,7 @@ export function GeneralSettings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="size">Tamanho da Empresa</Label>
-                <Select defaultValue="medium">
+                <Select value={size || undefined} onValueChange={(v) => setSize(v)}>
                   <SelectTrigger id="size">
                     <SelectValue />
                   </SelectTrigger>
@@ -106,7 +168,7 @@ export function GeneralSettings() {
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline">Cancelar</Button>
-              <Button>Salvar Alterações</Button>
+              <Button onClick={handleSave}>Salvar Alterações</Button>
             </div>
           </form>
         </CardContent>
@@ -125,7 +187,7 @@ export function GeneralSettings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="language">Idioma</Label>
-                <Select defaultValue="pt-br">
+                <Select value={language || undefined} onValueChange={(v) => setLanguage(v)}>
                   <SelectTrigger id="language">
                     <SelectValue />
                   </SelectTrigger>
@@ -138,7 +200,7 @@ export function GeneralSettings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Fuso Horário</Label>
-                <Select defaultValue="america-saopaulo">
+                <Select value={timezone || undefined} onValueChange={(v) => setTimezone(v)}>
                   <SelectTrigger id="timezone">
                     <SelectValue />
                   </SelectTrigger>
@@ -152,7 +214,7 @@ export function GeneralSettings() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="dateFormat">Formato de Data</Label>
-              <Select defaultValue="dd-mm-yyyy">
+              <Select value={dateFormat || undefined} onValueChange={(v) => setDateFormat(v)}>
                 <SelectTrigger id="dateFormat">
                   <SelectValue />
                 </SelectTrigger>
@@ -165,7 +227,7 @@ export function GeneralSettings() {
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline">Cancelar</Button>
-              <Button>Salvar Alterações</Button>
+              <Button onClick={handleSave}>Salvar Alterações</Button>
             </div>
           </form>
         </CardContent>
