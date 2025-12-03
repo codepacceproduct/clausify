@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Geist_Mono } from 'next/font/google'
+import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
@@ -9,7 +9,8 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Clausify - Análise Jurídica Inteligente",
-  description: "Plataforma de análise de contratos com IA para advogados corporativos e imobiliários. Identifique riscos, gerencie seu portfólio e tome decisões estratégicas.",
+  description:
+    "Plataforma de análise de contratos com IA para advogados corporativos e imobiliários. Identifique riscos, gerencie seu portfólio e tome decisões estratégicas.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -17,7 +18,12 @@ export const metadata: Metadata = {
         url: "/favicon.svg",
         type: "image/svg+xml",
       },
+      {
+        url: "/images/clausify-logo.png",
+        type: "image/png",
+      },
     ],
+    apple: "/images/clausify-logo.png",
   },
 }
 

@@ -1,11 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <rect width="64" height="64" rx="12" fill="#10b981"/>
-  <path d="M32 12L34 14L30 14L32 12Z" fill="#fff"/>
-  <path d="M18 28C18 26 20 24 22 24L42 24C44 24 46 26 46 28" stroke="#fff" stroke-width="2" fill="none"/>
-  <path d="M22 24L18 42L26 42L22 24Z" fill="#fff"/>
-  <path d="M42 24L46 42L38 42L42 24Z" fill="#fff"/>
-  <path d="M30 14L30 24L34 24L34 14" fill="#fff"/>
-  <circle cx="30" cy="27" r="1.5" fill="#10b981"/>
-  <circle cx="34" cy="27" r="1.5" fill="#10b981"/>
-  <path d="M16 44L48 44" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Letra C estilizada representando Clausify -->
+  <text x="32" y="44" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#ffffff" text-anchor="middle">C</text>
 </svg>
