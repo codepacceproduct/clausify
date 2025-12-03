@@ -22,11 +22,15 @@ export function AppHeader() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    setUserEmail(getUserEmail())
+    const load = async () => {
+      const email = await getUserEmail()
+      setUserEmail(email)
+    }
+    load()
   }, [])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push("/login")
   }
 

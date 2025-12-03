@@ -1,15 +1,41 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Cell, Pie, PieChart, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
-const data = [
-  { name: "Risco Baixo", value: 542, color: "#10b981" },
-  { name: "Risco Médio", value: 438, color: "#f59e0b" },
-  { name: "Risco Alto", value: 304, color: "#ef4444" },
-]
-
 export function RiskOverviewChart() {
+  const [data, setData] = useState<{ name: string; value: number; color: string }[]>([
+    { name: "Risco Baixo", value: 0, color: "#10b981" },
+    { name: "Risco Médio", value: 0, color: "#f59e0b" },
+    { name: "Risco Alto", value: 0, color: "#ef4444" },
+  ])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) return
+      const res = await fetch("/api/contracts", { headers: { Authorization: `Bearer ${token}` } })
+      const json = await res.json()
+      const contracts = (json?.contracts || []) as Array<{ risk_score: number | null }>
+      const buckets = { low: 0, medium: 0, high: 0 }
+      for (const c of contracts) {
+        const s = c.risk_score ?? 0
+        if (s >= 67) buckets.high++
+        else if (s >= 34) buckets.medium++
+        else buckets.low++
+      }
+      setData([
+        { name: "Risco Baixo", value: buckets.low, color: "#10b981" },
+        { name: "Risco Médio", value: buckets.medium, color: "#f59e0b" },
+        { name: "Risco Alto", value: buckets.high, color: "#ef4444" },
+      ])
+    }
+    fetchData()
+  }, [])
+
   return (
     <Card>
       <CardHeader>

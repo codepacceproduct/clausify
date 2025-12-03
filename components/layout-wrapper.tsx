@@ -7,6 +7,7 @@ import { AppHeader } from "./app-header"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Menu } from 'lucide-react'
+import { supabase } from "@/lib/supabase-client"
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -37,6 +38,15 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener("resize", handleResize)
       clearInterval(interval)
+    }
+  }, [])
+
+  useEffect(() => {
+    const remember = typeof window !== "undefined" ? localStorage.getItem("rememberMe") : null
+    if (remember === "false") {
+      const onUnload = () => { try { supabase.auth.signOut() } catch { void 0 } }
+      window.addEventListener("beforeunload", onUnload)
+      return () => window.removeEventListener("beforeunload", onUnload)
     }
   }, [])
 

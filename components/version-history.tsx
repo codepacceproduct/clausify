@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,66 +26,37 @@ interface ContractVersion {
   previousVersion?: string
 }
 
-const versions: ContractVersion[] = [
-  {
-    id: "1",
-    contractName: "Contrato de Prestação de Serviços - Alpha Tech",
-    version: "3.0",
-    status: "active",
-    createdBy: { name: "Maria Silva", avatar: "" },
-    createdAt: "20/01/2025 às 14:30",
-    changes: 8,
-    notes: "Versão final aprovada com ajustes de valores e prazos",
-    previousVersion: "2.1",
-  },
-  {
-    id: "2",
-    contractName: "Contrato de Prestação de Serviços - Alpha Tech",
-    version: "2.1",
-    status: "expired",
-    createdBy: { name: "Carlos Mendes", avatar: "" },
-    createdAt: "15/01/2025 às 10:15",
-    changes: 3,
-    notes: "Correções nas cláusulas de confidencialidade",
-    previousVersion: "2.0",
-  },
-  {
-    id: "3",
-    contractName: "Contrato de Prestação de Serviços - Alpha Tech",
-    version: "2.0",
-    status: "expired",
-    createdBy: { name: "Maria Silva", avatar: "" },
-    createdAt: "10/01/2025 às 16:45",
-    changes: 12,
-    notes: "Grande revisão com novos termos de pagamento",
-    previousVersion: "1.0",
-  },
-  {
-    id: "4",
-    contractName: "NDA - Beta Corporation",
-    version: "1.2",
-    status: "active",
-    createdBy: { name: "Ana Costa", avatar: "" },
-    createdAt: "18/01/2025 às 09:00",
-    changes: 2,
-    notes: "Atualização do período de confidencialidade",
-    previousVersion: "1.1",
-  },
-  {
-    id: "5",
-    contractName: "Contrato de Locação - Sede SP",
-    version: "1.0",
-    status: "review",
-    createdBy: { name: "Pedro Alves", avatar: "" },
-    createdAt: "19/01/2025 às 11:30",
-    changes: 0,
-    notes: "Versão inicial para revisão",
-  },
-]
-
 export function VersionHistory() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [versions, setVersions] = useState<ContractVersion[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchVersions = async () => {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) {
+        setLoading(false)
+        return
+      }
+      const res = await fetch("/api/versions", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      setVersions(json?.versions || [])
+      setLoading(false)
+    }
+    fetchVersions()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-[200px] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const filteredVersions = versions.filter((v) => {
     const matchesSearch = v.contractName.toLowerCase().includes(searchTerm.toLowerCase())

@@ -3,6 +3,7 @@ import { GeneralSettings } from "@/components/general-settings"
 import { NotificationSettings } from "@/components/notification-settings"
 import { SecuritySettings } from "@/components/security-settings"
 import { IntegrationSettings } from "@/components/integration-settings"
+import { AccessControl } from "@/components/access-control"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function SettingsPage() {
@@ -18,6 +19,7 @@ export default function SettingsPage() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="security">Segurança</TabsTrigger>
+          <TabsTrigger value="team">Equipe</TabsTrigger>
           <TabsTrigger value="integrations">Integrações</TabsTrigger>
         </TabsList>
 
@@ -31,6 +33,10 @@ export default function SettingsPage() {
 
         <TabsContent value="security" className="space-y-6">
           <SecuritySettings />
+        </TabsContent>
+
+        <TabsContent value="team" className="space-y-6">
+          <AccessControl />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-6">

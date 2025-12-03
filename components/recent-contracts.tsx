@@ -1,51 +1,60 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-const contracts = [
-  {
-    client: "Empresa Alpha Tech",
-    type: "Prestação de Serviços",
-    risk: "low" as const,
-    date: "Há 2 horas",
-    value: "R$ 250.000",
-    status: "Aprovado",
-  },
-  {
-    client: "Construtora Beta",
-    type: "Contrato de Obra",
-    risk: "medium" as const,
-    date: "Há 5 horas",
-    value: "R$ 1.800.000",
-    status: "Em Análise",
-  },
-  {
-    client: "Imobiliária Gamma",
-    type: "Locação Comercial",
-    risk: "low" as const,
-    date: "Há 8 horas",
-    value: "R$ 45.000",
-    status: "Aprovado",
-  },
-  {
-    client: "Indústria Delta",
-    type: "Fornecimento",
-    risk: "high" as const,
-    date: "Há 1 dia",
-    value: "R$ 3.200.000",
-    status: "Revisão",
-  },
-  {
-    client: "Startup Epsilon",
-    type: "Investimento",
-    risk: "medium" as const,
-    date: "Há 2 dias",
-    value: "R$ 500.000",
-    status: "Em Análise",
-  },
-]
+type Item = {
+  client: string
+  type: string
+  risk: "low" | "medium" | "high"
+  date: string
+  value: string
+  status: string
+}
 
 export function RecentContracts() {
+  const [items, setItems] = useState<Item[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) return
+      const res = await fetch("/api/contracts", { headers: { Authorization: `Bearer ${token}` } })
+      const json = await res.json()
+      const contracts = (json?.contracts || []) as Array<{
+        client: string | null
+        type: string | null
+        risk_score: number | null
+        created_at: string
+        value: string | null
+        status: string | null
+      }>
+      const fmt = (dateStr: string) => {
+        const dt = new Date(dateStr)
+        const diffMs = Date.now() - dt.getTime()
+        const h = Math.floor(diffMs / 3600000)
+        if (h < 24) return `Há ${h} horas`
+        const d = Math.floor(h / 24)
+        return `Há ${d} dias`
+      }
+      const mapped = contracts
+        .slice(0, 5)
+        .map((c) => ({
+          client: c.client || "",
+          type: c.type || "",
+          risk: (c.risk_score ?? 0) >= 67 ? "high" : (c.risk_score ?? 0) >= 34 ? "medium" : "low",
+          date: fmt(c.created_at),
+          value: c.value || "",
+          status: c.status || "",
+        }))
+      setItems(mapped)
+    }
+    fetchData()
+  }, [])
   return (
     <Card>
       <CardHeader>
@@ -54,7 +63,7 @@ export function RecentContracts() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {contracts.map((contract, index) => (
+          {items.map((contract, index) => (
             <div
               key={index}
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 border-b last:border-0"

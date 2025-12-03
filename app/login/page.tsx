@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
-import { login } from "@/lib/auth"
+import { toast } from "sonner"
 import Image from "next/image"
+import { supabase } from "@/lib/supabase-client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,16 +21,33 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    setTimeout(() => {
-      if (login(email, password)) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error && data.session) {
+        try {
+          localStorage.setItem("rememberMe", rememberMe ? "true" : "false")
+        } catch { void 0 }
         router.push("/dashboard")
+        return
       }
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      if (res.status === 404) {
+        toast.error("Conta não encontrada. Registre-se para continuar.")
+      } else if (res.status === 401) {
+        toast.error("Senha incorreta. Tente novamente.")
+      } else {
+        toast.error("Não foi possível acessar. Tente novamente mais tarde.")
+      }
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   return (

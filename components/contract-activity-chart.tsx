@@ -1,18 +1,43 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts"
 
-const data = [
-  { month: "Jan", analisados: 186, pendentes: 42 },
-  { month: "Fev", analisados: 205, pendentes: 38 },
-  { month: "Mar", analisados: 237, pendentes: 31 },
-  { month: "Abr", analisados: 273, pendentes: 45 },
-  { month: "Mai", analisados: 209, pendentes: 28 },
-  { month: "Jun", analisados: 214, pendentes: 35 },
-]
-
 export function ContractActivityChart() {
+  const [data, setData] = useState<{ month: string; analisados: number; pendentes: number }[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) return
+      const res = await fetch("/api/contracts", { headers: { Authorization: `Bearer ${token}` } })
+      const json = await res.json()
+      const contracts = (json?.contracts || []) as Array<{ status: string | null; created_at: string }>
+      const analyzedStatuses = new Set(["approved", "active"])
+      const pendingStatuses = new Set(["draft", "review"]) 
+      const now = new Date()
+      const months = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+        return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString("pt-BR", { month: "short" }) }
+      })
+      const agg = months.map(({ key, label }) => ({ key, label, analisados: 0, pendentes: 0 }))
+      for (const c of contracts) {
+        const dt = new Date(c.created_at)
+        const key = `${dt.getFullYear()}-${dt.getMonth()}`
+        const bucket = agg.find((a) => a.key === key)
+        if (!bucket) continue
+        const status = (c.status || "").toLowerCase()
+        if (analyzedStatuses.has(status)) bucket.analisados++
+        else if (pendingStatuses.has(status)) bucket.pendentes++
+      }
+      setData(agg.map((a) => ({ month: a.label, analisados: a.analisados, pendentes: a.pendentes })))
+    }
+    fetchData()
+  }, [])
+
   return (
     <Card>
       <CardHeader>

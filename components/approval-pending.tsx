@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -187,6 +188,23 @@ export function ApprovalPending() {
   const [comment, setComment] = useState("")
   const [isApproving, setIsApproving] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
+  const [approvals, setApprovals] = useState<PendingApproval[]>([])
+
+  useEffect(() => {
+    const fetchApprovals = async () => {
+      const { data } = await supabase.auth.getSession()
+      const token = data.session?.access_token
+      if (!token) return
+      const res = await fetch("/api/approvals", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      setApprovals(json?.approvals || [])
+    }
+    fetchApprovals()
+  }, [])
+
+  const items = approvals.length ? approvals : pendingApprovals
 
   const handleApprove = async () => {
     setIsApproving(true)
@@ -237,7 +255,7 @@ export function ApprovalPending() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pendingApprovals.length}</p>
+                <p className="text-2xl font-bold">{items.length}</p>
                 <p className="text-xs text-muted-foreground">Aguardando Aprovação</p>
               </div>
             </div>
@@ -250,7 +268,7 @@ export function ApprovalPending() {
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">2</p>
+                <p className="text-2xl font-bold">{items.filter((a) => a.priority === "high").length}</p>
                 <p className="text-xs text-muted-foreground">Alta Prioridade</p>
               </div>
             </div>
@@ -292,7 +310,7 @@ export function ApprovalPending() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {pendingApprovals.map((approval) => (
+            {items.map((approval) => (
               <div key={approval.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="flex-1 space-y-3">
