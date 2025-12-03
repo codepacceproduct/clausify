@@ -1,45 +1,38 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Info, AlertCircle } from "lucide-react"
 
-type AlertItem = { type: "high" | "medium" | "low"; title: string; contract: string; description: string; time: string }
+const alerts = [
+  {
+    type: "high" as const,
+    title: "Cláusula de Garantia",
+    contract: "Indústria Delta",
+    description: "Garantia excessiva identificada",
+    time: "Há 1 hora",
+  },
+  {
+    type: "medium" as const,
+    title: "Prazo de Vigência",
+    contract: "Construtora Beta",
+    description: "Prazo indeterminado requer atenção",
+    time: "Há 3 horas",
+  },
+  {
+    type: "low" as const,
+    title: "Atualização Monetária",
+    contract: "Imobiliária Gamma",
+    description: "Índice de correção sugerido",
+    time: "Há 5 horas",
+  },
+  {
+    type: "medium" as const,
+    title: "Rescisão Antecipada",
+    contract: "Startup Epsilon",
+    description: "Multa não especificada",
+    time: "Há 1 dia",
+  },
+]
 
 export function RiskAlerts() {
-  const [alerts, setAlerts] = useState<AlertItem[]>([])
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data } = await supabase.auth.getSession()
-      const token = data.session?.access_token
-      if (!token) return
-      const res = await fetch("/api/contracts", { headers: { Authorization: `Bearer ${token}` } })
-      const json = await res.json()
-      const contracts = (json?.contracts || []) as Array<{ client: string | null; risk_score: number | null; created_at: string }>
-      const fmt = (dateStr: string) => {
-        const dt = new Date(dateStr)
-        const diffMs = Date.now() - dt.getTime()
-        const h = Math.floor(diffMs / 3600000)
-        if (h < 24) return `Há ${h} horas`
-        const d = Math.floor(h / 24)
-        return `Há ${d} dias`
-      }
-      const highRisk = contracts
-        .filter((c) => (c.risk_score ?? 0) >= 80)
-        .slice(0, 4)
-        .map((c) => ({
-          type: "high" as const,
-          title: "Risco alto",
-          contract: c.client || "",
-          description: `Pontuação de risco ${Math.round(c.risk_score ?? 0)}`,
-          time: fmt(c.created_at),
-        }))
-      setAlerts(highRisk)
-    }
-    fetchData()
-  }, [])
   return (
     <Card>
       <CardHeader>

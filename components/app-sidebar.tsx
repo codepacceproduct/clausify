@@ -74,8 +74,8 @@ export function AppSidebar({
     document.documentElement.classList.toggle("dark")
   }
 
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    logout()
     router.push("/login")
   }
 

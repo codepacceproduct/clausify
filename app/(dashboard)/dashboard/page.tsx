@@ -4,12 +4,10 @@ import { RiskOverviewChart } from "@/components/risk-overview-chart"
 import { ContractActivityChart } from "@/components/contract-activity-chart"
 import { RecentContracts } from "@/components/recent-contracts"
 import { RiskAlerts } from "@/components/risk-alerts"
-import { WelcomeOwnerToast } from "@/components/welcome-owner-toast"
 
 export default function DashboardPage() {
   return (
     <LayoutWrapper>
-      <WelcomeOwnerToast />
       <div className="space-y-1">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-sm sm:text-base text-muted-foreground">Visão geral da sua carteira de contratos</p>
