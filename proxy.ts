@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const url = req.nextUrl.clone()
   const publicPaths = ["/", "/login", "/register", "/forgot-password", "/criar-conta", "/api-docs", "/privacidade", "/termos"]
   const path = url.pathname
@@ -33,6 +33,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Exclude API routes from middleware; they handle auth within route handlers
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
 }
