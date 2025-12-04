@@ -43,6 +43,8 @@ function RegisterContent() {
   const [orgId] = useState(qOrgId)
   const [inviteOk, setInviteOk] = useState(true)
   const [inviteMessage, setInviteMessage] = useState("")
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [selectedExisting, setSelectedExisting] = useState<any | null>(null)
 
   useEffect(() => {
     const logInvite = async () => {
@@ -109,7 +111,7 @@ function RegisterContent() {
       alert("Você precisa aceitar os termos de uso")
       return
     }
-    if (!orgId) {
+    if (!orgId && !selectedExisting) {
       if (!empresa.trim()) {
         alert("Informe o nome da organização")
         return
@@ -130,9 +132,13 @@ function RegisterContent() {
         email,
         name: nome.trim() || qName,
         surname: sobrenome.trim() || qSurname,
-        organization: orgId ? { id: orgId } : (empresa.trim()
-          ? { name: empresa.trim(), industry: setor || null, size: tamanho || null }
-          : null),
+        organization: orgId
+          ? { id: orgId }
+          : selectedExisting
+            ? { id: selectedExisting.id }
+            : empresa.trim()
+              ? { name: empresa.trim(), industry: setor || null, size: tamanho || null }
+              : null,
       }
       await fetch("/api/settings/profile", {
         method: "POST",
@@ -143,6 +149,22 @@ function RegisterContent() {
       router.push("/dashboard")
     } catch {}
     setIsLoading(false)
+  }
+
+  const handleEmpresaChange = async (v: string) => {
+    setEmpresa(v)
+    setSelectedExisting(null)
+    if (v.trim().length < 2) {
+      setSuggestions([])
+      return
+    }
+    try {
+      const r = await fetch(`/api/organizations/search?q=${encodeURIComponent(v.trim())}`)
+      const j = await r.json().catch(() => ({ organizations: [] }))
+      setSuggestions(Array.isArray(j.organizations) ? j.organizations : [])
+    } catch {
+      setSuggestions([])
+    }
   }
 
   return (
@@ -300,10 +322,49 @@ function RegisterContent() {
                     type="text"
                     placeholder="Nome do escritório ou empresa"
                     value={empresa}
-                    onChange={(e) => setEmpresa(e.target.value)}
+                    onChange={(e) => handleEmpresaChange(e.target.value)}
                     className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
-                    required
+                    disabled={!!selectedExisting}
+                    required={!selectedExisting}
                   />
+                  {!selectedExisting && suggestions.length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-2 bg-[#0f1419] border border-[#2a3640] rounded-xl shadow-xl max-h-60 overflow-auto">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="w-full text-left px-4 py-3 hover:bg-[#1a2329] text-gray-200"
+                          onClick={() => {
+                            setSelectedExisting(s)
+                            setEmpresa(s.name || "")
+                            setSetor(s.industry || "")
+                            setTamanho(s.size || "")
+                            setSuggestions([])
+                          }}
+                        >
+                          <div className="font-medium">{s.name}</div>
+                          <div className="text-xs text-gray-400">{s.industry || ""} {s.size ? `• ${s.size}` : ""}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedExisting && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                      <span>Organização existente selecionada</span>
+                      <button
+                        type="button"
+                        className="text-emerald-400 hover:text-emerald-300"
+                        onClick={() => {
+                          setSelectedExisting(null)
+                          setEmpresa("")
+                          setSetor("")
+                          setTamanho("")
+                        }}
+                      >
+                        Trocar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -313,7 +374,7 @@ function RegisterContent() {
                 <div className="space-y-2">
                   <label className="text-base sm:text-sm font-medium text-gray-300">Setor</label>
                   <Select value={setor || undefined} onValueChange={(v) => setSetor(v)}>
-                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
+                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white" disabled={!!selectedExisting}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -328,7 +389,7 @@ function RegisterContent() {
                 <div className="space-y-2">
                   <label className="text-base sm:text-sm font-medium text-gray-300">Tamanho da Empresa</label>
                   <Select value={tamanho || undefined} onValueChange={(v) => setTamanho(v)}>
-                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
+                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white" disabled={!!selectedExisting}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
