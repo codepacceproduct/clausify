@@ -22,7 +22,7 @@ export function AppHeader() {
   const [userEmail] = useState<string | null>(() => getUserEmail())
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
   const [avatarFit, setAvatarFit] = useState<'cover' | 'contain' | 'fill'>('cover')
-  const [avatarPosition, setAvatarPosition] = useState<'center' | 'top' | 'bottom' | 'left' | 'right'>('top')
+  const [avatarPosition, setAvatarPosition] = useState<'center' | 'top' | 'bottom' | 'left' | 'right'>('center')
   const [avatarZoom, setAvatarZoom] = useState<number>(1)
 
   useEffect(() => {
