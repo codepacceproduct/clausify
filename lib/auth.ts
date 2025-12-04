@@ -1,27 +1,46 @@
 "use client"
 
-// Simple authentication helper for client-side
+import { supabase } from "@/lib/supabase"
+
 export function isAuthenticated(): boolean {
-  if (typeof window === "undefined") return false
-  return localStorage.getItem("auth_token") !== null
+  if (typeof document === "undefined") return false
+  return document.cookie.includes("auth_token=")
 }
 
-export function login(email: string, password: string): boolean {
-  // Simulate login - in production, this would call your API
-  if (email && password) {
-    localStorage.setItem("auth_token", "demo_token_" + Date.now())
+export async function login(email: string, password: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data.session) return false
+  try {
     localStorage.setItem("user_email", email)
-    return true
-  }
-  return false
+    const token = data.session.access_token
+    const expiresAt = data.session.expires_at ? new Date(data.session.expires_at * 1000) : new Date(Date.now() + 60 * 60 * 1000)
+    const expires = expiresAt.toUTCString()
+    document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; expires=${expires}`
+    document.cookie = `user_email=${encodeURIComponent(email)}; path=/; expires=${expires}`
+  } catch {}
+  return true
 }
 
-export function logout(): void {
-  localStorage.removeItem("auth_token")
-  localStorage.removeItem("user_email")
+export async function logout(): Promise<void> {
+  try {
+    await supabase.auth.signOut()
+  } catch {}
+  try {
+    document.cookie = `auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    document.cookie = `user_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+  } catch {}
+  try {
+    localStorage.removeItem("user_email")
+  } catch {}
 }
 
 export function getUserEmail(): string | null {
-  if (typeof window === "undefined") return null
-  return localStorage.getItem("user_email")
+  if (typeof document === "undefined") return null
+  const m = document.cookie.match(/(?:^|; )user_email=([^;]+)/)
+  if (m && m[1]) return decodeURIComponent(m[1])
+  try {
+    return localStorage.getItem("user_email")
+  } catch {
+    return null
+  }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { getUserEmail } from "@/lib/auth"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, FileText, Download, Eye, Star } from "lucide-react"
@@ -84,6 +85,17 @@ const templates = [
 
 export function PlaybookTemplates() {
   const [searchTerm, setSearchTerm] = useState("")
+  const logAction = async (action: string, resource: string) => {
+    const email = getUserEmail() || ""
+    if (!email) return
+    try {
+      await fetch("/api/audit/logs/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, resource, status: "success" }),
+      })
+    } catch {}
+  }
 
   const filteredTemplates = templates.filter(
     (template) =>
@@ -161,11 +173,16 @@ export function PlaybookTemplates() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 bg-transparent"
+                      onClick={() => logAction("view", template.name)}
+                    >
                       <Eye className="h-3 w-3 mr-1" />
                       Visualizar
                     </Button>
-                    <Button size="sm" className="flex-1">
+                    <Button size="sm" className="flex-1" onClick={() => logAction("download", template.name)}>
                       <Download className="h-3 w-3 mr-1" />
                       Usar
                     </Button>
@@ -217,11 +234,16 @@ export function PlaybookTemplates() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 bg-transparent"
+                      onClick={() => logAction("view", template.name)}
+                    >
                       <Eye className="h-3 w-3 mr-1" />
                       Visualizar
                     </Button>
-                    <Button size="sm" className="flex-1">
+                    <Button size="sm" className="flex-1" onClick={() => logAction("download", template.name)}>
                       <Download className="h-3 w-3 mr-1" />
                       Usar
                     </Button>

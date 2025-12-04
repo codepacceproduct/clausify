@@ -21,19 +21,43 @@ export function AppHeader() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [userEmail] = useState<string | null>(() => getUserEmail())
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
+  const [avatarFit, setAvatarFit] = useState<'cover' | 'contain' | 'fill'>('cover')
+  const [avatarPosition, setAvatarPosition] = useState<'center' | 'top' | 'bottom' | 'left' | 'right'>('top')
+  const [avatarZoom, setAvatarZoom] = useState<number>(1)
 
   useEffect(() => {
     const load = async () => {
       if (!userEmail) return
       try {
-        const res = await fetch(`/api/settings/profile?email=${encodeURIComponent(userEmail)}`)
+        const res = await fetch(`/api/settings/profile`)
         if (!res.ok) return
         const { profile } = await res.json()
         if (profile?.avatar_url) setAvatarSrc(profile.avatar_url)
+        const prefs = profile?.regional_preferences?.avatar
+        if (prefs) {
+          if (prefs.fit) setAvatarFit(prefs.fit)
+          if (prefs.position) setAvatarPosition(prefs.position)
+          if (prefs.zoom) setAvatarZoom(Number(prefs.zoom))
+        }
       } catch {}
     }
     load()
   }, [userEmail])
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const d = e?.detail || {}
+      if (d.url) setAvatarSrc(d.url)
+      const p = d.prefs || {}
+      if (p.fit) setAvatarFit(p.fit)
+      if (p.position) setAvatarPosition(p.position)
+      if (p.zoom) setAvatarZoom(Number(p.zoom))
+    }
+    window.addEventListener('profile:avatar-updated', handler as EventListener)
+    return () => {
+      window.removeEventListener('profile:avatar-updated', handler as EventListener)
+    }
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -96,7 +120,15 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full p-0">
               <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0">
-                <AvatarImage src={avatarSrc ?? "/placeholder.svg?height=36&width=36"} alt="User" />
+                {avatarSrc ? (
+                  <AvatarImage
+                    src={avatarSrc}
+                    alt="User"
+                    fit={avatarFit}
+                    position={avatarPosition}
+                    zoom={avatarZoom}
+                  />
+                ) : null}
                 <AvatarFallback className="bg-emerald-600 text-white font-semibold text-xs sm:text-sm">
                   {getUserInitials()}
                 </AvatarFallback>

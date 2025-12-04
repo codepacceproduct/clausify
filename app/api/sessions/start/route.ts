@@ -1,9 +1,11 @@
 import { supabaseServer } from "@/lib/supabase-server"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, userAgent, device, os, browser, clientHost, hostname } = body
-  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+  const { userAgent, device, os, browser, clientHost, hostname } = body
+  const email = await getAuthedEmail(req)
+  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
   // Try to infer IP from common headers
   const hdr = req.headers
   const forwarded = hdr.get("x-forwarded-for") || hdr.get("x-real-ip") || hdr.get("cf-connecting-ip") || null

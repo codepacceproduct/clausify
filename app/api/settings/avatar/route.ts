@@ -1,10 +1,11 @@
 import { supabaseServer } from "@/lib/supabase-server"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function POST(req: Request) {
   const form = await req.formData()
-  const email = form.get("email") as string | null
+  const authed = await getAuthedEmail(req)
   const file = form.get("file") as File | null
-  if (!email || !file) return new Response(JSON.stringify({ error: "missing email or file" }), { status: 400 })
+  if (!authed || !file) return new Response(JSON.stringify({ error: "unauthorized or missing file" }), { status: 400 })
 
   const bucket = "avatars"
   const { data: bucketInfo } = await supabaseServer.storage.getBucket(bucket)
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   }
 
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
-  const safeFolder = email.replace(/[@.]/g, "-")
+  const safeFolder = authed.replace(/[@.]/g, "-")
   const path = `${safeFolder}/${Date.now()}.${ext}`
   const { error: uploadErr } = await supabaseServer.storage
     .from(bucket)
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
 
   const { data: publicUrl } = await supabaseServer.storage.from(bucket).getPublicUrl(path)
 
-  await supabaseServer.from("profiles").update({ avatar_url: publicUrl.publicUrl }).eq("email", email)
+  await supabaseServer.from("profiles").update({ avatar_url: publicUrl.publicUrl }).eq("email", authed)
 
   return Response.json({ url: publicUrl.publicUrl })
 }

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Plus, Copy, Edit, Trash2, ShieldAlert, ArrowRightLeft, BookOpen } from "lucide-react"
+import { getUserEmail } from "@/lib/auth"
 
 const fallbackClauses = [
   {
@@ -95,6 +96,17 @@ export function PlaybookFallbacks() {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const logAction = async (action: string, resource: string) => {
+    const email = getUserEmail() || ""
+    if (!email) return
+    try {
+      await fetch("/api/audit/logs/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, resource, status: "success" }),
+      })
+    } catch {}
+  }
 
   const filteredFallbacks = fallbackClauses.filter((clause) => {
     const matchesSearch =
@@ -255,13 +267,18 @@ export function PlaybookFallbacks() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => logAction("download", clause.name)}>
                       <Copy className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => logAction("edit", clause.name)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => logAction("delete", clause.name)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

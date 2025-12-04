@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react"
+import { Shield, Key, Smartphone, AlertTriangle, X } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { logout } from "@/lib/auth"
 import { useEffect, useState } from "react"
@@ -13,6 +13,9 @@ import { toast } from "sonner"
 import { getUserEmail } from "@/lib/auth"
 import { Progress } from "@/components/ui/progress"
 import * as Dialog from "@radix-ui/react-dialog"
+import { Card as UICard } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 
 export function SecuritySettings() {
   const [currentPassword, setCurrentPassword] = useState("")
@@ -44,6 +47,10 @@ export function SecuritySettings() {
   const [confirmAware, setConfirmAware] = useState<boolean>(false)
   const [confirmPhrase, setConfirmPhrase] = useState<string>("")
   const [deleting, setDeleting] = useState(false)
+  const [rolePerms, setRolePerms] = useState<Record<string, Record<string, boolean>>>({})
+  const [availableModules, setAvailableModules] = useState<string[]>([])
+  const [editRole, setEditRole] = useState<"admin" | "moderator" | "member" | null>(null)
+  const [tempPerms, setTempPerms] = useState<Record<string, boolean>>({})
 
   function formatRelative(iso: string) {
     const d = new Date(iso)
@@ -55,16 +62,15 @@ export function SecuritySettings() {
   }
 
   async function loadSessions() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const email = getUserEmail()
     if (!email) return
-    const r = await fetch(`/api/sessions/list?email=${encodeURIComponent(email)}`)
+    const r = await fetch(`/api/sessions/list`)
     const j = await r.json().catch(() => ({ sessions: [] }))
     setSessions(j.sessions || [])
   }
 
   async function endSession(id: string) {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
-    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, sessionId: id }) })
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id }) })
     if (r.ok) {
       toast.success("Sessão encerrada")
       await loadSessions()
@@ -72,8 +78,7 @@ export function SecuritySettings() {
   }
 
   async function endOthers() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
-    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, endOthers: true }) })
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endOthers: true }) })
     if (r.ok) {
       toast.success("Outras sessões encerradas")
       await loadSessions()
@@ -81,21 +86,22 @@ export function SecuritySettings() {
   }
 
   async function refreshTwoFA() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const email = getUserEmail()
     if (!email) return
-    const r = await fetch(`/api/settings/2fa/status?email=${encodeURIComponent(email)}`)
+    const r = await fetch(`/api/settings/2fa/status`)
     const j = await r.json().catch(() => ({ enabled: false }))
     setTwoFAEnabled(!!j.enabled)
   }
   useEffect(() => {
     refreshTwoFA()
     loadSessions()
+    loadRolePermissions()
   }, [])
 
   async function openSetup() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const email = getUserEmail()
     if (!email) return toast.error("Email ausente")
-    const r = await fetch(`/api/settings/2fa/setup?email=${encodeURIComponent(email)}`)
+    const r = await fetch(`/api/settings/2fa/setup`)
     if (!r.ok) return toast.error("Falha ao iniciar configuração")
     const j = await r.json()
     setOtpauthUrl(j.otpauth)
@@ -103,12 +109,10 @@ export function SecuritySettings() {
   }
 
   async function confirmEnable() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
-    if (!email) return toast.error("Email ausente")
     const r = await fetch(`/api/settings/2fa/enable`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, token: setupToken }),
+      body: JSON.stringify({ token: setupToken }),
     })
     if (r.ok) {
       toast.success("2FA ativado")
@@ -121,9 +125,7 @@ export function SecuritySettings() {
   }
 
   async function disable2FA() {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
-    if (!email) return toast.error("Email ausente")
-    const r = await fetch(`/api/settings/2fa/disable`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
+    const r = await fetch(`/api/settings/2fa/disable`, { method: "POST" })
     if (r.ok) {
       toast.success("2FA desativado")
       setTwoFAEnabled(false)
@@ -133,7 +135,7 @@ export function SecuritySettings() {
   }
 
   const handlePasswordUpdate = async () => {
-    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const email = getUserEmail()
     if (!email) {
       toast.error("Email ausente")
       return
@@ -151,7 +153,7 @@ export function SecuritySettings() {
       const res = await fetch("/api/settings/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword }),
       })
       if (res.ok) {
         toast.success("Senha atualizada")
@@ -168,8 +170,91 @@ export function SecuritySettings() {
       setSaving(false)
     }
   }
+  async function loadRolePermissions() {
+    const email = getUserEmail()
+    if (!email) return
+    const r = await fetch(`/api/permissions/role`)
+    const j = await r.json().catch(() => ({ permissions: {}, modules: [] }))
+    setRolePerms(j.permissions || {})
+    setAvailableModules(Array.isArray(j.modules) ? j.modules : [])
+  }
+
+  async function saveRolePermissions() {
+    if (!editRole) return
+    const r = await fetch(`/api/permissions/role`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: editRole, changes: tempPerms }) })
+    if (r.ok) {
+      toast.success("Permissões atualizadas")
+      setEditRole(null)
+      setTempPerms({})
+      await loadRolePermissions()
+    } else {
+      const err = await r.json().catch(() => ({}))
+      toast.error(err?.error || "Falha ao salvar")
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-muted-foreground" />
+            <CardTitle>Permissões por Papel</CardTitle>
+          </div>
+          <CardDescription>Defina quais módulos cada papel pode acessar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {["admin","moderator","member"].map((role) => (
+              <UICard key={role} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium capitalize">{role === "admin" ? "Administrador" : role === "moderator" ? "Moderador" : "Membro"}</div>
+                  <Button variant="outline" size="sm" onClick={() => { setEditRole(role as any); const base = rolePerms[role] || {}; const mods = availableModules.length ? availableModules : Object.keys(base || {}); const next: Record<string, boolean> = {}; for (const m of mods) next[m] = base[m] ?? false; setTempPerms(next) }}>Editar</Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(availableModules.length ? availableModules : Object.keys(rolePerms[role] || {})).map((m) => (
+                    <Badge key={m} variant={(rolePerms[role]?.[m] ? "default" : "secondary") as any} className={rolePerms[role]?.[m] ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}>{m}</Badge>
+                  ))}
+                </div>
+              </UICard>
+            ))}
+          </div>
+          <Dialog.Root open={!!editRole} onOpenChange={(v) => { if (!v) { setEditRole(null); setTempPerms({}) } }}>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+            <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-card text-card-foreground rounded-xl border shadow-xl w-full max-w-lg p-6 relative max-h-[80vh] overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => { setEditRole(null); setTempPerms({}) }}
+                  aria-label="Fechar"
+                  className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <Dialog.Title className="text-lg font-bold mb-2">Editar Permissões</Dialog.Title>
+                <Dialog.Description className="mb-4">Selecione os módulos permitidos para o papel</Dialog.Description>
+                {editRole === "admin" && (
+                  <div className="mb-3 p-3 border rounded-lg bg-muted/40 text-sm text-muted-foreground">
+                    Administrador possui acesso total e não pode ser restringido.
+                  </div>
+                )}
+                <div className="space-y-3">
+                  {(availableModules.length ? availableModules : Object.keys(tempPerms)).map((m) => (
+                    <div key={m} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="text-sm font-medium">{m}</div>
+                      <Switch disabled={editRole === "admin"} checked={!!tempPerms[m]} onCheckedChange={(v) => setTempPerms((s) => ({ ...s, [m]: v }))} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button type="button" variant="outline" onClick={() => { setEditRole(null); setTempPerms({}) }}>Cancelar</Button>
+                  <Button type="button" disabled={editRole === "admin"} onClick={saveRolePermissions}>Salvar</Button>
+                </div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Root>
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -360,10 +445,10 @@ export function SecuritySettings() {
                 <div className="flex justify-end gap-2 mt-4">
                   <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
                   <Button type="button" variant="destructive" disabled={deleting || !confirmAware || confirmPhrase.trim().toLowerCase() !== "desejo excluir minha conta"} onClick={async () => {
-                    const email = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+                    const email = getUserEmail()
                     if (!email) return
                     setDeleting(true)
-                    const r = await fetch(`/api/settings/account/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, confirmPhrase, reason, details, switchingTo, satisfaction }) })
+                    const r = await fetch(`/api/settings/account/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmPhrase, reason, details, switchingTo, satisfaction }) })
                     setDeleting(false)
                     if (r.ok) {
                       toast.success("Conta excluída")

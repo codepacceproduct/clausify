@@ -17,7 +17,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
   const [lastName, setLastName] = useState(initialProfile?.surname ?? "")
   const [email, setEmail] = useState<string>(() => {
     const local = typeof window !== "undefined" ? getUserEmail() : null
-    return initialProfile?.email ?? local ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    return initialProfile?.email ?? (local || "")
   })
   const [phone, setPhone] = useState(initialProfile?.phone ?? "")
   const [avatarUrl, setAvatarUrl] = useState<string>(initialProfile?.avatar_url ?? "")
@@ -41,13 +41,66 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
   const [dateFormat, setDateFormat] = useState(initialPrefs.dateFormat ?? "")
   const [saving, setSaving] = useState(false)
 
+  function broadcastPrefs(p?: { language?: string; timezone?: string; dateFormat?: string }) {
+    const prefs = {
+      language: p?.language ?? language,
+      timezone: p?.timezone ?? timezone,
+      dateFormat: p?.dateFormat ?? dateFormat,
+    }
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("prefs", JSON.stringify(prefs))
+        window.dispatchEvent(new CustomEvent("preferences:updated", { detail: prefs }))
+      }
+    } catch {}
+  }
+
+  function originFrom(pos: string) {
+    switch (pos) {
+      case "top":
+        return "top center"
+      case "bottom":
+        return "bottom center"
+      case "left":
+        return "center left"
+      case "right":
+        return "center right"
+      default:
+        return "center"
+    }
+  }
+
+  function bgPositionFrom(pos: string) {
+    switch (pos) {
+      case "top":
+        return "center top"
+      case "bottom":
+        return "center bottom"
+      case "left":
+        return "left center"
+      case "right":
+        return "right center"
+      default:
+        return "center"
+    }
+  }
+
+  function bgSize(fit: string, zoom: number) {
+    if (zoom === 1) {
+      if (fit === "cover") return "cover"
+      if (fit === "contain") return "contain"
+      return "100% 100%"
+    }
+    return `${Math.round(zoom * 100)}% auto`
+  }
+
   useEffect(() => {
-    const userEmail = getUserEmail() ?? (process.env.NEXT_PUBLIC_DEFAULT_EMAIL ?? "caiolncoln@gmail.com")
+    const userEmail = getUserEmail()
     if (!userEmail) return
     const needsClientFetch = !initialProfile || initialProfile?.email !== userEmail
     if (!needsClientFetch) return
     const load = async () => {
-      const res = await fetch(`/api/settings/profile?email=${encodeURIComponent(userEmail)}`)
+      const res = await fetch(`/api/settings/profile`)
       if (!res.ok) return
       const { profile, organization } = await res.json()
       if (profile) {
@@ -74,6 +127,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
         setTimezone(organization.timezone ?? "america-saopaulo")
         setLanguage(organization.locale ?? "pt-br")
       }
+      broadcastPrefs()
     }
     load()
   }, [initialProfile])
@@ -85,7 +139,6 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
     }
     setSaving(true)
     const payload = {
-      email,
       name: firstName,
       surname: lastName,
       phone,
@@ -102,6 +155,11 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
         body: JSON.stringify(payload),
       })
       if (res.ok) {
+        if (typeof window !== "undefined") {
+          const detail = { url: avatarUrl || undefined, prefs: { fit: avatarFit, position: avatarPosition, zoom: avatarZoom } }
+          window.dispatchEvent(new CustomEvent("profile:avatar-updated", { detail }))
+        }
+        broadcastPrefs({ language, timezone, dateFormat })
         toast.success("Configurações salvas")
       } else {
         toast.error("Falha ao salvar configurações")
@@ -128,11 +186,9 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full overflow-hidden border">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Avatar"
+                  <div
                     className="w-full h-full"
-                    style={{ objectFit: avatarFit as any, objectPosition: avatarPosition as any, transform: `scale(${avatarZoom})` }}
+                    style={{ backgroundImage: `url(${avatarUrl})`, backgroundRepeat: "no-repeat", backgroundPosition: bgPositionFrom(avatarPosition), backgroundSize: bgSize(avatarFit, avatarZoom) }}
                   />
                 ) : (
                   <div className="w-full h-full bg-muted" />
@@ -156,18 +212,21 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
                     setAvatarUrl(localUrl)
                     if (!email) return
                     const fd = new FormData()
-                    fd.append("email", email)
                     fd.append("file", f)
-                    try {
-                      const r = await fetch("/api/settings/avatar", { method: "POST", body: fd })
-                      const data = await r.json().catch(() => null)
-                      if (r.ok && data && data.url) {
-                        setAvatarUrl((prev) => data.url || prev)
-                        toast.success("Foto atualizada")
-                      } else {
-                        toast.error("Falha no upload")
+                  try {
+                    const r = await fetch("/api/settings/avatar", { method: "POST", body: fd })
+                    const data = await r.json().catch(() => null)
+                    if (r.ok && data && data.url) {
+                      setAvatarUrl((prev) => data.url || prev)
+                      if (typeof window !== "undefined") {
+                        const detail = { url: data.url || undefined, prefs: { fit: avatarFit, position: avatarPosition, zoom: avatarZoom } }
+                        window.dispatchEvent(new CustomEvent("profile:avatar-updated", { detail }))
                       }
-                    } catch {
+                      toast.success("Foto atualizada")
+                    } else {
+                      toast.error("Falha no upload")
+                    }
+                  } catch {
                       toast.error("Erro no upload")
                     }
                   }}
@@ -237,11 +296,9 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
             <div className="flex items-center gap-4">
               <div className="w-32 h-32 rounded-full overflow-hidden border">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Avatar"
+                  <div
                     className="w-full h-full"
-                    style={{ objectFit: tempFit as any, objectPosition: tempPosition as any, transform: `scale(${tempZoom})` }}
+                    style={{ backgroundImage: `url(${avatarUrl})`, backgroundRepeat: "no-repeat", backgroundPosition: bgPositionFrom(tempPosition), backgroundSize: bgSize(tempFit, tempZoom) }}
                   />
                 ) : (
                   <div className="w-full h-full bg-muted" />
@@ -353,7 +410,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="language">Idioma</Label>
-                <Select value={language || undefined} onValueChange={(v) => setLanguage(v)}>
+                <Select value={language || undefined} onValueChange={(v) => { setLanguage(v); broadcastPrefs({ language: v }) }}>
                   <SelectTrigger id="language">
                     <SelectValue />
                   </SelectTrigger>
@@ -366,7 +423,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Fuso Horário</Label>
-                <Select value={timezone || undefined} onValueChange={(v) => setTimezone(v)}>
+                <Select value={timezone || undefined} onValueChange={(v) => { setTimezone(v); broadcastPrefs({ timezone: v }) }}>
                   <SelectTrigger id="timezone">
                     <SelectValue />
                   </SelectTrigger>
@@ -380,7 +437,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
             </div>
             <div className="space-y-2">
               <Label htmlFor="dateFormat">Formato de Data</Label>
-              <Select value={dateFormat || undefined} onValueChange={(v) => setDateFormat(v)}>
+              <Select value={dateFormat || undefined} onValueChange={(v) => { setDateFormat(v); broadcastPrefs({ dateFormat: v }) }}>
                 <SelectTrigger id="dateFormat">
                   <SelectValue />
                 </SelectTrigger>

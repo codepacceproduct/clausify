@@ -1,6 +1,6 @@
 "use client"
 
-import { ptBR } from "date-fns/locale"
+import { ptBR, enUS, es } from "date-fns/locale"
 import { format } from "date-fns"
 import { DayPicker } from "react-day-picker"
 import * as Popover from "@radix-ui/react-popover"
@@ -15,15 +15,27 @@ export interface DatePickerProps {
   fromYear?: number
   toYear?: number
   className?: string
-  placeholder?: string
   style?: "calendar" | "dmy"
+  allowCalendar?: boolean
 }
 
-export function DatePicker({ value, onChange, fromYear = 2000, toYear = 2100, className, placeholder = "Selecionar data", style = "dmy" }: DatePickerProps) {
-  const locale = useMemo(() => ptBR, [])
+export function DatePicker({ value, onChange, fromYear = 2000, toYear = 2100, className, style = "dmy", allowCalendar = false }: DatePickerProps) {
+  const prefs = typeof window !== "undefined" ? ((window as any).__prefs || (() => { try { return JSON.parse(localStorage.getItem("prefs") || "{}") } catch { return {} } })()) : {}
+  const locale = useMemo(() => {
+    const lang = prefs?.language || "pt-br"
+    if (lang === "en") return enUS
+    if (lang === "es") return es
+    return ptBR
+  }, [prefs?.language])
   const [open, setOpen] = useState(false)
   const today = useMemo(() => new Date(), [])
-  const label = value ? format(value, "dd/MM/yyyy", { locale }) : format(today, "dd/MM/yyyy", { locale })
+  const pattern = (() => {
+    const f = prefs?.dateFormat || "dd-mm-yyyy"
+    if (f === "mm-dd-yyyy") return "MM/dd/yyyy"
+    if (f === "yyyy-mm-dd") return "yyyy-MM-dd"
+    return "dd/MM/yyyy"
+  })()
+  const label = value ? format(value, pattern, { locale }) : format(today, pattern, { locale })
   const initialValueRef = useRef<Date | undefined>(value)
   useEffect(() => {
     if (initialValueRef.current === undefined) {
@@ -94,7 +106,7 @@ export function DatePicker({ value, onChange, fromYear = 2000, toYear = 2100, cl
         </button>
       </Popover.Trigger>
       <Popover.Content sideOffset={8} className="z-50 rounded-xl border bg-card text-card-foreground p-3 shadow-md">
-        {style === "calendar" ? (
+        {allowCalendar && style === "calendar" ? (
           <DayPicker
             mode="single"
             selected={value}

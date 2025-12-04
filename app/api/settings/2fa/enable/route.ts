@@ -1,10 +1,13 @@
 import { supabaseServer } from "@/lib/supabase-server"
 import { verifyTOTP } from "@/lib/totp"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, token } = body
-  if (!email || !token) return new Response(JSON.stringify({ error: "missing email or token" }), { status: 400 })
+  const { token } = body
+  const email = await getAuthedEmail(req)
+  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  if (!token) return new Response(JSON.stringify({ error: "missing token" }), { status: 400 })
   const { data: profiles } = await supabaseServer
     .from("profiles")
     .select("id, email, totp_secret")

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState("")
+  const emailRef = useRef<HTMLInputElement | null>(null)
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -31,9 +31,34 @@ export default function LoginPage() {
     return !!j.enabled
   }
 
+  
+
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return
+      if (rememberMe) {
+        localStorage.setItem("rememberMe", "true")
+        const v = emailRef.current?.value || ""
+        if (v) localStorage.setItem("rememberEmail", v)
+      } else {
+        localStorage.setItem("rememberMe", "false")
+      }
+    } catch {}
+  }, [rememberMe])
+
+  useEffect(() => {
+    try {
+      const remembered = typeof window !== "undefined" && localStorage.getItem("rememberMe") === "true"
+      const saved = remembered ? (localStorage.getItem("rememberEmail") || "") : ""
+      if (emailRef.current) emailRef.current.value = saved
+    } catch {}
+  }, [])
+
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    const email = emailRef.current?.value || ""
     const needs2fa = await checkTwoFA(email)
     if (needs2fa) {
       if (!twoFactorCode) {
@@ -46,7 +71,7 @@ export default function LoginPage() {
         return
       }
     }
-    if (login(email, password)) {
+    if (await login(email, password)) {
       try {
         const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
         // very naive parser
@@ -55,6 +80,12 @@ export default function LoginPage() {
         const device = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop'
         const host = typeof window !== 'undefined' ? `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` : null
         await fetch('/api/sessions/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, userAgent: ua, device, os, browser, clientHost: host, hostname: null }) })
+      } catch {}
+      try {
+        if (rememberMe) {
+          localStorage.setItem("rememberMe", "true")
+          localStorage.setItem("rememberEmail", email)
+        }
       } catch {}
       router.push("/dashboard")
     }
@@ -160,10 +191,9 @@ export default function LoginPage() {
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <Input
+                  ref={emailRef}
                   type="email"
                   placeholder="Digite seu e-mail"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="h-16 sm:h-14 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
                   required
                 />

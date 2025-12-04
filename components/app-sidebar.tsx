@@ -24,6 +24,7 @@ import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { logout } from "@/lib/auth"
 import Image from "next/image"
+import { getUserEmail } from "@/lib/auth"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -49,6 +50,8 @@ export function AppSidebar({
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [allowedModules, setAllowedModules] = useState<Record<string, boolean>>({})
+  const [profileRole, setProfileRole] = useState<string | null>(null)
 
   useEffect(() => {
     const handleResize = () => {
@@ -64,6 +67,43 @@ export function AppSidebar({
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      const email = getUserEmail()
+      if (!email) return
+      try {
+        const profRes = await fetch(`/api/settings/profile`)
+        const { profile } = await profRes.json()
+        const role = String(profile?.role || "member").toLowerCase()
+        setProfileRole(role)
+        const permRes = await fetch(`/api/permissions/role`)
+        const j = await permRes.json()
+        const perms = j?.permissions || {}
+        const modules = perms[role] || {}
+        setAllowedModules(modules)
+      } catch {}
+    }
+    load()
+  }, [])
+
+  const moduleKeyForHref = (href: string): string => {
+    if (href.startsWith("/dashboard")) return "dashboard"
+    if (href.startsWith("/contratos")) return "contratos"
+    if (href.startsWith("/portfolio")) return "portfolio"
+    if (href.startsWith("/aprovacoes")) return "aprovacoes"
+    if (href.startsWith("/calendario")) return "calendario"
+    if (href.startsWith("/versionamento")) return "versionamento"
+    if (href.startsWith("/playbook")) return "playbook"
+    if (href.startsWith("/seguranca")) return "seguranca"
+    if (href.startsWith("/assinaturas")) return "assinaturas"
+    if (href.startsWith("/configuracoes")) return "configuracoes"
+    if (href.startsWith("/integracoes")) return "integracoes"
+    if (href.startsWith("/auditoria")) return "auditoria"
+    if (href.startsWith("/equipes")) return "equipes"
+    if (href.startsWith("/analises")) return "analises"
+    return href.replace(/^\//, "")
+  }
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
@@ -128,7 +168,10 @@ export function AppSidebar({
         </div>
 
         <nav className="flex-1 space-y-2 px-4 sm:px-3 overflow-y-auto pt-4 sm:pt-3">
-          {navigation.map((item) => {
+          {navigation.filter((item) => {
+            const key = moduleKeyForHref(item.href)
+            return allowedModules[key] !== false
+          }).map((item) => {
             const isActive = pathname === item.href
             return (
               <Link

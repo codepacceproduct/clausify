@@ -36,6 +36,13 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setUploading(false)
     onAnalysisStart?.()
+    try {
+      await fetch(`/api/audit/logs/record`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
+      })
+    } catch {}
   }
 
   return (

@@ -1,15 +1,15 @@
 import { supabaseServer } from "@/lib/supabase-server"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function GET(req: Request) {
-  const url = new URL(req.url)
-  const email = url.searchParams.get("email")
-  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+  const email = await getAuthedEmail(req)
+  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
 
   let profile = null as any
   {
     const { data: profiles } = await supabaseServer
       .from("profiles")
-      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url")
+      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url, role")
       .eq("email", email)
       .limit(1)
     profile = profiles?.[0] ?? null
@@ -46,8 +46,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, name, surname, phone, regional_preferences, organization, avatar_url } = body
-  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+  const authed = await getAuthedEmail(req)
+  if (!authed) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  const { name, surname, phone, regional_preferences, organization, avatar_url } = body
+  const email = authed
 
   const { data: authUsers } = await supabaseServer
     .from("auth.users")
@@ -86,6 +88,39 @@ export async function POST(req: Request) {
         .from("organizations")
         .update({ name: orgName, industry, size, timezone, locale })
         .eq("id", id)
+      if (id) {
+        if (userId) {
+          await supabaseServer.from("profiles").update({ organization_id: id }).eq("id", userId)
+        } else {
+          await supabaseServer.from("profiles").update({ organization_id: id }).eq("email", email)
+        }
+        const { data: existingMember } = await supabaseServer
+          .from("organization_members")
+          .select("email")
+          .eq("organization_id", id)
+          .eq("email", email)
+          .limit(1)
+        if (existingMember && existingMember.length > 0) {
+          await supabaseServer
+            .from("organization_members")
+            .update({ status: "active", joined_at: new Date().toISOString() })
+            .eq("organization_id", id)
+            .eq("email", email)
+        } else {
+          await supabaseServer
+            .from("organization_members")
+            .insert({ organization_id: id, email, role: "member", status: "active", joined_at: new Date().toISOString() })
+        }
+        const { data: profs } = await supabaseServer
+          .from("profiles")
+          .select("role")
+          .eq("email", email)
+          .limit(1)
+        const currentRole = String(profs?.[0]?.role || "")
+        if (!currentRole) {
+          await supabaseServer.from("profiles").update({ role: "member" }).eq("email", email)
+        }
+      }
     } else if (orgName) {
       const { data: createdOrg, error: orgErr } = await supabaseServer
         .from("organizations")
@@ -96,11 +131,34 @@ export async function POST(req: Request) {
       const newOrgId = createdOrg?.[0]?.id
       if (newOrgId) {
         if (userId) {
-          await supabaseServer.from("profiles").update({ organization_id: newOrgId }).eq("id", userId)
+          await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("id", userId)
         } else {
-          await supabaseServer.from("profiles").update({ organization_id: newOrgId }).eq("email", email)
+          await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("email", email)
         }
+        await supabaseServer
+          .from("organization_members")
+          .insert({ organization_id: newOrgId, email, role: "admin", status: "active", joined_at: new Date().toISOString() })
       }
+    }
+  } else {
+    const domain = (email.split("@")[1] || "").split(".")[0]
+    const fallbackName = domain ? domain : (name ? `${name} Organização` : `Org de ${email}`)
+    const { data: createdOrg, error: orgErr } = await supabaseServer
+      .from("organizations")
+      .insert({ name: fallbackName, industry: null, size: null, timezone: "america-saopaulo", locale: "pt-br" })
+      .select("id")
+      .limit(1)
+    if (orgErr) return new Response(JSON.stringify({ error: orgErr.message }), { status: 500 })
+    const newOrgId = createdOrg?.[0]?.id
+    if (newOrgId) {
+      if (userId) {
+        await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("id", userId)
+      } else {
+        await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("email", email)
+      }
+      await supabaseServer
+        .from("organization_members")
+        .insert({ organization_id: newOrgId, email, role: "admin", status: "active", joined_at: new Date().toISOString() })
     }
   }
 
@@ -109,8 +167,10 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   const body = await req.json()
-  const { email, name, surname, phone, regional_preferences, organization, avatar_url } = body
-  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+  const authed = await getAuthedEmail(req)
+  if (!authed) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  const { name, surname, phone, regional_preferences, organization, avatar_url } = body
+  const email = authed
 
   const updatePayload: any = { name, surname, phone }
   if (regional_preferences) updatePayload.regional_preferences = regional_preferences

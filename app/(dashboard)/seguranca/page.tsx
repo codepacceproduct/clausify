@@ -2,6 +2,7 @@ import { LayoutWrapper } from "@/components/layout-wrapper"
 import { SecurityOverview } from "@/components/security-overview"
 import { AuditLogs } from "@/components/audit-logs"
 import { AccessControl } from "@/components/access-control"
+import { SecuritySettings } from "@/components/security-settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function SecurityPage() {
@@ -32,7 +33,7 @@ export default function SecurityPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
-          <div className="text-center py-12 text-muted-foreground">Configurações de segurança serão exibidas aqui</div>
+          <SecuritySettings />
         </TabsContent>
       </Tabs>
     </LayoutWrapper>

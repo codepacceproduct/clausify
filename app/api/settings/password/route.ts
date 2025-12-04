@@ -1,10 +1,12 @@
 import { supabaseServer } from "@/lib/supabase-server"
 import { supabase } from "@/lib/supabase"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, currentPassword, newPassword } = body
-  if (!email || !newPassword) return new Response(JSON.stringify({ error: "missing email or newPassword" }), { status: 400 })
+  const { currentPassword, newPassword } = body
+  const email = await getAuthedEmail(req)
+  if (!email || !newPassword) return new Response(JSON.stringify({ error: "unauthorized or missing newPassword" }), { status: 400 })
 
   let userId: string | null = null
   if (currentPassword) {

@@ -23,12 +23,38 @@ function Avatar({
 
 function AvatarImage({
   className,
+  fit = 'cover',
+  position = 'top',
+  zoom = 1,
+  style,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Image> & {
+  fit?: 'cover' | 'contain' | 'fill'
+  position?: 'center' | 'top' | 'bottom' | 'left' | 'right'
+  zoom?: number
+  style?: React.CSSProperties
+}) {
+  const pos = position === 'top'
+    ? 'top center'
+    : position === 'bottom'
+      ? 'bottom center'
+      : position === 'left'
+        ? 'center left'
+        : position === 'right'
+          ? 'center right'
+          : 'center'
+  const mergedStyle: React.CSSProperties = {
+    objectFit: fit,
+    objectPosition: pos,
+    transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+    transformOrigin: pos,
+    ...style,
+  }
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
       className={cn('aspect-square size-full', className)}
+      style={mergedStyle}
       {...props}
     />
   )

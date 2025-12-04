@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,9 +16,15 @@ import { login } from "@/lib/auth"
 export default function CriarContaPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const sp = useSearchParams()
+  const qEmail = sp.get("email") || ""
+  const qName = sp.get("name") || ""
+  const qSurname = sp.get("surname") || ""
+  const qOrgId = sp.get("org_id") || ""
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [nome, setNome] = useState("")
-  const [email, setEmail] = useState("")
+  const [nome, setNome] = useState(qName)
+  const [sobrenome, setSobrenome] = useState(qSurname)
+  const [email, setEmail] = useState(qEmail)
   const [empresa, setEmpresa] = useState("")
   const [setor, setSetor] = useState("")
   const [tamanho, setTamanho] = useState("")
@@ -26,9 +32,32 @@ export default function CriarContaPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [orgId, setOrgId] = useState(qOrgId)
+
+  useEffect(() => {
+    const logInvite = async () => {
+      if (!qEmail) return
+      try {
+        await fetch("/api/teams/invite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: qEmail, name: qName, surname: qSurname, org_id: qOrgId, logOnly: true }),
+        })
+      } catch {}
+    }
+    logInvite()
+  }, [qEmail, qName, qSurname, qOrgId])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!nome.trim()) {
+      alert("Informe seu nome")
+      return
+    }
+    if (!(sobrenome.trim() || qSurname)) {
+      alert("Informe seu sobrenome")
+      return
+    }
     if (password !== confirmPassword) {
       alert("As senhas não coincidem")
       return
@@ -37,18 +66,30 @@ export default function CriarContaPage() {
       alert("Você precisa aceitar os termos de uso")
       return
     }
+    if (!orgId) {
+      if (!empresa.trim()) {
+        alert("Informe o nome da organização")
+        return
+      }
+      if (!setor) {
+        alert("Selecione o setor da organização")
+        return
+      }
+      if (!tamanho) {
+        alert("Selecione o tamanho da empresa")
+        return
+      }
+    }
     setIsLoading(true)
 
     try {
-      const [firstName, ...rest] = nome.trim().split(" ")
-      const lastName = rest.join(" ")
       const payload: any = {
         email,
-        name: firstName || nome,
-        surname: lastName || "",
-        organization: empresa.trim()
+        name: nome.trim() || qName,
+        surname: sobrenome.trim() || qSurname,
+        organization: orgId ? { id: orgId } : (empresa.trim()
           ? { name: empresa.trim(), industry: setor || null, size: tamanho || null }
-          : null,
+          : null),
       }
       await fetch("/api/settings/profile", {
         method: "POST",
@@ -156,18 +197,34 @@ export default function CriarContaPage() {
           </div>
 
           <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-base sm:text-sm font-medium text-gray-300">Nome completo</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <Input
-                  type="text"
-                  placeholder="Digite seu nome completo"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
-                  required
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-base sm:text-sm font-medium text-gray-300">Nome</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <Input
+                    type="text"
+                    placeholder="Digite seu nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-base sm:text-sm font-medium text-gray-300">Sobrenome</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <Input
+                    type="text"
+                    placeholder="Digite seu sobrenome"
+                    value={sobrenome}
+                    onChange={(e) => setSobrenome(e.target.value)}
+                    className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
@@ -186,21 +243,24 @@ export default function CriarContaPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-base sm:text-sm font-medium text-gray-300">Empresa / Escritório (opcional)</label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <Input
-                  type="text"
-                  placeholder="Nome do escritório ou empresa"
-                  value={empresa}
-                  onChange={(e) => setEmpresa(e.target.value)}
-                  className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
-                />
+            {!orgId && (
+              <div className="space-y-2">
+                <label className="text-base sm:text-sm font-medium text-gray-300">Organização</label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <Input
+                    type="text"
+                    placeholder="Nome do escritório ou empresa"
+                    value={empresa}
+                    onChange={(e) => setEmpresa(e.target.value)}
+                    className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
-            {empresa.trim() && (
+            {!orgId && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-base sm:text-sm font-medium text-gray-300">Setor</label>
