@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,14 @@ import Image from "next/image"
 import { login } from "@/lib/auth"
 
 export default function CriarContaPage() {
+  return (
+    <Suspense fallback={<div />}> 
+      <RegisterContent />
+    </Suspense>
+  )
+}
+
+function RegisterContent() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const sp = useSearchParams()
@@ -32,7 +40,9 @@ export default function CriarContaPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [orgId, setOrgId] = useState(qOrgId)
+  const [orgId] = useState(qOrgId)
+  const [inviteOk, setInviteOk] = useState(true)
+  const [inviteMessage, setInviteMessage] = useState("")
 
   useEffect(() => {
     const logInvite = async () => {
@@ -48,8 +58,41 @@ export default function CriarContaPage() {
     logInvite()
   }, [qEmail, qName, qSurname, qOrgId])
 
+  useEffect(() => {
+    const validateInvite = async () => {
+      if (!qEmail) return
+      try {
+        const params = new URLSearchParams()
+        params.set("email", qEmail)
+        if (qOrgId) params.set("org_id", qOrgId)
+        const r = await fetch(`/api/teams/invite?${params.toString()}`)
+        const j = await r.json().catch(() => ({}))
+        if (j && j.invite) {
+          if (j.isValid) {
+            const inv = j.invite as any
+            if (!nome && inv.name) setNome(inv.name)
+            if (!sobrenome && inv.surname) setSobrenome(inv.surname)
+            setInviteOk(true)
+            setInviteMessage("")
+          } else {
+            setInviteOk(false)
+            const reason = String(j.reason || "invalid")
+            if (reason === "expired") setInviteMessage("Este convite expirou. Solicite um novo ao administrador.")
+            else if (reason === "not_started") setInviteMessage("Este convite ainda não está válido. Tente novamente mais tarde.")
+            else setInviteMessage("Convite inválido ou não encontrado.")
+          }
+        }
+      } catch {}
+    }
+    validateInvite()
+  }, [qEmail, qOrgId, nome, sobrenome])
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!inviteOk) {
+      alert(inviteMessage || "Convite inválido")
+      return
+    }
     if (!nome.trim()) {
       alert("Informe seu nome")
       return
@@ -196,6 +239,11 @@ export default function CriarContaPage() {
             <p className="text-gray-400 text-sm">Preencha os dados abaixo para começar</p>
           </div>
 
+          {inviteMessage ? (
+            <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+              {inviteMessage}
+            </div>
+          ) : null}
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -360,7 +408,7 @@ export default function CriarContaPage() {
             <Button
               type="submit"
               className="w-full h-14 sm:h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-lg sm:text-base rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
-              disabled={isLoading}
+              disabled={isLoading || !inviteOk}
             >
               {isLoading ? (
                 "Criando conta..."

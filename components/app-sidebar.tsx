@@ -24,7 +24,7 @@ import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { logout } from "@/lib/auth"
 import Image from "next/image"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken } from "@/lib/auth"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -51,7 +51,6 @@ export function AppSidebar({
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [allowedModules, setAllowedModules] = useState<Record<string, boolean>>({})
-  const [profileRole, setProfileRole] = useState<string | null>(null)
 
   useEffect(() => {
     const handleResize = () => {
@@ -73,11 +72,11 @@ export function AppSidebar({
       const email = getUserEmail()
       if (!email) return
       try {
-        const profRes = await fetch(`/api/settings/profile`)
+        const token = getAuthToken()
+        const profRes = await fetch(`/api/settings/profile`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
         const { profile } = await profRes.json()
         const role = String(profile?.role || "member").toLowerCase()
-        setProfileRole(role)
-        const permRes = await fetch(`/api/permissions/role`)
+        const permRes = await fetch(`/api/permissions/role`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
         const j = await permRes.json()
         const perms = j?.permissions || {}
         const modules = perms[role] || {}

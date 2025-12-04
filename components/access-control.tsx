@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Shield, Edit, Trash2, Mail, Clock } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken } from "@/lib/auth"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR, enUS, es } from "date-fns/locale"
 import { Input } from "@/components/ui/input"
@@ -59,7 +59,8 @@ export function AccessControl() {
       return
     }
     const url = `/api/organizations/members`
-    fetch(url)
+    const token = getAuthToken()
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       .then(async (r) => r.json())
       .then((json) => {
         setMembers(Array.isArray(json?.members) ? json.members : [])
@@ -79,7 +80,8 @@ export function AccessControl() {
     const email = requesterEmail
     if (!email) return
     const url = `/api/organizations/members`
-    fetch(url).then(async (r) => r.json()).then((json) => {
+    const token = getAuthToken()
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined }).then(async (r) => r.json()).then((json) => {
       setMembers(Array.isArray(json?.members) ? json.members : [])
     })
   }
@@ -88,9 +90,12 @@ export function AccessControl() {
     if (!newEmail || !newPassword) return
     setInviting(true)
     try {
+      const token = getAuthToken()
+      const headers: any = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch("/api/organizations/members", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ email: newEmail, name: newName || undefined, surname: newSurname || undefined, password: newPassword, role: newRole }),
       })
       if (res.ok) {
@@ -108,11 +113,10 @@ export function AccessControl() {
   }
 
   async function handleSaveRole(email: string) {
-    const res = await fetch("/api/organizations/members", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ member_email: email, role: editingRole }),
-    })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const res = await fetch("/api/organizations/members", { method: "PUT", headers, body: JSON.stringify({ member_email: email, role: editingRole }) })
     if (res.ok) {
       setEditingEmail(null)
       reloadMembers()
@@ -121,11 +125,10 @@ export function AccessControl() {
 
   async function confirmDelete() {
     if (!deleteEmail) return
-    const res = await fetch("/api/organizations/members", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ member_email: deleteEmail }),
-    })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const res = await fetch("/api/organizations/members", { method: "DELETE", headers, body: JSON.stringify({ member_email: deleteEmail }) })
     setDeleteOpen(false)
     setDeleteEmail(null)
     if (res.ok) reloadMembers()

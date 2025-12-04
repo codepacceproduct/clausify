@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Download, FileText, Upload, Edit, Trash2, Eye, User, Calendar } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken } from "@/lib/auth"
 
 type LogItem = {
   id: string | number
@@ -51,7 +51,8 @@ export function AuditLogs() {
     if (!email) return
     ;(async () => {
       try {
-        const r = await fetch(`/api/audit/logs/list`)
+        const token = getAuthToken()
+        const r = await fetch(`/api/audit/logs/list`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
         const j = await r.json()
         const rows: any[] = j.logs || []
         const mapped: LogItem[] = rows.map((s) => ({
@@ -66,13 +67,12 @@ export function AuditLogs() {
         setLogs(mapped)
         const ips = Array.from(new Set(rows.map((s) => s.ip).filter(Boolean))) as string[]
         await Promise.all(
-          ips.map((ip) =>
-            fetch(`/api/audit/logs/record`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ip, resource: "Sistema", action: "ip_change" }),
-            }).catch(() => {})
-          )
+          ips.map((ip) => {
+            const tk = getAuthToken()
+            const headers: any = { "Content-Type": "application/json" }
+            if (tk) headers.Authorization = `Bearer ${tk}`
+            return fetch(`/api/audit/logs/record`, { method: "POST", headers, body: JSON.stringify({ ip, resource: "Sistema", action: "ip_change" }) }).catch(() => {})
+          })
         )
       } catch {}
     })()
@@ -100,7 +100,8 @@ export function AuditLogs() {
             onClick={async () => {
               const email = getUserEmail()
               if (!email) return
-              const res = await fetch(`/api/audit/logs/export`)
+              const token = getAuthToken()
+              const res = await fetch(`/api/audit/logs/export`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
               const blob = await res.blob()
               const url = URL.createObjectURL(blob)
               const a = document.createElement("a")

@@ -44,3 +44,23 @@ export function getUserEmail(): string | null {
     return null
   }
 }
+
+export function getAuthToken(): string | null {
+  if (typeof document === "undefined") return null
+  const m = document.cookie.match(/(?:^|; )auth_token=([^;]+)/)
+  return m && m[1] ? decodeURIComponent(m[1]) : null
+}
+
+export async function syncAuthCookies(): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getSession()
+    const session = data?.session
+    if (!session) return
+    const token = session.access_token
+    const email = session.user?.email || getUserEmail() || ""
+    const expiresAt = session.expires_at ? new Date(session.expires_at * 1000) : new Date(Date.now() + 60 * 60 * 1000)
+    const expires = expiresAt.toUTCString()
+    document.cookie = `auth_token=${encodeURIComponent(token)}; path=/; expires=${expires}`
+    if (email) document.cookie = `user_email=${encodeURIComponent(email)}; path=/; expires=${expires}`
+  } catch {}
+}

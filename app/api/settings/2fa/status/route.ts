@@ -2,7 +2,10 @@ import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function GET(req: Request) {
-  const email = await getAuthedEmail(req)
+  const url = new URL(req.url)
+  const queryEmail = url.searchParams.get("email")
+  const authedEmail = await getAuthedEmail(req)
+  const email = authedEmail || queryEmail
   if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
   const { data: profiles } = await supabaseServer
     .from("profiles")

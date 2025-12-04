@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Users, Link as LinkIcon, Mail, Building2, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function TeamsSettings() {
@@ -73,9 +73,12 @@ export function TeamsSettings() {
     }
     setLoading(true)
     try {
+      const token = getAuthToken()
+      const headers: any = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
       const res = await fetch("/api/teams/invite", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           name: firstName,
           surname: lastName,
@@ -154,8 +157,8 @@ export function TeamsSettings() {
     setPendingRoles((prev) => ({ ...prev, [email]: role }))
   }
   const saveAllStatusChanges = async () => {
-  const requesterEmail = getUserEmail() || ""
-    if (!userEmail) return
+    const requesterEmail = getUserEmail() || ""
+    if (!requesterEmail) return
     const statusChanges = Object.entries(pendingStatuses)
     const roleChanges = Object.entries(pendingRoles)
     const allEmails = Array.from(new Set([...statusChanges.map(([e]) => e), ...roleChanges.map(([e]) => e)]))
@@ -165,14 +168,19 @@ export function TeamsSettings() {
       for (const targetEmail of allEmails) {
         const status = pendingStatuses[targetEmail]
         const role = pendingRoles[targetEmail]
-        const payload: any = { requester: userEmail, member_email: targetEmail }
+        const payload: any = { requester: requesterEmail, member_email: targetEmail }
         if (status) payload.status = status
         if (role) payload.role = role
-        await fetch(`/api/organizations/members`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
+        {
+          const token = getAuthToken()
+          const headers: any = { "Content-Type": "application/json" }
+          if (token) headers.Authorization = `Bearer ${token}`
+          await fetch(`/api/organizations/members`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify(payload),
+          })
+        }
       }
       toast.success("Alterações salvas")
       setPendingStatuses({})
@@ -191,7 +199,8 @@ export function TeamsSettings() {
     if (!userEmail) return
     setOrgLoading(true)
     try {
-      const r = await fetch(`/api/organizations/current`)
+      const token = getAuthToken()
+      const r = await fetch(`/api/organizations/current`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       const j = await r.json().catch(() => ({}))
       const o = j.organization || null
       if (o) {
@@ -220,7 +229,8 @@ export function TeamsSettings() {
     const userEmail = getUserEmail() || ""
     if (!userEmail) return
     try {
-      const r = await fetch(`/api/organizations/members`)
+      const token = getAuthToken()
+      const r = await fetch(`/api/organizations/members`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       const j = await r.json().catch(() => ({ members: [] }))
       setMembers(j.members || [])
     } catch {}
@@ -253,7 +263,10 @@ export function TeamsSettings() {
       },
     }
     try {
-      const r = await fetch(`/api/organizations/current`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      const token = getAuthToken()
+      const headers: any = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const r = await fetch(`/api/organizations/current`, { method: "PUT", headers, body: JSON.stringify(payload) })
       if (r.ok) {
         toast.success("Organização atualizada")
         await loadOrganization()
@@ -272,7 +285,8 @@ export function TeamsSettings() {
     const ok = window.confirm("Tem certeza que deseja excluir a organização? Esta ação é irreversível.")
     if (!ok) return
     try {
-      const r = await fetch(`/api/organizations/current`, { method: "DELETE" })
+      const token = getAuthToken()
+      const r = await fetch(`/api/organizations/current`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       if (r.ok) {
         toast.success("Organização excluída")
         setOrgId(null)

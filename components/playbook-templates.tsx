@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken } from "@/lib/auth"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, FileText, Download, Eye, Star } from "lucide-react"
@@ -89,11 +89,10 @@ export function PlaybookTemplates() {
     const email = getUserEmail() || ""
     if (!email) return
     try {
-      await fetch("/api/audit/logs/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, resource, status: "success" }),
-      })
+      const token = getAuthToken()
+      const headers: any = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
+      await fetch("/api/audit/logs/record", { method: "POST", headers, body: JSON.stringify({ action, resource, status: "success" }) })
     } catch {}
   }
 

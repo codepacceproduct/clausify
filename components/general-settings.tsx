@@ -55,20 +55,7 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
     } catch {}
   }
 
-  function originFrom(pos: string) {
-    switch (pos) {
-      case "top":
-        return "top center"
-      case "bottom":
-        return "bottom center"
-      case "left":
-        return "center left"
-      case "right":
-        return "center right"
-      default:
-        return "center"
-    }
-  }
+  
 
   function bgPositionFrom(pos: string) {
     switch (pos) {
@@ -127,7 +114,18 @@ export function GeneralSettings({ initialProfile, initialOrganization }: { initi
         setTimezone(organization.timezone ?? "america-saopaulo")
         setLanguage(organization.locale ?? "pt-br")
       }
-      broadcastPrefs()
+      {
+        const lang = (organization?.locale ?? (profile?.regional_preferences?.language ?? "pt-br")) as string
+        const tz = (organization?.timezone ?? (profile?.regional_preferences?.timezone ?? "america-saopaulo")) as string
+        const df = (profile?.regional_preferences?.dateFormat ?? "dd-mm-yyyy") as string
+        try {
+          if (typeof window !== "undefined") {
+            const prefs = { language: lang, timezone: tz, dateFormat: df }
+            localStorage.setItem("prefs", JSON.stringify(prefs))
+            window.dispatchEvent(new CustomEvent("preferences:updated", { detail: prefs }))
+          }
+        } catch {}
+      }
     }
     load()
   }, [initialProfile])

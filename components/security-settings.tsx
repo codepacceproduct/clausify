@@ -10,12 +10,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { logout } from "@/lib/auth"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { getUserEmail } from "@/lib/auth"
+import { getUserEmail, getAuthToken, syncAuthCookies } from "@/lib/auth"
 import { Progress } from "@/components/ui/progress"
 import * as Dialog from "@radix-ui/react-dialog"
 import { Card as UICard } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 
 export function SecuritySettings() {
   const [currentPassword, setCurrentPassword] = useState("")
@@ -51,6 +51,7 @@ export function SecuritySettings() {
   const [availableModules, setAvailableModules] = useState<string[]>([])
   const [editRole, setEditRole] = useState<"admin" | "moderator" | "member" | null>(null)
   const [tempPerms, setTempPerms] = useState<Record<string, boolean>>({})
+  const [setupError, setSetupError] = useState<string | null>(null)
 
   function formatRelative(iso: string) {
     const d = new Date(iso)
@@ -64,13 +65,17 @@ export function SecuritySettings() {
   async function loadSessions() {
     const email = getUserEmail()
     if (!email) return
-    const r = await fetch(`/api/sessions/list`)
+    const token = getAuthToken()
+    const r = await fetch(`/api/sessions/list`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
     const j = await r.json().catch(() => ({ sessions: [] }))
     setSessions(j.sessions || [])
   }
 
   async function endSession(id: string) {
-    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: id }) })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers, body: JSON.stringify({ sessionId: id }) })
     if (r.ok) {
       toast.success("Sessão encerrada")
       await loadSessions()
@@ -78,7 +83,10 @@ export function SecuritySettings() {
   }
 
   async function endOthers() {
-    const r = await fetch(`/api/sessions/end`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endOthers: true }) })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/sessions/end`, { method: "POST", headers, body: JSON.stringify({ endOthers: true }) })
     if (r.ok) {
       toast.success("Outras sessões encerradas")
       await loadSessions()
@@ -88,7 +96,8 @@ export function SecuritySettings() {
   async function refreshTwoFA() {
     const email = getUserEmail()
     if (!email) return
-    const r = await fetch(`/api/settings/2fa/status`)
+    const token = getAuthToken()
+    const r = await fetch(`/api/settings/2fa/status`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
     const j = await r.json().catch(() => ({ enabled: false }))
     setTwoFAEnabled(!!j.enabled)
   }
@@ -96,24 +105,68 @@ export function SecuritySettings() {
     refreshTwoFA()
     loadSessions()
     loadRolePermissions()
+    const i = setInterval(() => { loadSessions() }, 30000)
+    return () => { clearInterval(i) }
   }, [])
 
   async function openSetup() {
     const email = getUserEmail()
-    if (!email) return toast.error("Email ausente")
-    const r = await fetch(`/api/settings/2fa/setup`)
-    if (!r.ok) return toast.error("Falha ao iniciar configuração")
-    const j = await r.json()
-    setOtpauthUrl(j.otpauth)
+    if (!email) { toast.error("Email ausente"); return }
     setSetupOpen(true)
+    setOtpauthUrl(null)
+    setSetupError(null)
+    await syncAuthCookies()
+    let token = getAuthToken()
+    try {
+      const r = await fetch(`/api/settings/2fa/setup`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+      if (!r.ok) {
+        if (r.status === 401) {
+          await syncAuthCookies()
+          token = getAuthToken()
+          const rr = await fetch(`/api/settings/2fa/setup`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+          if (!rr.ok) {
+            const err = await rr.json().catch(() => ({}))
+            const msg = err?.error || "Falha ao iniciar configuração"
+            toast.error(msg)
+            setSetupError(msg)
+            return
+          }
+          const jj = await rr.json().catch(() => null)
+          if (!jj?.otpauth) {
+            const msg = "Resposta inválida do servidor"
+            toast.error(msg)
+            setSetupError(msg)
+            return
+          }
+          setOtpauthUrl(jj.otpauth)
+          return
+        }
+        const err = await r.json().catch(() => ({}))
+        const msg = err?.error || "Falha ao iniciar configuração"
+        toast.error(msg)
+        setSetupError(msg)
+        return
+      }
+      const j = await r.json().catch(() => null)
+      if (!j?.otpauth) {
+        const msg = "Resposta inválida do servidor"
+        toast.error(msg)
+        setSetupError(msg)
+        return
+      }
+      setOtpauthUrl(j.otpauth)
+    } catch {
+      const msg = "Erro ao conectar ao servidor"
+      toast.error(msg)
+      setSetupError(msg)
+    }
   }
 
   async function confirmEnable() {
-    const r = await fetch(`/api/settings/2fa/enable`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: setupToken }),
-    })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/settings/2fa/enable`, { method: "POST", headers, body: JSON.stringify({ token: setupToken }) })
     if (r.ok) {
       toast.success("2FA ativado")
       setSetupOpen(false)
@@ -125,7 +178,10 @@ export function SecuritySettings() {
   }
 
   async function disable2FA() {
-    const r = await fetch(`/api/settings/2fa/disable`, { method: "POST" })
+    const token = getAuthToken()
+    const headers: any = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/settings/2fa/disable`, { method: "POST", headers })
     if (r.ok) {
       toast.success("2FA desativado")
       setTwoFAEnabled(false)
@@ -150,11 +206,10 @@ export function SecuritySettings() {
     }
     setSaving(true)
     try {
-      const res = await fetch("/api/settings/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      })
+      const token = getAuthToken()
+      const headers: any = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const res = await fetch("/api/settings/password", { method: "POST", headers, body: JSON.stringify({ currentPassword, newPassword }) })
       if (res.ok) {
         toast.success("Senha atualizada")
         setCurrentPassword("")
@@ -173,15 +228,81 @@ export function SecuritySettings() {
   async function loadRolePermissions() {
     const email = getUserEmail()
     if (!email) return
-    const r = await fetch(`/api/permissions/role`)
-    const j = await r.json().catch(() => ({ permissions: {}, modules: [] }))
-    setRolePerms(j.permissions || {})
-    setAvailableModules(Array.isArray(j.modules) ? j.modules : [])
+    const token = getAuthToken()
+    const fallbackModules = [
+      "dashboard",
+      "contratos",
+      "portfolio",
+      "aprovacoes",
+      "calendario",
+      "versionamento",
+      "playbook",
+      "seguranca",
+      "assinaturas",
+      "configuracoes",
+      "configuracoes.general",
+      "configuracoes.notifications",
+      "configuracoes.security",
+      "configuracoes.integrations",
+      "configuracoes.teams",
+      "integracoes",
+      "auditoria",
+      "equipes",
+      "analises",
+    ]
+    try {
+      const r = await fetch(`/api/permissions/role`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+      if (!r.ok) {
+        const base: Record<string, Record<string, boolean>> = { admin: {}, moderator: {}, member: {} }
+        for (const m of fallbackModules) {
+          base.admin[m] = true
+          base.moderator[m] = !["seguranca"].includes(m)
+          base.member[m] = !["seguranca", "configuracoes", "aprovacoes", "auditoria"].includes(m)
+        }
+        for (const k of [
+          "configuracoes.general",
+          "configuracoes.notifications",
+          "configuracoes.security",
+          "configuracoes.integrations",
+          "configuracoes.teams",
+        ]) {
+          base.member[k] = false
+        }
+        setRolePerms(base)
+        setAvailableModules(fallbackModules)
+        return
+      }
+      const j = await r.json().catch(() => ({ permissions: {}, modules: [] }))
+      const mods = Array.isArray(j.modules) ? j.modules : fallbackModules
+      setRolePerms(j.permissions || {})
+      setAvailableModules(mods)
+    } catch {
+      const base: Record<string, Record<string, boolean>> = { admin: {}, moderator: {}, member: {} }
+      for (const m of fallbackModules) {
+        base.admin[m] = true
+        base.moderator[m] = !["seguranca"].includes(m)
+        base.member[m] = !["seguranca", "configuracoes", "aprovacoes", "auditoria"].includes(m)
+      }
+      for (const k of [
+        "configuracoes.general",
+        "configuracoes.notifications",
+        "configuracoes.security",
+        "configuracoes.integrations",
+        "configuracoes.teams",
+      ]) {
+        base.member[k] = false
+      }
+      setRolePerms(base)
+      setAvailableModules(fallbackModules)
+    }
   }
 
   async function saveRolePermissions() {
     if (!editRole) return
-    const r = await fetch(`/api/permissions/role`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: editRole, changes: tempPerms }) })
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/permissions/role`, { method: "PUT", headers, body: JSON.stringify({ role: editRole, changes: tempPerms }) })
     if (r.ok) {
       toast.success("Permissões atualizadas")
       setEditRole(null)
@@ -321,10 +442,21 @@ export function SecuritySettings() {
                 <p className="text-sm text-muted-foreground mb-4">Escaneie o QR no seu autenticador e digite o código para ativar.</p>
                 {otpauthUrl ? (
                   <div className="flex flex-col items-center gap-3 mb-4">
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`} alt="QR Code" className="border rounded" />
+                    <Image src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUrl)}`} alt="QR Code" width={200} height={200} className="border rounded" unoptimized />
                     <a href={otpauthUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Abrir no autenticador</a>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mb-4">
+                    {setupError ? (
+                      <div className="text-sm text-red-600 dark:text-red-400 mb-3">{setupError}</div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Gerando QR code...</div>
+                    )}
+                    <div className="flex justify-end">
+                      <Button type="button" variant="outline" size="sm" onClick={openSetup}>Tentar novamente</Button>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="setupToken">Código do autenticador</Label>
                   <Input id="setupToken" placeholder="000000" value={setupToken} onChange={(e) => setSetupToken(e.target.value)} />
@@ -366,9 +498,12 @@ export function SecuritySettings() {
               </div>
             ))}
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
             <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => endOthers()}>
               Encerrar Todas as Outras Sessões
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => loadSessions()}>
+              Atualizar Sessões
             </Button>
           </div>
         </CardContent>
@@ -448,15 +583,21 @@ export function SecuritySettings() {
                     const email = getUserEmail()
                     if (!email) return
                     setDeleting(true)
-                    const r = await fetch(`/api/settings/account/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmPhrase, reason, details, switchingTo, satisfaction }) })
-                    setDeleting(false)
-                    if (r.ok) {
-                      toast.success("Conta excluída")
-                      logout()
-                      window.location.href = "/login"
-                    } else {
-                      const err = await r.json().catch(() => ({}))
-                      toast.error(err?.error || "Falha ao excluir")
+                    try {
+                      const token = getAuthToken()
+                      const headers: any = { "Content-Type": "application/json" }
+                      if (token) headers.Authorization = `Bearer ${token}`
+                      const r = await fetch(`/api/settings/account/delete`, { method: "POST", headers, body: JSON.stringify({ confirmPhrase, reason, details, switchingTo, satisfaction }) })
+                      if (r.ok) {
+                        toast.success("Conta excluída")
+                        logout()
+                        window.location.href = "/login"
+                      } else {
+                        const err = await r.json().catch(() => ({}))
+                        toast.error(err?.error || "Falha ao excluir")
+                      }
+                    } finally {
+                      setDeleting(false)
                     }
                   }}>{deleting ? "Excluindo..." : "Excluir Conta"}</Button>
                 </div>

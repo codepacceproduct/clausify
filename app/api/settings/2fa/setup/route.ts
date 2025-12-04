@@ -13,9 +13,20 @@ export async function GET(req: Request) {
     .limit(1)
   const profile = profiles?.[0]
   const secret = profile?.totp_secret || generateBase32Secret(20)
-  if (!profile) return new Response(JSON.stringify({ error: "profile_not_found" }), { status: 404 })
-
-  if (!profile?.totp_secret) {
+  if (!profile) {
+    const { data: authUsers } = await supabaseServer
+      .from("auth.users")
+      .select("id, email")
+      .eq("email", email)
+      .limit(1)
+    const authUser = authUsers?.[0]
+    const payload: any = { email, totp_secret: secret, totp_enabled: false }
+    if (authUser?.id) payload.id = authUser.id
+    const { error: upErr } = await supabaseServer
+      .from("profiles")
+      .upsert(payload, { onConflict: "id" })
+    if (upErr) return new Response(JSON.stringify({ error: upErr.message }), { status: 500 })
+  } else if (!profile?.totp_secret) {
     await supabaseServer.from("profiles").update({ totp_secret: secret, totp_enabled: false }).eq("email", email)
   }
 

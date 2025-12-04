@@ -62,6 +62,34 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
+  const email = (url.searchParams.get("email") || "").trim()
+  const orgId = (url.searchParams.get("org_id") || "").trim()
+  if (email) {
+    let query = supabaseServer
+      .from("team_invite_logs")
+      .select("email, name, surname, created_at, valid_from, valid_to, organization_id, link")
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+    if (orgId) query = query.eq("organization_id", orgId)
+    const { data, error } = await query
+    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    const invite = (data && data[0]) || null
+    if (!invite) return Response.json({ invite: null, isValid: false, reason: "not_found" })
+    const now = new Date()
+    const from = invite.valid_from ? new Date(invite.valid_from as string) : null
+    const to = invite.valid_to ? new Date(invite.valid_to as string) : null
+    const fromOk = from ? now.getTime() >= from.getTime() : true
+    const toOk = to ? now.getTime() <= to.getTime() : true
+    const isValid = Boolean(fromOk && toOk)
+    let reason: string | null = null
+    if (!isValid) {
+      if (to && now.getTime() > to.getTime()) reason = "expired"
+      else if (from && now.getTime() < from.getTime()) reason = "not_started"
+      else reason = "invalid"
+    }
+    return Response.json({ invite, isValid, reason })
+  }
   const page = Math.max(1, Number(url.searchParams.get("page") || "1"))
   const q = (url.searchParams.get("q") || "").toLowerCase()
   const from = url.searchParams.get("from")

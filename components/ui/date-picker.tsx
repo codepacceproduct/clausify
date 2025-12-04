@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export interface DatePickerProps {
   value?: Date
-  onChange?: (date?: Date) => void
+  onChange?: (_date?: Date) => void
   fromYear?: number
   toYear?: number
   className?: string
@@ -41,7 +41,7 @@ export function DatePicker({ value, onChange, fromYear = 2000, toYear = 2100, cl
     if (initialValueRef.current === undefined) {
       onChange?.(today)
     }
-  }, [])
+  }, [onChange, today])
 
   const [day, setDay] = useState<string | undefined>(value ? String(value.getDate()) : undefined)
   const [month, setMonth] = useState<string | undefined>(value ? String(value.getMonth() + 1) : undefined)

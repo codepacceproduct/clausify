@@ -1,9 +1,11 @@
 import { supabaseServer } from "@/lib/supabase-server"
+import { getAuthedEmail } from "@/lib/api-auth"
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { email, confirmPhrase, reason, details, switchingTo, satisfaction } = body
-  if (!email) return new Response(JSON.stringify({ error: "missing email" }), { status: 400 })
+  const { confirmPhrase, reason, details, switchingTo, satisfaction } = body
+  const email = await getAuthedEmail(req)
+  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
   const phrase = (confirmPhrase || "").trim().toLowerCase()
   if (phrase !== "desejo excluir minha conta") {
     return new Response(JSON.stringify({ error: "frase_incorreta" }), { status: 400 })
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
   {
     const { data } = await supabaseServer
       .from("profiles")
-      .select("id, email, avatar_url")
+      .select("id, email, avatar_url, organization_id")
       .eq("email", email)
       .limit(1)
     profile = data?.[0] ?? null
@@ -32,6 +34,7 @@ export async function POST(req: Request) {
   }
 
   await supabaseServer.from("sessions").delete().eq("email", email)
+  await supabaseServer.from("organization_members").delete().eq("email", email)
 
   if (profile?.id) {
     await supabaseServer.from("profiles").delete().eq("id", profile.id)
@@ -52,6 +55,12 @@ export async function POST(req: Request) {
     const { error } = await supabaseServer.auth.admin.deleteUser(authUserId)
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
+
+  try {
+    await supabaseServer
+      .from("audit_logs")
+      .insert({ email, action: "account_delete", ip: null, status: "success", resource: "Conta", organization_id: profile?.organization_id ?? null })
+  } catch {}
 
   return Response.json({ ok: true })
 }
