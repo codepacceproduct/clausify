@@ -13,7 +13,7 @@ import { getUserEmail, getAuthToken } from "@/lib/auth"
 type LogItem = {
   id: string | number
   user: string
-  action: "login" | "download" | "upload" | "edit" | "delete" | "view" | "compare"
+  action: "login" | "download" | "upload" | "edit" | "delete" | "view" | "compare" | "ip_change"
   resource: string
   timestamp: string
   ip: string | null
@@ -28,6 +28,7 @@ const actionIcons = {
   view: Eye,
   login: User,
   compare: FileText,
+  ip_change: Calendar,
 }
 
 const actionLabels = {
@@ -38,6 +39,7 @@ const actionLabels = {
   view: "Visualização",
   login: "Login",
   compare: "Comparação",
+  ip_change: "Mudança de IP",
 }
 
 export function AuditLogs() {
@@ -160,7 +162,7 @@ export function AuditLogs() {
         <ScrollArea className="h-[600px] pr-4">
           <div className="space-y-3">
             {filteredLogs.map((log) => {
-              const ActionIcon = actionIcons[log.action as keyof typeof actionIcons]
+              const ActionIcon = actionIcons[log.action as keyof typeof actionIcons] || FileText
               return (
                 <div
                   key={log.id}
@@ -180,7 +182,7 @@ export function AuditLogs() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm">{log.user}</p>
                       <Badge variant="secondary" className="text-xs">
-                        {actionLabels[log.action as keyof typeof actionLabels]}
+                        {actionLabels[log.action as keyof typeof actionLabels] || log.action}
                       </Badge>
                       <Badge
                         className={
