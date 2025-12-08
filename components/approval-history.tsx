@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Filter, Download, CheckCircle, XCircle, FileText, User, Building } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
 interface HistoryItem {
   id: string
@@ -30,107 +31,52 @@ interface HistoryItem {
   }>
 }
 
-const historyData: HistoryItem[] = [
-  {
-    id: "1",
-    contractName: "Contrato de Prestação de Serviços - TechCorp",
-    client: "TechCorp Solutions",
-    value: "R$ 320.000,00",
-    type: "Prestação de Serviços",
-    status: "approved",
-    submittedBy: "Maria Silva",
-    submittedAt: "10/01/2025",
-    completedAt: "15/01/2025",
-    totalTime: "5 dias",
-    approvals: [
-      {
-        level: 1,
-        role: "Analista",
-        approver: "Carlos Mendes",
-        status: "approved",
-        date: "11/01/2025",
-        comment: "Cláusulas adequadas",
-      },
-      {
-        level: 2,
-        role: "Gestor",
-        approver: "Patricia Lima",
-        status: "approved",
-        date: "13/01/2025",
-        comment: "Valores dentro do orçamento",
-      },
-      { level: 3, role: "Diretor", approver: "Roberto Silva", status: "approved", date: "15/01/2025" },
-    ],
-  },
-  {
-    id: "2",
-    contractName: "NDA - Parceria Estratégica",
-    client: "Global Partners Inc",
-    value: "N/A",
-    type: "NDA",
-    status: "approved",
-    submittedBy: "João Santos",
-    submittedAt: "12/01/2025",
-    completedAt: "14/01/2025",
-    totalTime: "2 dias",
-    approvals: [
-      { level: 1, role: "Analista", approver: "Ana Costa", status: "approved", date: "13/01/2025" },
-      { level: 2, role: "Gestor", approver: "Patricia Lima", status: "approved", date: "14/01/2025" },
-    ],
-  },
-  {
-    id: "3",
-    contractName: "Contrato de Locação - Filial RJ",
-    client: "Imobiliária Premium",
-    value: "R$ 45.000,00/mês",
-    type: "Locação",
-    status: "rejected",
-    submittedBy: "Pedro Alves",
-    submittedAt: "08/01/2025",
-    completedAt: "12/01/2025",
-    totalTime: "4 dias",
-    approvals: [
-      {
-        level: 1,
-        role: "Analista",
-        approver: "Carlos Mendes",
-        status: "approved",
-        date: "09/01/2025",
-        comment: "Valor acima do mercado, mas localização justifica",
-      },
-      {
-        level: 2,
-        role: "Gestor",
-        approver: "Patricia Lima",
-        status: "rejected",
-        date: "12/01/2025",
-        comment: "Orçamento não permite este valor mensal. Renegociar.",
-      },
-    ],
-  },
-  {
-    id: "4",
-    contractName: "Contrato de Fornecimento - Equipamentos TI",
-    client: "TechSupply Ltda",
-    value: "R$ 180.000,00",
-    type: "Fornecimento",
-    status: "approved",
-    submittedBy: "Maria Silva",
-    submittedAt: "05/01/2025",
-    completedAt: "10/01/2025",
-    totalTime: "5 dias",
-    approvals: [
-      { level: 1, role: "Analista", approver: "Ana Costa", status: "approved", date: "06/01/2025" },
-      { level: 2, role: "Gestor", approver: "Patricia Lima", status: "approved", date: "08/01/2025" },
-      { level: 3, role: "Diretor", approver: "Roberto Silva", status: "approved", date: "10/01/2025" },
-    ],
-  },
-]
+const emptyHistory: HistoryItem[] = []
 
 export function ApprovalHistory() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null)
+  const [historyData, setHistoryData] = useState<HistoryItem[]>(emptyHistory)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("approvals")
+        .select("id, contract_name, client, value, type, status, submitted_by, submitted_at, deadline, comments, previous_approvals")
+        .in("status", ["approved", "rejected"]) as any
+      const rows = (data || []) as any[]
+      const mapped: HistoryItem[] = rows.map((r) => {
+        const submittedAt = r.submitted_at ? new Date(r.submitted_at) : null
+        const completedAt = r.deadline ? new Date(r.deadline) : null
+        const totalTime = submittedAt && completedAt
+          ? `${Math.max(0, Math.round((completedAt.getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24)))} dias`
+          : "-"
+        return {
+          id: String(r.id),
+          contractName: String(r.contract_name || ""),
+          client: String(r.client || ""),
+          value: String(r.value || ""),
+          type: String(r.type || ""),
+          status: String(r.status || "approved") as any,
+          submittedBy: String(r.submitted_by || ""),
+          submittedAt: submittedAt ? submittedAt.toLocaleDateString("pt-BR") : "",
+          completedAt: completedAt ? completedAt.toLocaleDateString("pt-BR") : "",
+          totalTime,
+          approvals: Array.isArray(r.previous_approvals) ? r.previous_approvals.map((a: any) => ({
+            level: Number(a.level || 1),
+            role: String(a.role || ""),
+            approver: String(a.approver || ""),
+            status: String(a.status || "approved") as any,
+            date: a.date ? String(a.date) : "",
+            comment: a.comment ? String(a.comment) : undefined,
+          })) : [],
+        }
+      })
+      setHistoryData(mapped)
+    }
+    load()
+  }, [])
 
   const filteredHistory = historyData.filter((item) => {
     const matchesSearch =

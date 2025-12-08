@@ -1,117 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, Edit, MoreHorizontal, AlertTriangle, Calendar, GitBranch, CheckSquare, FileSearch } from "lucide-react"
+import { AlertTriangle, Calendar, GitBranch, CheckSquare, FileSearch } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { getAuthToken } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
 
-const contracts = [
-  {
-    id: "CT-2025-001",
-    client: "Empresa Alpha Tech Ltda",
-    type: "Prestação de Serviços",
-    value: "R$ 250.000",
-    startDate: "15/01/2025",
-    endDate: "15/01/2026",
-    status: "active" as const,
-    risk: "low" as const,
-    daysToExpire: 348,
-  },
-  {
-    id: "CT-2025-002",
-    client: "Construtora Beta S/A",
-    type: "Contrato de Obra",
-    value: "R$ 1.800.000",
-    startDate: "10/01/2025",
-    endDate: "10/07/2025",
-    status: "active" as const,
-    risk: "medium" as const,
-    daysToExpire: 163,
-  },
-  {
-    id: "CT-2024-458",
-    client: "Imobiliária Gamma",
-    type: "Locação Comercial",
-    value: "R$ 45.000",
-    startDate: "20/12/2024",
-    endDate: "20/02/2025",
-    status: "active" as const,
-    risk: "low" as const,
-    daysToExpire: 23,
-    nearExpiry: true,
-  },
-  {
-    id: "CT-2024-412",
-    client: "Indústria Delta Manufatura",
-    type: "Fornecimento",
-    value: "R$ 3.200.000",
-    startDate: "05/11/2024",
-    endDate: "05/11/2026",
-    status: "active" as const,
-    risk: "high" as const,
-    daysToExpire: 642,
-  },
-  {
-    id: "CT-2024-389",
-    client: "Startup Epsilon Ventures",
-    type: "Investimento",
-    value: "R$ 500.000",
-    startDate: "01/10/2024",
-    endDate: "01/10/2029",
-    status: "pending" as const,
-    risk: "medium" as const,
-    daysToExpire: 1825,
-  },
-  {
-    id: "CT-2024-301",
-    client: "Tech Zeta Corporation",
-    type: "Parceria",
-    value: "R$ 800.000",
-    startDate: "15/08/2024",
-    endDate: "15/01/2025",
-    status: "expired" as const,
-    risk: "low" as const,
-    daysToExpire: -13,
-  },
-  {
-    id: "CT-2024-256",
-    client: "Consultoria Eta Business",
-    type: "Prestação de Serviços",
-    value: "R$ 120.000",
-    startDate: "01/07/2024",
-    endDate: "01/01/2025",
-    status: "expired" as const,
-    risk: "low" as const,
-    daysToExpire: -27,
-  },
-  {
-    id: "CT-2024-198",
-    client: "Transportadora Theta Logística",
-    type: "Fornecimento",
-    value: "R$ 950.000",
-    startDate: "10/05/2024",
-    endDate: "10/05/2025",
-    status: "active" as const,
-    risk: "medium" as const,
-    daysToExpire: 112,
-  },
-]
+function initials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean)
+  const letters = parts.slice(0, 3).map((p) => p[0]).join("")
+  return letters.toUpperCase()
+}
 
 export function PortfolioTable() {
   const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
   const itemsPerPage = 8
+  const [orgInitials, setOrgInitials] = useState("ORG")
+  const [rows, setRows] = useState<any[]>([])
+
+  useEffect(() => {
+    const loadOrg = async () => {
+      const token = getAuthToken()
+      try {
+        const r = await fetch(`/api/organizations/current`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+        const j = await r.json().catch(() => ({}))
+        const name = j?.organization?.name || "Org"
+        setOrgInitials(initials(String(name)))
+      } catch {}
+    }
+    const loadData = async () => {
+      const { data } = await supabase
+        .from("approvals")
+        .select("id, contract_name, client, value, type, deadline, priority, status, submitted_at")
+        .limit(1000)
+      setRows(data || [])
+    }
+    loadOrg()
+    loadData()
+  }, [])
+
+  const list = useMemo(() => {
+    const now = new Date()
+    return rows.map((r) => {
+      const d = r.deadline ? new Date(r.deadline) : null
+      const diff = d ? Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+      const nearExpiry = diff !== null && diff > 0 && diff <= 30
+      const expired = diff !== null && diff < 0
+      const status = expired ? "expired" : String(r.status || "pending")
+      const risk = String(r.priority || "medium")
+      return {
+        id: String(r.id || "").slice(0, 8).toUpperCase(),
+        client: r.client || r.contract_name || "",
+        type: r.type || "",
+        value: r.value || "",
+        endDate: d ? d.toLocaleDateString("pt-BR") : "-",
+        status,
+        risk,
+        daysToExpire: diff ?? undefined,
+        nearExpiry,
+      }
+    })
+  }, [rows])
 
   const handleViewVersions = (contractId: string) => {
     router.push(`/versionamento?contract=${contractId}`)
@@ -149,9 +103,9 @@ export function PortfolioTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contracts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((contract) => (
+            {list.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((contract) => (
               <TableRow key={contract.id}>
-                <TableCell className="font-mono text-xs">{contract.id}</TableCell>
+                <TableCell className="font-mono text-xs">{orgInitials}-{contract.id}</TableCell>
                 <TableCell className="font-medium">{contract.client}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{contract.type}</Badge>
@@ -208,44 +162,27 @@ export function PortfolioTable() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Visualizar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleAnalyze(contract.id)}>
-                        <FileSearch className="h-4 w-4 mr-2" />
-                        Reanalisar com IA
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewVersions(contract.id)}>
-                        <GitBranch className="h-4 w-4 mr-2" />
-                        Ver Versões
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleRequestApproval(contract.id)}>
-                        <CheckSquare className="h-4 w-4 mr-2" />
-                        Solicitar Aprovação
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAddToCalendar(contract.id)}>
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Adicionar ao Calendário
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">Cancelar Contrato</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => handleAnalyze(contract.id)}>
+                      <FileSearch className="h-4 w-4 mr-2" />
+                      Reanalisar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleViewVersions(contract.id)}>
+                      <GitBranch className="h-4 w-4 mr-2" />
+                      Versões
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleRequestApproval(contract.id)}>
+                      <CheckSquare className="h-4 w-4 mr-2" />
+                      Aprovação
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleAddToCalendar(contract.id)}>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Calendário
+                    </Button>
+                    <Button variant="destructive" size="sm">
+                      Cancelar
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -254,8 +191,8 @@ export function PortfolioTable() {
 
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-muted-foreground">
-            Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, contracts.length)}{" "}
-            de {contracts.length} contratos
+            Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, list.length)}{" "}
+            de {list.length} contratos
           </p>
           <div className="flex gap-2">
             <Button
@@ -269,8 +206,8 @@ export function PortfolioTable() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(Math.ceil(contracts.length / itemsPerPage), currentPage + 1))}
-              disabled={currentPage >= Math.ceil(contracts.length / itemsPerPage)}
+              onClick={() => setCurrentPage(Math.min(Math.ceil(list.length / itemsPerPage), currentPage + 1))}
+              disabled={currentPage >= Math.ceil(list.length / itemsPerPage)}
             >
               Próxima
             </Button>

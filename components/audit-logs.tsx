@@ -47,6 +47,8 @@ export function AuditLogs() {
   const [filterAction, setFilterAction] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [logs, setLogs] = useState<LogItem[]>([])
+  const [page, setPage] = useState(1)
+  const pageSize = 20
 
   useEffect(() => {
     const email = getUserEmail()
@@ -87,6 +89,15 @@ export function AuditLogs() {
     const statusFilter = filterStatus === "all" ? () => true : (l: LogItem) => l.status === filterStatus
     return logs.filter((l) => matchesSearch(l) && actionFilter(l) && statusFilter(l))
   }, [logs, searchTerm, filterAction, filterStatus])
+
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize))
+  const startIndex = (page - 1) * pageSize
+  const currentLogs = filteredLogs.slice(startIndex, startIndex + pageSize)
+
+  useEffect(() => {
+    const id = setTimeout(() => setPage(1), 0)
+    return () => clearTimeout(id)
+  }, [searchTerm, filterAction, filterStatus])
 
   return (
     <Card>
@@ -161,7 +172,7 @@ export function AuditLogs() {
         {/* Logs List */}
         <ScrollArea className="h-[600px] pr-4">
           <div className="space-y-3">
-            {filteredLogs.map((log) => {
+            {currentLogs.map((log) => {
               const ActionIcon = actionIcons[log.action as keyof typeof actionIcons] || FileText
               return (
                 <div
@@ -209,6 +220,13 @@ export function AuditLogs() {
             })}
           </div>
         </ScrollArea>
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-xs text-muted-foreground">Página {page} de {totalPages}</div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Anterior</Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Próxima</Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

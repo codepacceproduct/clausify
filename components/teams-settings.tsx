@@ -3,22 +3,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { DatePicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
-import { Users, Link as LinkIcon, Mail, Building2, Trash2 } from "lucide-react"
+import { Building2, Trash2, Users, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { getUserEmail, getAuthToken } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function TeamsSettings() {
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null)
-  const [inviteFrom, setInviteFrom] = useState("")
-  const [inviteTo, setInviteTo] = useState("")
   const [orgLoading, setOrgLoading] = useState(false)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [orgName, setOrgName] = useState("")
@@ -37,89 +29,13 @@ export function TeamsSettings() {
   const [postalCode, setPostalCode] = useState("")
   const [memberCount, setMemberCount] = useState(0)
   const [members, setMembers] = useState<Array<{ email: string; name: string | null; surname: string | null; role: string; status: string; invited_at: string | null; joined_at: string | null }>>([])
+  const [memberQuery, setMemberQuery] = useState("")
+  const [page, setPage] = useState(1)
+  const pageSize = 5
 
-  function toIso(d: Date) {
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const dd = String(d.getDate()).padStart(2, "0")
-    return `${yyyy}-${mm}-${dd}`
-  }
+  
 
-  function fromIso(s: string) {
-    if (!s) return undefined
-    const [y, m, d] = s.split("-").map((x) => Number(x))
-    if (!y || !m || !d) return undefined
-    return new Date(y, m - 1, d)
-  }
-
-  const validEmail = (v: string) => /.+@.+\..+/.test(v)
-
-  const handleGenerate = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      toast.error("Preencha nome, sobrenome e e-mail")
-      return
-    }
-    if (!validEmail(email)) {
-      toast.error("E-mail inválido")
-      return
-    }
-    if (!inviteFrom || !inviteTo) {
-      toast.error("Defina o período De e Até para o convite")
-      return
-    }
-    if (new Date(inviteTo).getTime() < new Date(inviteFrom).getTime()) {
-      toast.error("A data 'Até' deve ser posterior à data 'De'")
-      return
-    }
-    setLoading(true)
-    try {
-      const token = getAuthToken()
-      const headers: any = { "Content-Type": "application/json" }
-      if (token) headers.Authorization = `Bearer ${token}`
-      const res = await fetch("/api/teams/invite", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          name: firstName,
-          surname: lastName,
-          email,
-          valid_from: new Date(inviteFrom).toISOString(),
-          valid_to: new Date(inviteTo).toISOString(),
-        }),
-      })
-      const j = await res.json().catch(() => ({}))
-      if (res.ok && j.link) {
-        setGeneratedLink(j.link)
-        toast.success("Link gerado")
-      } else {
-        toast.error(j?.error || "Falha ao gerar link")
-      }
-    } catch {
-      toast.error("Erro ao gerar link")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCopy = async () => {
-    if (!generatedLink) return
-    try {
-      await navigator.clipboard.writeText(generatedLink)
-      toast.success("Link copiado")
-    } catch {
-      toast.error("Não foi possível copiar")
-    }
-  }
-
-  const handleEmailSend = () => {
-    if (!generatedLink || !email) return
-    const subject = encodeURIComponent("Convite para acessar a Clausify")
-    const body = encodeURIComponent(
-      `Olá ${firstName},\n\nVocê foi convidado para acessar a Clausify. Use o link abaixo para entrar com Magic Link:\n\n${generatedLink}\n\nSe tiver qualquer dúvida, responda este e-mail.\n\nAbraços,`
-    )
-    const href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`
-    window.open(href)
-  }
+  
 
   function fmtDate(iso: string) {
     const d = new Date(iso)
@@ -237,9 +153,30 @@ export function TeamsSettings() {
   }, [])
 
   useEffect(() => {
-    loadOrganization()
-    loadMembers()
+    const id = setTimeout(() => {
+      loadOrganization()
+      loadMembers()
+    }, 0)
+    return () => clearTimeout(id)
   }, [loadOrganization, loadMembers])
+
+  const userEmail = getUserEmail() || ""
+  const currentUserRole = normalizeRole((members.find((x) => x.email === userEmail)?.role || ""))
+  const isLeader = currentUserRole === "admin"
+
+  const filteredMembers = members.filter((m) => {
+    const q = memberQuery.trim().toLowerCase()
+    if (!q) return true
+    const fullName = [m.name || "", m.surname || ""].join(" ").toLowerCase()
+    return fullName.includes(q) || (m.email || "").toLowerCase().includes(q)
+  })
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize))
+  const start = (page - 1) * pageSize
+  const currentMembers = filteredMembers.slice(start, start + pageSize)
+  useEffect(() => {
+    const id = setTimeout(() => setPage(1), 0)
+    return () => clearTimeout(id)
+  }, [memberQuery])
 
   const handleOrgSave = async () => {
     const userEmail = getUserEmail() || ""
@@ -317,66 +254,7 @@ export function TeamsSettings() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Equipes</CardTitle>
-          </div>
-          <CardDescription>Convide novos usuários com Nome, Sobrenome e E-mail</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nome</Label>
-              <Input id="firstName" placeholder="Nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Sobrenome</Label>
-              <Input id="lastName" placeholder="Sobrenome" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-2 mt-4">
-            <Label htmlFor="email">E-mail</Label>
-            <Input id="email" type="email" placeholder="usuario@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="inviteFrom">De</Label>
-              <DatePicker value={fromIso(inviteFrom)} onChange={(d) => setInviteFrom(d ? toIso(d) : "")} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inviteTo">Até</Label>
-              <DatePicker value={fromIso(inviteTo)} onChange={(d) => setInviteTo(d ? toIso(d) : "")} />
-            </div>
-          </div>
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleGenerate} disabled={loading}>{loading ? "Gerando..." : "Gerar Link Magic"}</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {generatedLink ? (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <LinkIcon className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Link Gerado</CardTitle>
-            </div>
-            <CardDescription>Copie ou envie por e-mail</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Input value={generatedLink} readOnly className="flex-1" />
-              <Button variant="outline" size="sm" onClick={handleCopy}>Copiar</Button>
-              <Button variant="outline" size="sm" onClick={handleEmailSend}>
-                <Mail className="mr-2 h-4 w-4" />
-                Enviar por e-mail
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      
 
       
 
@@ -392,31 +270,31 @@ export function TeamsSettings() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="orgName">Nome</Label>
-              <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
+              <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="legalName">Razão Social</Label>
-              <Input id="legalName" value={legalName} onChange={(e) => setLegalName(e.target.value)} />
+              <Input id="legalName" value={legalName} onChange={(e) => setLegalName(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="taxId">CNPJ</Label>
-              <Input id="taxId" value={taxId} onChange={(e) => setTaxId(e.target.value)} />
+              <Input id="taxId" value={taxId} onChange={(e) => setTaxId(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="companyEmail">E-mail corporativo</Label>
-              <Input id="companyEmail" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} />
+              <Input id="companyEmail" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
-              <Input id="website" value={website} onChange={(e) => setWebsite(e.target.value)} />
+              <Input id="website" value={website} onChange={(e) => setWebsite(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="industry">Setor</Label>
-              <Select value={industry || undefined} onValueChange={(v) => setIndustry(v)}>
+              <Select value={industry || undefined} onValueChange={(v) => setIndustry(v)} disabled={!isLeader}>
                 <SelectTrigger id="industry">
                   <SelectValue />
                 </SelectTrigger>
@@ -431,7 +309,7 @@ export function TeamsSettings() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="size">Tamanho da Empresa</Label>
-              <Select value={size || undefined} onValueChange={(v) => setSize(v)}>
+              <Select value={size || undefined} onValueChange={(v) => setSize(v)} disabled={!isLeader}>
                 <SelectTrigger id="size">
                   <SelectValue />
                 </SelectTrigger>
@@ -445,27 +323,27 @@ export function TeamsSettings() {
             </div>
             <div className="sm:col-span-2 space-y-2">
               <Label htmlFor="address1">Endereço Linha 1</Label>
-              <Input id="address1" value={address1} onChange={(e) => setAddress1(e.target.value)} />
+              <Input id="address1" value={address1} onChange={(e) => setAddress1(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="sm:col-span-2 space-y-2">
               <Label htmlFor="address2">Endereço Linha 2</Label>
-              <Input id="address2" value={address2} onChange={(e) => setAddress2(e.target.value)} />
+              <Input id="address2" value={address2} onChange={(e) => setAddress2(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="city">Cidade</Label>
-              <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} />
+              <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="region">Estado/Região</Label>
-              <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} />
+              <Input id="region" value={region} onChange={(e) => setRegion(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="country">País</Label>
-              <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
+              <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={!isLeader} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="postalCode">CEP</Label>
-              <Input id="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+              <Input id="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} disabled={!isLeader} />
             </div>
           </div>
           <div className="flex items-center justify-between mt-4">
@@ -499,10 +377,14 @@ export function TeamsSettings() {
             <Users className="h-5 w-5 text-muted-foreground" />
             <CardTitle>Membros da Organização</CardTitle>
           </div>
-          <CardDescription>Pessoas que entraram via Magic Link</CardDescription>
+          <CardDescription>Membros da Organização Cadastrados.</CardDescription>
         </CardHeader>
         <CardContent>
-          {members.length === 0 ? (
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar por nome ou e-mail..." value={memberQuery} onChange={(e) => setMemberQuery(e.target.value)} className="pl-10" />
+          </div>
+          {currentMembers.length === 0 ? (
             <div className="text-sm text-muted-foreground">Nenhum membro encontrado</div>
           ) : (
             <div className="divide-y border rounded-lg">
@@ -514,7 +396,7 @@ export function TeamsSettings() {
                 <div>Entrada</div>
                 <div>Status</div>
               </div>
-              {members.map((m) => (
+              {currentMembers.map((m) => (
                 <div key={m.email} className="grid grid-cols-6 gap-4 px-4 py-3 items-center">
                   <div className="truncate">{[m.name, m.surname].filter(Boolean).join(" ") || "—"}</div>
                   <div className="truncate">{m.email}</div>
@@ -561,6 +443,13 @@ export function TeamsSettings() {
               ))}
             </div>
           )}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-xs text-muted-foreground">Página {page} de {totalPages}</div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Anterior</Button>
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Próxima</Button>
+            </div>
+          </div>
           <div className="flex justify-end mt-4 gap-2">
             <Button size="sm" onClick={saveAllStatusChanges} disabled={savingStatuses}>Salvar Alteração</Button>
             <Button size="sm" variant="outline" onClick={loadMembers}>Atualizar lista</Button>

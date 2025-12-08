@@ -89,8 +89,60 @@ export function SecuritySettings() {
     const r = await fetch(`/api/sessions/end`, { method: "POST", headers, body: JSON.stringify({ endOthers: true }) })
     if (r.ok) {
       toast.success("Outras sessões encerradas")
+      try {
+        await logout()
+      } finally {
+        window.location.href = "/login"
+      }
+    }
+  }
+
+  async function clearSession(id: string) {
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/sessions/clear`, { method: "POST", headers, body: JSON.stringify({ sessionId: id }) })
+    if (r.ok) {
+      toast.success("Sessão limpa")
       await loadSessions()
     }
+  }
+
+  async function clearAllSessions() {
+    const token = getAuthToken()
+    const headers: any = { "Content-Type": "application/json" }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const r = await fetch(`/api/sessions/clear`, { method: "POST", headers, body: JSON.stringify({ clearAll: true }) })
+    if (r.ok) {
+      toast.success("Todas as sessões foram limpas")
+      try {
+        await logout()
+      } finally {
+        window.location.href = "/login"
+      }
+    }
+  }
+
+  async function endAndMaybeLogout(s: { id: string; client_host: string | null }) {
+    await endSession(s.id)
+    try {
+      const host = typeof window !== 'undefined' ? `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` : null
+      if (host && s.client_host === host) {
+        await logout()
+        window.location.href = "/login"
+      }
+    } catch {}
+  }
+
+  async function clearAndMaybeLogout(s: { id: string; client_host: string | null }) {
+    await clearSession(s.id)
+    try {
+      const host = typeof window !== 'undefined' ? `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` : null
+      if (host && s.client_host === host) {
+        await logout()
+        window.location.href = "/login"
+      }
+    } catch {}
   }
 
   async function refreshTwoFA() {
@@ -108,6 +160,8 @@ export function SecuritySettings() {
     const i = setInterval(() => { loadSessions() }, 30000)
     return () => { clearInterval(i) }
   }, [])
+
+  
 
   async function openSetup() {
     const email = getUserEmail()
@@ -225,6 +279,7 @@ export function SecuritySettings() {
       setSaving(false)
     }
   }
+
   async function loadRolePermissions() {
     const email = getUserEmail()
     if (!email) return
@@ -406,6 +461,7 @@ export function SecuritySettings() {
               <Button type="button" onClick={handlePasswordUpdate} disabled={saving}>{saving ? "Atualizando..." : "Atualizar Senha"}</Button>
             </div>
           </form>
+          
         </CardContent>
       </Card>
 
@@ -490,17 +546,25 @@ export function SecuritySettings() {
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">{formatRelative(s.last_active)} • Host {s.client_host || s.hostname || '—'} • IP {s.ip || '—'}</div>
                 </div>
-                {s.active && (
-                  <Button variant="outline" size="sm" onClick={() => endSession(s.id)}>
-                    Encerrar
+                <div className="flex gap-2">
+                  {s.active && (
+                    <Button variant="outline" size="sm" onClick={() => endAndMaybeLogout(s)}>
+                      Encerrar
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => clearAndMaybeLogout(s)}>
+                    Limpar
                   </Button>
-                )}
+                </div>
               </div>
             ))}
           </div>
           <div className="mt-4 flex flex-col sm:flex-row gap-2">
             <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => endOthers()}>
               Encerrar Todas as Outras Sessões
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => clearAllSessions()}>
+              Limpar Todas as Sessões
             </Button>
             <Button variant="outline" className="w-full sm:w-auto bg-transparent" onClick={() => loadSessions()}>
               Atualizar Sessões

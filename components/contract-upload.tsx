@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, FileText, X, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { getAuthToken } from "@/lib/auth"
 
 interface ContractUploadProps {
   onAnalysisStart?: () => void
@@ -31,18 +32,27 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
   }
 
   const handleUpload = async () => {
+    if (files.length === 0) return
     setUploading(true)
-    // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setUploading(false)
-    onAnalysisStart?.()
     try {
-      await fetch(`/api/audit/logs/record`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
-      })
-    } catch {}
+      const form = new FormData()
+      for (const f of files) form.append("files", f)
+      const token = getAuthToken()
+      const r = await fetch(`/api/contracts/upload`, { method: "POST", body: form, headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+      if (!r.ok) throw new Error("upload_failed")
+      onAnalysisStart?.()
+      try {
+        await fetch(`/api/audit/logs/record`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
+        })
+      } catch {}
+      setFiles([])
+    } catch {
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -153,9 +163,9 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
           <CardDescription>Personalize a profundidade da análise jurídica</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-3">
+              <div className="space-y-3">
             <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="risk-analysis" defaultChecked className="mt-1" />
+              <input type="checkbox" id="risk-analysis" className="mt-1" />
               <div className="flex-1">
                 <Label htmlFor="risk-analysis" className="font-medium cursor-pointer">
                   Análise de Risco
@@ -167,7 +177,7 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
             </div>
 
             <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="compliance" defaultChecked className="mt-1" />
+              <input type="checkbox" id="compliance" className="mt-1" />
               <div className="flex-1">
                 <Label htmlFor="compliance" className="font-medium cursor-pointer">
                   Conformidade Legal
@@ -177,7 +187,7 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
             </div>
 
             <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="clauses" defaultChecked className="mt-1" />
+              <input type="checkbox" id="clauses" className="mt-1" />
               <div className="flex-1">
                 <Label htmlFor="clauses" className="font-medium cursor-pointer">
                   Análise de Cláusulas
@@ -221,9 +231,9 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
             <div className="flex items-center justify-between mb-2">
               <Label className="text-sm font-medium">Nível de Análise</Label>
             </div>
-            <Select defaultValue="detailed">
+            <Select>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Selecione o Nível da Analíse" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="quick">Rápida (5-10 min)</SelectItem>
