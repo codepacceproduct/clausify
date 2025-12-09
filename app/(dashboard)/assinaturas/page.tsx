@@ -1,19 +1,21 @@
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { SubscriptionPlans } from "@/components/subscription-plans"
-import { CurrentPlan } from "@/components/current-plan"
 import { PaymentHistory } from "@/components/payment-history"
 import { BillingInfo } from "@/components/billing-info"
+import { CurrentPlan } from "@/components/current-plan"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function SubscriptionsPage() {
   return (
     <LayoutWrapper>
-      <div>
+      <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Assinaturas e Planos</h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">Gerencie sua assinatura e forma de pagamento</p>
       </div>
 
-      <CurrentPlan />
+      <div className="mb-8">
+        <CurrentPlan />
+      </div>
 
       <Tabs defaultValue="plans" className="w-full">
         <TabsList className="w-full sm:w-auto">

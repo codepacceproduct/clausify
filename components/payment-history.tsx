@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, CheckCircle2, XCircle, Clock } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Download, CheckCircle2, XCircle, Clock, FileText } from "lucide-react"
 
 const payments = [
   {
@@ -67,50 +68,65 @@ export function PaymentHistory() {
         <CardDescription>Veja todas as suas transações e baixe notas fiscais</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {payments.map((payment) => {
-            const status = statusConfig[payment.status as keyof typeof statusConfig]
-            const StatusIcon = status.icon
+        {payments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <div className="bg-muted/50 p-4 rounded-full mb-4">
+              <FileText className="h-8 w-8 opacity-50" />
+            </div>
+            <p className="font-medium">Nenhuma cobrança encontrada</p>
+            <p className="text-sm mt-1">Suas faturas aparecerão aqui assim que forem geradas.</p>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Fatura</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Método</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((payment) => {
+                  const status = statusConfig[payment.status as keyof typeof statusConfig]
+                  const StatusIcon = status.icon
 
-            return (
-              <div
-                key={payment.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-start gap-4 flex-1 w-full sm:w-auto">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                    <StatusIcon className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                      <span className="font-medium text-foreground">{payment.id}</span>
-                      <Badge variant="secondary" className={status.className}>
-                        {status.label}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-0.5">
-                      <div>{payment.date}</div>
-                      <div className="block sm:hidden">{payment.method}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                  <div className="hidden sm:block text-sm text-muted-foreground min-w-[140px]">{payment.method}</div>
-                  <div className="font-semibold text-foreground min-w-[100px] text-left sm:text-right">
-                    {payment.amount}
-                  </div>
-                  <Button variant="ghost" size="sm" className="shrink-0">
-                    <Download className="h-4 w-4" />
-                    <span className="ml-2 hidden sm:inline">NF-e</span>
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline">Carregar Mais</Button>
-        </div>
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.id}</TableCell>
+                      <TableCell>{payment.date}</TableCell>
+                      <TableCell>{payment.amount}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={`${status.className} flex w-fit items-center gap-1`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                        {payment.method}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-2 sm:h-9">
+                          <Download className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Baixar NF-e</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        
+        {payments.length > 0 && (
+          <div className="mt-6 flex justify-center">
+            <Button variant="outline" className="w-full sm:w-auto">Carregar Mais</Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

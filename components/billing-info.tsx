@@ -1,12 +1,47 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CreditCard, Building2, FileText } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { CreditCard, Building2, FileText, CheckCircle2 } from "lucide-react"
 
 export function BillingInfo() {
   return (
     <div className="space-y-6">
+      {/* Seção do Plano Atual */}
+      <Card className="border-emerald-500/20 bg-emerald-50/10 dark:bg-emerald-900/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Plano Atual</CardTitle>
+              <CardDescription>Detalhes da sua assinatura ativa</CardDescription>
+            </div>
+            <Badge variant="outline" className="border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              Ativo
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">Professional</h3>
+            <p className="text-muted-foreground mt-1">Renova em 15 de Janeiro de 2025</p>
+          </div>
+          <div className="text-left sm:text-right">
+            <p className="text-2xl font-bold">R$ 299,00<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+            <p className="text-xs text-muted-foreground mt-1">Cobrado mensalmente</p>
+          </div>
+        </CardContent>
+        <CardFooter className="bg-muted/20 border-t px-6 py-4 flex flex-col sm:flex-row justify-end gap-3">
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+            Cancelar Assinatura
+          </Button>
+          <Button variant="outline" size="sm">
+            Alterar Plano
+          </Button>
+        </CardFooter>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -16,13 +51,16 @@ export function BillingInfo() {
           <CardDescription>Gerencie seus métodos de pagamento</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                <CreditCard className="h-6 w-6 text-white" />
+              <div className="flex h-12 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-sm">
+                <CreditCard className="h-6 w-6" />
               </div>
               <div>
-                <div className="font-medium">•••• •••• •••• 4532</div>
+                <div className="font-medium flex items-center gap-2">
+                  Mastercard final 4532
+                  <Badge variant="secondary" className="text-[10px] h-5">Principal</Badge>
+                </div>
                 <div className="text-sm text-muted-foreground">Expira em 12/2026</div>
               </div>
             </div>
@@ -81,8 +119,8 @@ export function BillingInfo() {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline">Cancelar</Button>
-              <Button>Salvar Alterações</Button>
+              <Button variant="ghost" type="button">Cancelar</Button>
+              <Button type="submit">Salvar Alterações</Button>
             </div>
           </form>
         </CardContent>

@@ -15,6 +15,7 @@ import {
 import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { logout, getUserEmail } from "@/lib/auth"
+import { useNotifications } from "@/hooks/use-notifications"
 
 export function AppHeader() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export function AppHeader() {
   const [avatarFit, setAvatarFit] = useState<'cover' | 'contain' | 'fill'>('cover')
   const [avatarPosition, setAvatarPosition] = useState<'center' | 'top' | 'bottom' | 'left' | 'right'>('center')
   const [avatarZoom, setAvatarZoom] = useState<number>(1)
+  const { items, unread } = useNotifications()
 
   useEffect(() => {
     const load = async () => {
@@ -111,10 +113,50 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-        <Button variant="ghost" size="icon" className="relative shrink-0 h-9 w-9 sm:h-10 sm:w-10">
-          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />
-        </Button>
+        {/* Notificações */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label="Abrir notificações"
+              variant="ghost"
+              size="icon"
+              className="relative shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+            >
+              <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className={`absolute right-1 top-1 h-2 w-2 rounded-full ${unread > 0 ? "bg-emerald-500" : "bg-muted"}`} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-80"
+            align="end"
+            sideOffset={8}
+            forceMount
+          >
+            <DropdownMenuLabel className="text-sm font-medium">Notificações</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+
+            {items.length === 0 ? (
+              <div className="py-10 px-3 flex items-center justify-center">
+                <p className="text-sm text-muted-foreground text-center">
+                  Sem notificações registradas.
+                </p>
+              </div>
+            ) : (
+              <div className="max-h-80 overflow-auto py-2">
+                {items.map((n) => (
+                  <div key={n.id} className="px-3 py-2 hover:bg-accent rounded-md">
+                    <div className="text-sm font-medium">{n.title}</div>
+                    {n.message ? <div className="text-xs text-muted-foreground">{n.message}</div> : null}
+                    <div className="text-[11px] text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="justify-center text-xs text-emerald-500" onClick={() => router.push("/notificacoes")}>Ver todas as notificações</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
