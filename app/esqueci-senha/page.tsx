@@ -5,28 +5,42 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, ArrowRight, ArrowLeft, Star, Users, CheckCircle2, Shield } from "lucide-react"
+import { Mail, ArrowRight, ArrowLeft, Star, Users, CheckCircle2, Shield, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { createClient } from "@/lib/supabase/client"
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
     setIsLoading(true)
 
-    setTimeout(() => {
-      setEmailSent(true)
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
+        ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/redefinir-senha`
+        : `${window.location.origin}/redefinir-senha`,
+    })
+
+    if (authError) {
+      setError(authError.message)
       setIsLoading(false)
-    }, 1000)
+      return
+    }
+
+    setEmailSent(true)
+    setIsLoading(false)
   }
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row overflow-hidden">
-      {/* Left Side - Same as login */}
+      {/* Left Side */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -127,6 +141,13 @@ export default function EsqueciSenhaPage() {
                 </p>
               </div>
 
+              {error && (
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-base sm:text-sm font-medium text-gray-300">E-mail</label>
@@ -173,12 +194,15 @@ export default function EsqueciSenhaPage() {
               </p>
               <div className="bg-[#1a2329] border border-[#2a3640] rounded-xl p-4 text-left">
                 <p className="text-sm text-gray-400">
-                  <span className="text-emerald-400 font-medium">Dica:</span> O link expira em 30 minutos. Caso não
-                  receba o e-mail, verifique se digitou o endereço corretamente.
+                  <span className="text-emerald-400 font-medium">Dica:</span> O link expira em 1 hora. Caso não receba o
+                  e-mail, verifique se digitou o endereço corretamente.
                 </p>
               </div>
               <Button
-                onClick={() => setEmailSent(false)}
+                onClick={() => {
+                  setEmailSent(false)
+                  setEmail("")
+                }}
                 variant="outline"
                 className="w-full h-14 border-[#2a3640] text-gray-300 hover:bg-[#1a2329] hover:text-white rounded-xl"
               >

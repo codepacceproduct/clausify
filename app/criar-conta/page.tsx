@@ -6,16 +6,33 @@ import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2, User, Building2 } from "lucide-react"
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ArrowRight,
+  Star,
+  Users,
+  CheckCircle2,
+  User,
+  Building2,
+  AlertCircle,
+} from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { login } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export default function CriarContaPage() {
   return (
-    <Suspense fallback={<div />}> 
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0f1419]">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
+        </div>
+      }
+    >
       <RegisterContent />
     </Suspense>
   )
@@ -23,131 +40,111 @@ export default function CriarContaPage() {
 
 function RegisterContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
-  const sp = useSearchParams()
-  const qEmail = sp.get("email") || ""
-  const qName = sp.get("name") || ""
-  const qSurname = sp.get("surname") || ""
-  const qOrgId = sp.get("org_id") || ""
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [nome, setNome] = useState(qName)
-  const [sobrenome, setSobrenome] = useState(qSurname)
-  const [email, setEmail] = useState(qEmail)
+  const [nome, setNome] = useState("")
+  const [sobrenome, setSobrenome] = useState("")
+  const [email, setEmail] = useState("")
   const [empresa, setEmpresa] = useState("")
-  const [setor, setSetor] = useState("")
-  const [tamanho, setTamanho] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [orgId] = useState(qOrgId)
-  const [inviteOk, setInviteOk] = useState(true)
-  const [inviteMessage, setInviteMessage] = useState("")
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
+  // Check URL params for invite
   useEffect(() => {
-    const logInvite = async () => {
-      if (!qEmail) return
-      try {
-        await fetch("/api/teams/invite", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: qEmail, name: qName, surname: qSurname, org_id: qOrgId, logOnly: true }),
-        })
-      } catch {}
-    }
-    logInvite()
-  }, [qEmail, qName, qSurname, qOrgId])
-
-  useEffect(() => {
-    const validateInvite = async () => {
-      if (!qEmail) return
-      try {
-        const params = new URLSearchParams()
-        params.set("email", qEmail)
-        if (qOrgId) params.set("org_id", qOrgId)
-        const r = await fetch(`/api/teams/invite?${params.toString()}`)
-        const j = await r.json().catch(() => ({}))
-        if (j && j.invite) {
-          if (j.isValid) {
-            const inv = j.invite as any
-            if (!nome && inv.name) setNome(inv.name)
-            if (!sobrenome && inv.surname) setSobrenome(inv.surname)
-            setInviteOk(true)
-            setInviteMessage("")
-          } else {
-            setInviteOk(false)
-            const reason = String(j.reason || "invalid")
-            if (reason === "expired") setInviteMessage("Este convite expirou. Solicite um novo ao administrador.")
-            else if (reason === "not_started") setInviteMessage("Este convite ainda não está válido. Tente novamente mais tarde.")
-            else setInviteMessage("Convite inválido ou não encontrado.")
-          }
-        }
-      } catch {}
-    }
-    validateInvite()
-  }, [qEmail, qOrgId, nome, sobrenome])
+    const qEmail = searchParams.get("email")
+    const qName = searchParams.get("name")
+    const qSurname = searchParams.get("surname")
+    if (qEmail) setEmail(qEmail)
+    if (qName) setNome(qName)
+    if (qSurname) setSobrenome(qSurname)
+  }, [searchParams])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inviteOk) {
-      alert(inviteMessage || "Convite inválido")
-      return
-    }
+    setError("")
+    setSuccess("")
+
     if (!nome.trim()) {
-      alert("Informe seu nome")
+      setError("Informe seu nome")
       return
     }
-    if (!(sobrenome.trim() || qSurname)) {
-      alert("Informe seu sobrenome")
+
+    if (!sobrenome.trim()) {
+      setError("Informe seu sobrenome")
       return
     }
+
     if (password !== confirmPassword) {
-      alert("As senhas não coincidem")
+      setError("As senhas não coincidem")
       return
     }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres")
+      return
+    }
+
     if (!acceptTerms) {
-      alert("Você precisa aceitar os termos de uso")
+      setError("Você precisa aceitar os termos de uso")
       return
     }
-    if (!orgId) {
-      if (!empresa.trim()) {
-        alert("Informe o nome da organização")
-        return
-      }
-      if (!setor) {
-        alert("Selecione o setor da organização")
-        return
-      }
-      if (!tamanho) {
-        alert("Selecione o tamanho da empresa")
-        return
-      }
-    }
+
     setIsLoading(true)
 
-    try {
-      const payload: any = {
-        email,
-        name: nome.trim() || qName,
-        surname: sobrenome.trim() || qSurname,
-        organization: orgId ? { id: orgId } : (empresa.trim()
-          ? { name: empresa.trim(), industry: setor || null, size: tamanho || null }
-          : null),
+    const supabase = createClient()
+    const fullName = `${nome.trim()} ${sobrenome.trim()}`
+
+    const { data, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          name: nome.trim(),
+          surname: sobrenome.trim(),
+          organization: empresa.trim() || null,
+        },
+        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
+      },
+    })
+
+    if (authError) {
+      if (authError.message.includes("already registered")) {
+        setError("Este e-mail já está cadastrado")
+      } else {
+        setError(authError.message)
       }
-      await fetch("/api/settings/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      login(email, password)
+      setIsLoading(false)
+      return
+    }
+
+    // Check if email confirmation is required
+    if (data.user && !data.session) {
+      setSuccess("Conta criada! Verifique seu e-mail para confirmar sua conta.")
+      setIsLoading(false)
+      return
+    }
+
+    // If no confirmation required, redirect to dashboard
+    if (data.session) {
+      try {
+        localStorage.setItem("user_email", email)
+        localStorage.setItem("user_name", fullName)
+      } catch {}
       router.push("/dashboard")
-    } catch {}
+    }
+
     setIsLoading(false)
   }
 
   return (
     <div className="min-h-screen h-screen flex flex-col lg:flex-row overflow-hidden">
-      {/* Left Side - Different image for register */}
+      {/* Left Side */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -239,11 +236,20 @@ function RegisterContent() {
             <p className="text-gray-400 text-sm">Preencha os dados abaixo para começar</p>
           </div>
 
-          {inviteMessage ? (
-            <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
-              {inviteMessage}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
             </div>
-          ) : null}
+          )}
+
+          {success && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -291,56 +297,19 @@ function RegisterContent() {
               </div>
             </div>
 
-            {!orgId && (
-              <div className="space-y-2">
-                <label className="text-base sm:text-sm font-medium text-gray-300">Organização</label>
-                <div className="relative">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                  <Input
-                    type="text"
-                    placeholder="Nome do escritório ou empresa"
-                    value={empresa}
-                    onChange={(e) => setEmpresa(e.target.value)}
-                    className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
-                    required
-                  />
-                </div>
+            <div className="space-y-2">
+              <label className="text-base sm:text-sm font-medium text-gray-300">Empresa / Escritório (opcional)</label>
+              <div className="relative">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <Input
+                  type="text"
+                  placeholder="Nome do escritório ou empresa"
+                  value={empresa}
+                  onChange={(e) => setEmpresa(e.target.value)}
+                  className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white text-base placeholder:text-gray-500 pl-12 focus:border-emerald-500 focus:ring-emerald-500/20 rounded-xl"
+                />
               </div>
-            )}
-
-            {!orgId && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-base sm:text-sm font-medium text-gray-300">Setor</label>
-                  <Select value={setor || undefined} onValueChange={(v) => setSetor(v)}>
-                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="legal">Jurídico</SelectItem>
-                      <SelectItem value="finance">Financeiro</SelectItem>
-                      <SelectItem value="realestate">Imobiliário</SelectItem>
-                      <SelectItem value="technology">Tecnologia</SelectItem>
-                      <SelectItem value="other">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-base sm:text-sm font-medium text-gray-300">Tamanho da Empresa</label>
-                  <Select value={tamanho || undefined} onValueChange={(v) => setTamanho(v)}>
-                    <SelectTrigger className="h-14 sm:h-12 bg-[#1a2329] border-[#2a3640] text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">1-10 funcionários</SelectItem>
-                      <SelectItem value="medium">11-50 funcionários</SelectItem>
-                      <SelectItem value="large">51-200 funcionários</SelectItem>
-                      <SelectItem value="enterprise">200+ funcionários</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
+            </div>
 
             <div className="space-y-2">
               <label className="text-base sm:text-sm font-medium text-gray-300">Senha</label>
@@ -408,7 +377,7 @@ function RegisterContent() {
             <Button
               type="submit"
               className="w-full h-14 sm:h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-lg sm:text-base rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
-              disabled={isLoading || !inviteOk}
+              disabled={isLoading || !!success}
             >
               {isLoading ? (
                 "Criando conta..."

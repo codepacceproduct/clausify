@@ -7,11 +7,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2 } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Star, Users, CheckCircle2, AlertCircle } from "lucide-react"
 import Link from "next/link"
-import { login } from "@/lib/auth"
 import Image from "next/image"
-import { Label } from "@/components/ui/label"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,18 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false)
-  const [twoFactorCode, setTwoFactorCode] = useState("")
-
-  async function checkTwoFA(emailToCheck: string) {
-    const r = await fetch(`/api/settings/2fa/status?email=${encodeURIComponent(emailToCheck)}`)
-    const j = await r.json().catch(() => ({ enabled: false }))
-    setTwoFAEnabled(!!j.enabled)
-    return !!j.enabled
-  }
-
-  
+  const [error, setError] = useState("")
 
   useEffect(() => {
     try {
@@ -49,46 +37,61 @@ export default function LoginPage() {
   useEffect(() => {
     try {
       const remembered = typeof window !== "undefined" && localStorage.getItem("rememberMe") === "true"
-      const saved = remembered ? (localStorage.getItem("rememberEmail") || "") : ""
+      const saved = remembered ? localStorage.getItem("rememberEmail") || "" : ""
       if (emailRef.current) emailRef.current.value = saved
     } catch {}
   }, [])
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) {
+        router.push("/dashboard")
+      }
+    }
+    checkSession()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
     setIsLoading(true)
+
     const email = emailRef.current?.value || ""
-    const needs2fa = await checkTwoFA(email)
-    if (needs2fa) {
-      if (!twoFactorCode) {
-        setIsLoading(false)
-        return
+
+    const supabase = createClient()
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (authError) {
+      if (authError.message.includes("Invalid login credentials")) {
+        setError("E-mail ou senha incorretos")
+      } else if (authError.message.includes("Email not confirmed")) {
+        setError("Confirme seu e-mail antes de fazer login")
+      } else {
+        setError(authError.message)
       }
-      const r = await fetch(`/api/settings/2fa/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, token: twoFactorCode }) })
-      if (!r.ok) {
-        setIsLoading(false)
-        return
-      }
+      setIsLoading(false)
+      return
     }
-    if (await login(email, password)) {
-      try {
-        const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
-        // very naive parser
-        const os = /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iOS' : 'Desconhecido'
-        const browser = /Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : /Firefox/i.test(ua) ? 'Firefox' : 'Outro'
-        const device = /Mobile|Android|iPhone/i.test(ua) ? 'Mobile' : 'Desktop'
-        const host = typeof window !== 'undefined' ? `${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` : null
-        await fetch('/api/sessions/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, userAgent: ua, device, os, browser, clientHost: host, hostname: null }) })
-      } catch {}
+
+    if (data.session) {
       try {
         if (rememberMe) {
           localStorage.setItem("rememberMe", "true")
           localStorage.setItem("rememberEmail", email)
         }
+        localStorage.setItem("user_email", email)
+        localStorage.setItem("user_name", data.user?.user_metadata?.full_name || email)
       } catch {}
       router.push("/dashboard")
     }
+
     setIsLoading(false)
   }
 
@@ -175,7 +178,6 @@ export default function LoginPage() {
       <div className="flex-1 flex items-stretch lg:items-center justify-center bg-[#0f1419] overflow-y-auto">
         <div className="w-full max-w-md space-y-6 sm:space-y-8 px-6 py-8 sm:px-8 sm:py-4">
           <div className="flex justify-center">
-            {/* Replaced text and icon with the new logo image */}
             <div className="relative w-48 h-16">
               <Image src="/images/clausify-logo.png" alt="Clausify Logo" fill className="object-contain" priority />
             </div>
@@ -184,6 +186,13 @@ export default function LoginPage() {
           <div className="space-y-2 text-center">
             <h2 className="text-3xl sm:text-3xl font-bold text-white">Acesse sua conta</h2>
           </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
@@ -221,12 +230,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            {twoFAEnabled && (
-              <div className="space-y-2">
-                <Label htmlFor="twoFactor">Código 2FA</Label>
-                <Input id="twoFactor" placeholder="000000" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} />
-              </div>
-            )}
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
               <div className="flex items-center gap-2">
@@ -277,7 +280,7 @@ export default function LoginPage() {
 
             <p className="text-sm sm:text-xs text-gray-500 max-w-sm mx-auto px-4">
               Todos os seus dados estão seguros e jamais serão compartilhados.{" "}
-              <Link href="/privacy" className="text-gray-400 hover:text-gray-300 underline">
+              <Link href="/privacidade" className="text-gray-400 hover:text-gray-300 underline">
                 Termos de Uso e Políticas de Privacidade
               </Link>
             </p>
