@@ -51,6 +51,7 @@ export async function updateSession(request: NextRequest) {
     "/termos",
     "/lgpd",
     "/cookies",
+    "/listadeespera", // Added listadeespera to public paths
   ]
 
   const isPublicPath = publicPaths.some(

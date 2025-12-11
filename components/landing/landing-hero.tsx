@@ -111,8 +111,8 @@ export function LandingHero() {
             />
           </div>
 
-          {/* Floating Cards */}
-          <div className="absolute left-0 lg:left-10 top-1/2 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float">
+          {/* Floating Cards - using Tailwind animate-bounce as alternative */}
+          <div className="absolute left-0 lg:left-10 top-1/2 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float-card">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-emerald-400" />
@@ -124,7 +124,7 @@ export function LandingHero() {
             </div>
           </div>
 
-          <div className="absolute right-0 lg:right-10 top-2/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float delay-500">
+          <div className="absolute right-0 lg:right-10 top-2/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float-card-delayed">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Zap className="w-5 h-5 text-blue-400" />
@@ -137,19 +137,6 @@ export function LandingHero() {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
-        }
-        .delay-500 {
-          animation-delay: 0.5s;
-        }
-      `}</style>
     </section>
   )
 }
