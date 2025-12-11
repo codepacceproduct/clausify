@@ -24,7 +24,7 @@ function Avatar({
 function AvatarImage({
   className,
   fit = 'cover',
-  position = 'center',
+  position = 'top',
   zoom = 1,
   style,
   ...props
@@ -35,13 +35,13 @@ function AvatarImage({
   style?: React.CSSProperties
 }) {
   const pos = position === 'top'
-    ? 'center top'
+    ? 'top center'
     : position === 'bottom'
-      ? 'center bottom'
+      ? 'bottom center'
       : position === 'left'
-        ? 'left center'
+        ? 'center left'
         : position === 'right'
-          ? 'right center'
+          ? 'center right'
           : 'center'
   const mergedStyle: React.CSSProperties = {
     objectFit: fit,

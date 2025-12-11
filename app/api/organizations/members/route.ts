@@ -19,14 +19,14 @@ export async function GET(req: Request) {
     .order("joined_at", { ascending: false })
 
   const emails = (members || []).map((m: any) => m.email).filter(Boolean)
-  let names: Record<string, { name: string | null; surname: string | null; role: string | null; avatar_url: string | null; phone: string | null }> = {}
+  let names: Record<string, { name: string | null; surname: string | null; role: string | null; avatar_url: string | null }> = {}
   if (emails.length) {
     const { data: profs } = await supabaseServer
       .from("profiles")
-      .select("email,name,surname,role,avatar_url,phone")
+      .select("email,name,surname,role,avatar_url")
       .in("email", emails)
     for (const p of profs || []) {
-      names[p.email as string] = { name: (p.name as string) || null, surname: (p.surname as string) || null, role: ((p.role as string) || null), avatar_url: ((p.avatar_url as string) || null), phone: ((p.phone as string) || null) }
+      names[p.email as string] = { name: (p.name as string) || null, surname: (p.surname as string) || null, role: ((p.role as string) || null), avatar_url: ((p.avatar_url as string) || null) }
     }
   }
   const mapRole = (r?: string | null) => {
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
     }
   }
   const now = Date.now()
-  const rows = [] as Array<{ email: string; name: string | null; surname: string | null; phone: string | null; role: string; status: string; invited_at: string | null; joined_at: string | null; avatar_url: string | null }>
+  const rows = [] as Array<{ email: string; name: string | null; surname: string | null; role: string; status: string; invited_at: string | null; joined_at: string | null; avatar_url: string | null }>
   for (const m of members || []) {
     const emailKey = m.email as string
     const latest = latestLogsByEmail[emailKey]
@@ -70,7 +70,6 @@ export async function GET(req: Request) {
       email: emailKey,
       name: names[emailKey]?.name || null,
       surname: names[emailKey]?.surname || null,
-      phone: names[emailKey]?.phone || null,
       role: mapRole(m.role as string) || mapRole(names[emailKey]?.role || null),
       status,
       invited_at: m.invited_at as string | null,

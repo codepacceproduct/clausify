@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Shield, Edit, Trash2, Mail, Clock, Key, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { Shield, Edit, Trash2, Mail, Clock } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { getUserEmail, getAuthToken } from "@/lib/auth"
 import { formatDistanceToNow } from "date-fns"
@@ -12,7 +12,6 @@ import { ptBR, enUS, es } from "date-fns/locale"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { toast } from "sonner"
 
 type Member = {
   email: string
@@ -45,14 +44,6 @@ export function AccessControl() {
   const [newRole, setNewRole] = useState<"admin" | "moderator" | "member">("member")
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteEmail, setDeleteEmail] = useState<string | null>(null)
-  const [savingPwd, setSavingPwd] = useState(false)
-  const [targetEmail, setTargetEmail] = useState<string>("")
-  const [targetNewPassword, setTargetNewPassword] = useState<string>("")
-  const [targetConfirmPassword, setTargetConfirmPassword] = useState<string>("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "moderator" | "member">("all")
-  const [page, setPage] = useState<number>(1)
-  const itemsPerPage = 5
   const locale = useMemo(() => {
     const prefs = typeof window !== "undefined" ? ((window as any).__prefs || (() => { try { return JSON.parse(localStorage.getItem("prefs") || "{}") } catch { return {} } })()) : {}
     const lang = prefs?.language || "pt-br"
@@ -84,26 +75,6 @@ export function AccessControl() {
     return (me?.role || "member") as "admin" | "moderator" | "member"
   }, [members, requesterEmail])
   const isAdmin = currentUserRole === "admin"
-
-  const filteredMembers = useMemo(() => {
-    const term = (searchTerm || "").trim().toLowerCase()
-    return members.filter((m) => {
-      const name = [m.name, m.surname].filter(Boolean).join(" ")
-      const matchesText = term
-        ? (name.toLowerCase().includes(term) || m.email.toLowerCase().includes(term))
-        : true
-      const matchesRole = roleFilter === "all" ? true : m.role === roleFilter
-      return matchesText && matchesRole
-    })
-  }, [members, searchTerm, roleFilter])
-
-  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / itemsPerPage))
-  const startIndex = (page - 1) * itemsPerPage
-  const pageMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage)
-
-  useEffect(() => {
-    setPage(1)
-  }, [searchTerm, roleFilter])
 
   function reloadMembers() {
     const email = requesterEmail
@@ -163,40 +134,6 @@ export function AccessControl() {
     if (res.ok) reloadMembers()
   }
 
-  async function handleTargetPasswordUpdate() {
-    const email = requesterEmail
-    if (!email) { toast.error("Email ausente"); return }
-    if (!isAdmin) { toast.error("Permissão negada"); return }
-    if (!targetEmail) { toast.error("Selecione um usuário"); return }
-    if (!targetNewPassword || targetNewPassword.length < 8) { toast.error("Senha deve ter ao menos 8 caracteres"); return }
-    if (targetNewPassword !== targetConfirmPassword) { toast.error("As senhas não coincidem"); return }
-    setSavingPwd(true)
-    try {
-      const token = getAuthToken()
-      const headers: any = { "Content-Type": "application/json" }
-      if (token) headers.Authorization = `Bearer ${token}`
-      const res = await fetch("/api/settings/password", { method: "POST", headers, body: JSON.stringify({ newPassword: targetNewPassword, targetEmail }) })
-      if (res.ok) {
-        toast.success("Senha do usuário atualizada")
-        setTargetNewPassword("")
-        setTargetConfirmPassword("")
-        try {
-          const tk = getAuthToken()
-          const hdrs: any = { "Content-Type": "application/json" }
-          if (tk) hdrs.Authorization = `Bearer ${tk}`
-          await fetch(`/api/audit/logs/record`, { method: "POST", headers: hdrs, body: JSON.stringify({ action: "password_change", resource: "Usuário", status: "success" }) })
-        } catch {}
-      } else {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err?.error || "Falha ao atualizar senha do usuário")
-      }
-    } catch {
-      toast.error("Erro ao atualizar senha do usuário")
-    } finally {
-      setSavingPwd(false)
-    }
-  }
-
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       {/* Users List */}
@@ -247,34 +184,12 @@ export function AccessControl() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome ou e-mail"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as any)}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as funções</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="moderator">Moderador</SelectItem>
-                  <SelectItem value="member">Membro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             {loading ? (
               <div className="text-sm text-muted-foreground">Carregando usuários...</div>
-            ) : filteredMembers.length === 0 ? (
+            ) : members.length === 0 ? (
               <div className="text-sm text-muted-foreground">Nenhum usuário encontrado</div>
             ) : (
-              pageMembers.map((user) => (
+              members.map((user) => (
               <div key={user.email} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
@@ -360,38 +275,6 @@ export function AccessControl() {
               </div>
             )))
             }
-            {filteredMembers.length > 0 && (
-              <div className="flex items-center justify-between pt-2">
-                <div className="text-xs text-muted-foreground">
-                  {filteredMembers.length <= itemsPerPage
-                    ? `Mostrando ${filteredMembers.length} de ${filteredMembers.length}`
-                    : `Mostrando ${startIndex + 1}–${Math.min(startIndex + itemsPerPage, filteredMembers.length)} de ${filteredMembers.length}`}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Anterior
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    Página {page} de {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    Próxima
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -449,47 +332,6 @@ export function AccessControl() {
           </div>
         </CardContent>
       </Card>
-
-      {isAdmin && (
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-muted-foreground" />
-              <CardTitle>Alterar Senha de Usuário</CardTitle>
-            </div>
-            <CardDescription>Administradores podem redefinir senhas de usuários da organização</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Usuário</span>
-                <Select value={targetEmail || undefined} onValueChange={setTargetEmail}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members.map((m) => (
-                      <SelectItem key={m.email} value={m.email}>{[m.name, m.surname].filter(Boolean).join(" ") || m.email} — {m.role}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Nova Senha</span>
-                <Input type="password" placeholder="••••••••" value={targetNewPassword} onChange={(e) => setTargetNewPassword(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Confirmar Nova Senha</span>
-                <Input type="password" placeholder="••••••••" value={targetConfirmPassword} onChange={(e) => setTargetConfirmPassword(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <Button variant="outline" onClick={handleTargetPasswordUpdate} disabled={savingPwd}>{savingPwd ? "Atualizando..." : "Atualizar Senha do Usuário"}</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>

@@ -4,7 +4,6 @@ import { AuditLogs } from "@/components/audit-logs"
 import { AccessControl } from "@/components/access-control"
 import { SecuritySettings } from "@/components/security-settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PendingMembers } from "@/components/pending-members"
 
 export default function SecurityPage() {
   return (
@@ -22,7 +21,6 @@ export default function SecurityPage() {
         <TabsList>
           <TabsTrigger value="logs">Logs de Auditoria</TabsTrigger>
           <TabsTrigger value="access">Controle de Acesso</TabsTrigger>
-          <TabsTrigger value="requests">Solicitações</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
 
@@ -32,10 +30,6 @@ export default function SecurityPage() {
 
         <TabsContent value="access" className="space-y-6">
           <AccessControl />
-        </TabsContent>
-
-        <TabsContent value="requests" className="space-y-6">
-          <PendingMembers />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,8 +29,6 @@ import {
   DollarSign,
   Calendar,
 } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { getAuthToken, getUserEmail } from "@/lib/auth"
 
 interface PendingApproval {
   id: string
@@ -64,104 +62,143 @@ interface PendingApproval {
     date?: string
     comment?: string
   }>
-  previewUrl?: string | null
 }
 
-function sanitizeName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9-_.]/g, "-").replace(/-+/g, "-")
-}
+const pendingApprovals: PendingApproval[] = [
+  {
+    id: "1",
+    contractName: "Contrato de Prestação de Serviços - Alpha Tech",
+    client: "Alpha Tech Solutions",
+    value: "R$ 450.000,00",
+    type: "Prestação de Serviços",
+    currentLevel: 2,
+    totalLevels: 3,
+    submittedBy: {
+      name: "Maria Silva",
+      avatar: "",
+      role: "Analista Jurídico",
+    },
+    submittedAt: "20/01/2025 às 14:30",
+    deadline: "25/01/2025",
+    priority: "high",
+    comments: [
+      {
+        id: "c1",
+        user: "Carlos Mendes",
+        avatar: "",
+        role: "Analista Sr.",
+        text: "Contrato revisado. Cláusulas de confidencialidade adequadas ao padrão da empresa.",
+        date: "21/01/2025 às 09:15",
+      },
+    ],
+    previousApprovals: [
+      {
+        level: 1,
+        role: "Analista",
+        approver: "Carlos Mendes",
+        status: "approved",
+        date: "21/01/2025",
+        comment: "Aprovado com ressalvas menores",
+      },
+      { level: 2, role: "Gestor", approver: "Você", status: "pending" },
+      { level: 3, role: "Diretor", approver: "Roberto Lima", status: "pending" },
+    ],
+  },
+  {
+    id: "2",
+    contractName: "Acordo de Confidencialidade - Beta Corp",
+    client: "Beta Corporation",
+    value: "N/A",
+    type: "NDA",
+    currentLevel: 2,
+    totalLevels: 2,
+    submittedBy: {
+      name: "João Santos",
+      avatar: "",
+      role: "Analista Jurídico",
+    },
+    submittedAt: "19/01/2025 às 10:00",
+    deadline: "22/01/2025",
+    priority: "medium",
+    comments: [],
+    previousApprovals: [
+      { level: 1, role: "Analista", approver: "Ana Costa", status: "approved", date: "20/01/2025" },
+      { level: 2, role: "Gestor", approver: "Você", status: "pending" },
+    ],
+  },
+  {
+    id: "3",
+    contractName: "Contrato de Locação Comercial - Sede SP",
+    client: "Imobiliária Central",
+    value: "R$ 85.000,00/mês",
+    type: "Locação",
+    currentLevel: 3,
+    totalLevels: 3,
+    submittedBy: {
+      name: "Pedro Alves",
+      avatar: "",
+      role: "Coordenador",
+    },
+    submittedAt: "18/01/2025 às 16:45",
+    deadline: "23/01/2025",
+    priority: "high",
+    comments: [
+      {
+        id: "c2",
+        user: "Ana Costa",
+        avatar: "",
+        role: "Analista",
+        text: "Valores estão acima da média de mercado. Sugiro renegociação.",
+        date: "19/01/2025 às 11:30",
+      },
+      {
+        id: "c3",
+        user: "Carlos Mendes",
+        avatar: "",
+        role: "Gestor",
+        text: "Localização estratégica justifica o valor. Aprovado com esta ressalva.",
+        date: "20/01/2025 às 14:00",
+      },
+    ],
+    previousApprovals: [
+      {
+        level: 1,
+        role: "Analista",
+        approver: "Ana Costa",
+        status: "approved",
+        date: "19/01/2025",
+        comment: "Aprovado com ressalvas",
+      },
+      {
+        level: 2,
+        role: "Gestor",
+        approver: "Carlos Mendes",
+        status: "approved",
+        date: "20/01/2025",
+        comment: "Aprovado",
+      },
+      { level: 3, role: "Diretor", approver: "Você", status: "pending" },
+    ],
+  },
+]
 
 export function ApprovalPending() {
   const [comment, setComment] = useState("")
   const [isApproving, setIsApproving] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
-  const [items, setItems] = useState<PendingApproval[]>([])
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("approvals")
-        .select("id, contract_name, client, value, type, current_level, total_levels, submitted_by, submitted_at, deadline, priority, comments, previous_approvals, status")
-        .eq("status", "pending")
-        .order("submitted_at", { ascending: false })
-      const rows = (data || []) as any[]
-      const mapped: PendingApproval[] = rows.map((r) => ({
-        id: String(r.id),
-        contractName: String(r.contract_name || ""),
-        client: String(r.client || ""),
-        value: String(r.value || ""),
-        type: String(r.type || ""),
-        currentLevel: Number(r.current_level || 1),
-        totalLevels: Number(r.total_levels || 1),
-        submittedBy: { name: String(r.submitted_by || "Usuário"), avatar: "", role: "" },
-        submittedAt: r.submitted_at ? new Date(r.submitted_at).toLocaleString("pt-BR") : "",
-        deadline: r.deadline ? new Date(r.deadline).toLocaleDateString("pt-BR") : "",
-        priority: (String(r.priority || "medium") as any),
-        comments: Array.isArray(r.comments) ? r.comments : [],
-        previousApprovals: Array.isArray(r.previous_approvals) ? r.previous_approvals : [],
-        previewUrl: null,
-      }))
-      setItems(mapped)
-    }
-    load()
-  }, [])
-
-  const fetchPreviewUrl = async (contractName: string): Promise<string | null> => {
-    try {
-      const token = getAuthToken()
-      const r = await fetch(`/api/contracts/list`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-      const j = await r.json().catch(() => ({ items: [] }))
-      const files: { name: string; signedUrl: string | null }[] = j.items || []
-      const safe = sanitizeName(contractName)
-      const found = files.find((f) => sanitizeName(f.name).includes(safe)) || files[0]
-      return found?.signedUrl || null
-    } catch {
-      return null
-    }
-  }
-
-  const handleApprove = async (id: string) => {
+  const handleApprove = async () => {
     setIsApproving(true)
-    const email = getUserEmail() || ""
-    const now = new Date()
-    const newComment = comment.trim()
-    const { data: rows } = await supabase.from("approvals").select("comments").eq("id", id).limit(1)
-    const existing = rows?.[0]?.comments || []
-    const updatedComments = newComment
-      ? [...existing, { id: `${now.getTime()}`, user: email || "", avatar: "", role: "", text: newComment, date: now.toLocaleString("pt-BR") }]
-      : existing
-    await supabase.from("approvals").update({ status: "approved", comments: updatedComments }).eq("id", id)
-    try {
-      const tk = getAuthToken()
-      const headers: any = { "Content-Type": "application/json" }
-      if (tk) headers.Authorization = `Bearer ${tk}`
-      await fetch(`/api/audit/logs/record`, { method: "POST", headers, body: JSON.stringify({ action: "approve", resource: id, status: "success" }) })
-    } catch {}
-    setComment("")
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     setIsApproving(false)
-    setItems((prev) => prev.filter((p) => p.id !== id))
+    setComment("")
   }
 
-  const handleReject = async (id: string) => {
+  const handleReject = async () => {
     setIsRejecting(true)
-    const email = getUserEmail() || ""
-    const now = new Date()
-    const newComment = comment.trim()
-    const { data: rows } = await supabase.from("approvals").select("comments").eq("id", id).limit(1)
-    const existing = rows?.[0]?.comments || []
-    const updatedComments = newComment
-      ? [...existing, { id: `${now.getTime()}`, user: email || "", avatar: "", role: "", text: newComment, date: now.toLocaleString("pt-BR") }]
-      : existing
-    await supabase.from("approvals").update({ status: "rejected", comments: updatedComments }).eq("id", id)
-    try {
-      const tk = getAuthToken()
-      const headers: any = { "Content-Type": "application/json" }
-      if (tk) headers.Authorization = `Bearer ${tk}`
-      await fetch(`/api/audit/logs/record`, { method: "POST", headers, body: JSON.stringify({ action: "reject", resource: id, status: "success" }) })
-    } catch {}
-    setComment("")
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     setIsRejecting(false)
-    setItems((prev) => prev.filter((p) => p.id !== id))
+    setComment("")
   }
 
   const getPriorityColor = (priority: string) => {
@@ -186,20 +223,6 @@ export function ApprovalPending() {
     }
   }
 
-  const summary = useMemo(() => {
-    const pending = items.length
-    const high = items.filter((i) => i.priority === "high").length
-    const now = new Date()
-    const recentApproved = 0
-    const avgDays = Math.round(
-      items.reduce((acc, i) => {
-        const sub = i.submittedAt ? new Date(i.submittedAt.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1")).getTime() : now.getTime()
-        return acc + (now.getTime() - sub) / (1000 * 60 * 60 * 24)
-      }, 0) / Math.max(1, items.length)
-    )
-    return { pending, high, recentApproved, avgDays }
-  }, [items])
-
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -211,7 +234,7 @@ export function ApprovalPending() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.pending}</p>
+                <p className="text-2xl font-bold">{pendingApprovals.length}</p>
                 <p className="text-xs text-muted-foreground">Aguardando Aprovação</p>
               </div>
             </div>
@@ -224,7 +247,7 @@ export function ApprovalPending() {
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.high}</p>
+                <p className="text-2xl font-bold">2</p>
                 <p className="text-xs text-muted-foreground">Alta Prioridade</p>
               </div>
             </div>
@@ -237,7 +260,7 @@ export function ApprovalPending() {
                 <CheckCircle className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.recentApproved}</p>
+                <p className="text-2xl font-bold">12</p>
                 <p className="text-xs text-muted-foreground">Aprovados (Mês)</p>
               </div>
             </div>
@@ -250,7 +273,7 @@ export function ApprovalPending() {
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.avgDays} dias</p>
+                <p className="text-2xl font-bold">2.3 dias</p>
                 <p className="text-xs text-muted-foreground">Tempo Médio</p>
               </div>
             </div>
@@ -266,7 +289,7 @@ export function ApprovalPending() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {items.map((approval) => (
+            {pendingApprovals.map((approval) => (
               <div key={approval.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="flex-1 space-y-3">
@@ -336,35 +359,21 @@ export function ApprovalPending() {
                     </div>
                   </div>
 
-                  <Dialog onOpenChange={async (open) => {
-                    if (!open) return
-                    const url = await fetchPreviewUrl(approval.contractName)
-                    setItems((prev) => prev.map((p) => (p.id === approval.id ? { ...p, previewUrl: url } : p)))
-                  }}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          Revisar
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh]">
-                        <DialogHeader>
-                          <DialogTitle>Revisão de Contrato</DialogTitle>
-                          <DialogDescription>{approval.contractName}</DialogDescription>
-                        </DialogHeader>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>
+                        Revisar
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh]">
+                      <DialogHeader>
+                        <DialogTitle>Revisão de Contrato</DialogTitle>
+                        <DialogDescription>{approval.contractName}</DialogDescription>
+                      </DialogHeader>
 
-                        <ScrollArea className="max-h-[60vh] pr-4">
-                          <div className="space-y-6">
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-medium">Pré-visualização</h4>
-                              <div className="border rounded-lg overflow-hidden">
-                                {approval.previewUrl ? (
-                                  <iframe src={approval.previewUrl} className="w-full h-64" />
-                                ) : (
-                                  <div className="p-4 text-sm text-muted-foreground">Arquivo não encontrado para este contrato</div>
-                                )}
-                              </div>
-                            </div>
+                      <ScrollArea className="max-h-[60vh] pr-4">
+                        <div className="space-y-6">
                           {/* Contract Info */}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
@@ -491,7 +500,7 @@ export function ApprovalPending() {
                       </ScrollArea>
 
                       <DialogFooter className="flex gap-2 sm:gap-0">
-                        <Button variant="destructive" onClick={() => handleReject(approval.id)} disabled={isRejecting || isApproving}>
+                        <Button variant="destructive" onClick={handleReject} disabled={isRejecting || isApproving}>
                           {isRejecting ? (
                             "Rejeitando..."
                           ) : (
@@ -501,7 +510,7 @@ export function ApprovalPending() {
                             </>
                           )}
                         </Button>
-                        <Button onClick={() => handleApprove(approval.id)} disabled={isApproving || isRejecting}>
+                        <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
                           {isApproving ? (
                             "Aprovando..."
                           ) : (

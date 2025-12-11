@@ -1,65 +1,24 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, Calendar, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Calendar, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, Bar, BarChart, XAxis, YAxis } from "recharts"
-import { supabase } from "@/lib/supabase"
+
+const riskData = [
+  { name: "Baixo", value: 542, color: "#10b981" },
+  { name: "Médio", value: 438, color: "#f59e0b" },
+  { name: "Alto", value: 304, color: "#ef4444" },
+]
+
+const categoryData = [
+  { category: "Serviços", count: 456, value: 12500000 },
+  { category: "Locação", count: 289, value: 8900000 },
+  { category: "Fornecimento", count: 234, value: 15600000 },
+  { category: "Obra", count: 156, value: 24300000 },
+  { category: "Investimento", count: 89, value: 18700000 },
+]
 
 export function PortfolioOverview() {
-  const [rows, setRows] = useState<any[]>([])
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("approvals")
-        .select("contract_name, client, value, type, deadline, priority, status, submitted_at")
-        .limit(2000)
-      setRows(data || [])
-    }
-    load()
-  }, [])
-
-  const parseValue = (v: string | null) => {
-    if (!v) return 0
-    const n = String(v).replace(/[^0-9,.-]/g, "").replace(/\./g, "").replace(/,/, ".")
-    const x = parseFloat(n)
-    return isNaN(x) ? 0 : x
-  }
-
-  const stats = useMemo(() => {
-    const now = new Date()
-    const totalValue = rows.reduce((acc, r) => acc + parseValue(r.value), 0)
-    const activeCount = rows.filter((r) => String(r.status) === "active").length
-    const expiringSoon = rows.filter((r) => {
-      const d = r.deadline ? new Date(r.deadline) : null
-      if (!d) return false
-      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      return diff > 0 && diff <= 30
-    }).length
-    const expiringValue = rows.reduce((acc, r) => {
-      const d = r.deadline ? new Date(r.deadline) : null
-      if (!d) return acc
-      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      return diff > 0 && diff <= 30 ? acc + parseValue(r.value) : acc
-    }, 0)
-    const highRisk = rows.filter((r) => String(r.priority) === "high").length
-    const riskData = [
-      { name: "Baixo", value: rows.filter((r) => String(r.priority) === "low").length, color: "#10b981" },
-      { name: "Médio", value: rows.filter((r) => String(r.priority) === "medium").length, color: "#f59e0b" },
-      { name: "Alto", value: highRisk, color: "#ef4444" },
-    ]
-    const byType: Record<string, { category: string; count: number; value: number }> = {}
-    rows.forEach((r) => {
-      const k = String(r.type || "Outros")
-      if (!byType[k]) byType[k] = { category: k, count: 0, value: 0 }
-      byType[k].count++
-      byType[k].value += parseValue(r.value)
-    })
-    const categoryData = Object.values(byType)
-    return { totalValue, activeCount, expiringSoon, expiringValue, highRisk, riskData, categoryData }
-  }, [rows])
-
   return (
     <div className="space-y-6">
       {/* Key Metrics */}
@@ -70,7 +29,11 @@ export function PortfolioOverview() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {stats.totalValue.toLocaleString("pt-BR")}</div>
+            <div className="text-2xl font-bold">R$ 80,2M</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-success" />
+              <span className="text-success">+18.2%</span> vs último trimestre
+            </p>
           </CardContent>
         </Card>
 
@@ -80,7 +43,11 @@ export function PortfolioOverview() {
             <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeCount}</div>
+            <div className="text-2xl font-bold">1,284</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-success" />
+              <span className="text-success">+12.5%</span> este ano
+            </p>
           </CardContent>
         </Card>
 
@@ -90,8 +57,8 @@ export function PortfolioOverview() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.expiringSoon}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total: R$ {stats.expiringValue.toLocaleString("pt-BR")}</p>
+            <div className="text-2xl font-bold">42</div>
+            <p className="text-xs text-muted-foreground mt-1">Total: R$ 5,2M</p>
           </CardContent>
         </Card>
 
@@ -101,7 +68,11 @@ export function PortfolioOverview() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.highRisk}</div>
+            <div className="text-2xl font-bold">304</div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <TrendingDown className="h-3 w-3 text-success" />
+              <span className="text-success">-8.3%</span> vs mês anterior
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +87,7 @@ export function PortfolioOverview() {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={stats.riskData}
+                  data={riskData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -125,7 +96,7 @@ export function PortfolioOverview() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {stats.riskData.map((entry, index) => (
+                  {riskData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -141,7 +112,7 @@ export function PortfolioOverview() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stats.categoryData}>
+              <BarChart data={categoryData}>
                 <XAxis dataKey="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,9 +16,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Edit2, Trash2, Users, ArrowRight, GripVertical, CheckCircle } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { getAuthToken } from "@/lib/auth"
-import { toast } from "sonner"
 
 interface WorkflowLevel {
   id: string
@@ -42,131 +39,49 @@ interface Workflow {
   isActive: boolean
 }
 
+const workflows: Workflow[] = [
+  {
+    id: "1",
+    name: "Fluxo Padrão - 3 Níveis",
+    description: "Workflow completo com análise, gestão e diretoria",
+    contractTypes: ["Prestação de Serviços", "Locação", "Fornecimento"],
+    isActive: true,
+    levels: [
+      { id: "l1", level: 1, role: "Analista Jurídico", approvers: ["Carlos Mendes", "Ana Costa"], isRequired: true },
+      { id: "l2", level: 2, role: "Gestor Jurídico", approvers: ["Patricia Lima"], isRequired: true },
+      { id: "l3", level: 3, role: "Diretor", approvers: ["Roberto Silva"], isRequired: true },
+    ],
+  },
+  {
+    id: "2",
+    name: "Fluxo Simplificado - NDA",
+    description: "Aprovação rápida para acordos de confidencialidade",
+    contractTypes: ["NDA", "Termo de Confidencialidade"],
+    isActive: true,
+    levels: [
+      { id: "l1", level: 1, role: "Analista Jurídico", approvers: ["Carlos Mendes", "Ana Costa"], isRequired: true },
+      { id: "l2", level: 2, role: "Gestor Jurídico", approvers: ["Patricia Lima"], isRequired: true },
+    ],
+  },
+  {
+    id: "3",
+    name: "Fluxo Alto Valor",
+    description: "Para contratos acima de R$ 500.000,00",
+    contractTypes: ["Todos os tipos"],
+    isActive: true,
+    levels: [
+      { id: "l1", level: 1, role: "Analista Jurídico", approvers: ["Carlos Mendes", "Ana Costa"], isRequired: true },
+      { id: "l2", level: 2, role: "Gestor Jurídico", approvers: ["Patricia Lima"], isRequired: true },
+      { id: "l3", level: 3, role: "Diretor Jurídico", approvers: ["Roberto Silva"], isRequired: true },
+      { id: "l4", level: 4, role: "CEO", approvers: ["João Martins"], isRequired: true },
+    ],
+  },
+]
+
 export function ApprovalWorkflow() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [newWorkflowName, setNewWorkflowName] = useState("")
   const [newWorkflowDesc, setNewWorkflowDesc] = useState("")
-  const [workflows, setWorkflows] = useState<Workflow[]>([])
-  const [isCreating, setIsCreating] = useState(false)
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
-  const [editName, setEditName] = useState("")
-  const [editDesc, setEditDesc] = useState("")
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("workflows")
-        .select("id,name,description,contract_types,levels,is_active")
-        .order("created_at", { ascending: false })
-      const rows = (data || []) as any[]
-      const mapped: Workflow[] = rows.map((r) => ({
-        id: String(r.id),
-        name: String(r.name || "Fluxo"),
-        description: String(r.description || ""),
-        contractTypes: Array.isArray(r.contract_types) ? r.contract_types : [],
-        levels: Array.isArray(r.levels) ? r.levels : [],
-        isActive: Boolean(r.is_active ?? true),
-      }))
-      setWorkflows(mapped)
-    }
-    load()
-  }, [])
-
-  const handleCreateWorkflow = async () => {
-    if (!newWorkflowName.trim()) return
-    setIsCreating(true)
-    try {
-      const headers: any = { "Content-Type": "application/json" }
-      const token = getAuthToken()
-      if (token) headers.Authorization = `Bearer ${token}`
-      const res = await fetch(`/api/workflows/create`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ name: newWorkflowName.trim(), description: newWorkflowDesc.trim(), contractTypes: [], levels: [] }),
-      })
-      if (!res.ok) throw new Error(`Erro ao criar fluxo`)
-      const j = await res.json()
-      const w = j?.workflow || {}
-      const wf: Workflow = {
-        id: String(w.id || `${Date.now()}`),
-        name: String(w.name || newWorkflowName.trim()),
-        description: String(w.description || newWorkflowDesc.trim()),
-        contractTypes: Array.isArray(w.contract_types) ? w.contract_types : [],
-        levels: Array.isArray(w.levels) ? w.levels : [],
-        isActive: Boolean(w.is_active ?? true),
-      }
-      setWorkflows((prev) => [wf, ...prev])
-      toast.success("Fluxo criado com sucesso")
-      setIsCreateOpen(false)
-      setNewWorkflowName("")
-      setNewWorkflowDesc("")
-    } catch {
-      toast.error("Não foi possível criar o fluxo")
-    }
-    setIsCreating(false)
-  }
-
-  const openEdit = (wf: Workflow) => {
-    setEditId(wf.id)
-    setEditName(wf.name)
-    setEditDesc(wf.description || "")
-    setIsEditOpen(true)
-  }
-
-  const saveEdit = async () => {
-    if (!editId) return
-    const headers: any = { "Content-Type": "application/json" }
-    const token = getAuthToken()
-    if (token) headers.Authorization = `Bearer ${token}`
-    try {
-      const res = await fetch(`/api/workflows/update`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ id: editId, name: editName.trim(), description: editDesc.trim() }),
-      })
-      if (!res.ok) throw new Error("Erro ao salvar fluxo")
-      const j = await res.json()
-      const w = j?.workflow
-      setWorkflows((prev) => prev.map((x) => (x.id === editId ? {
-        id: String(w?.id || editId),
-        name: String(w?.name || editName.trim()),
-        description: String(w?.description || editDesc.trim()),
-        contractTypes: Array.isArray(w?.contract_types) ? w.contract_types : x.contractTypes,
-        levels: Array.isArray(w?.levels) ? w.levels : x.levels,
-        isActive: Boolean(w?.is_active ?? x.isActive),
-      } : x)))
-      toast.success("Fluxo atualizado")
-      setIsEditOpen(false)
-      setEditId(null)
-    } catch {
-      toast.error("Não foi possível atualizar o fluxo")
-    }
-  }
-
-  const confirmDelete = (wf: Workflow) => {
-    setDeleteId(wf.id)
-    setIsDeleting(true)
-  }
-
-  const doDelete = async () => {
-    if (!deleteId) { setIsDeleting(false); return }
-    const headers: any = { "Content-Type": "application/json" }
-    const token = getAuthToken()
-    if (token) headers.Authorization = `Bearer ${token}`
-    try {
-      const res = await fetch(`/api/workflows/delete`, { method: "DELETE", headers, body: JSON.stringify({ id: deleteId }) })
-      if (!res.ok) throw new Error("Erro ao apagar fluxo")
-      setWorkflows((prev) => prev.filter((x) => x.id !== deleteId))
-      toast.success("Fluxo apagado")
-    } catch {
-      toast.error("Não foi possível apagar o fluxo")
-    }
-    setIsDeleting(false)
-    setDeleteId(null)
-  }
 
   return (
     <div className="space-y-6">
@@ -225,7 +140,7 @@ export function ApprovalWorkflow() {
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateWorkflow} disabled={isCreating}>{isCreating ? "Criando..." : "Criar Fluxo"}</Button>
+              <Button onClick={() => setIsCreateOpen(false)}>Criar Fluxo</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -247,10 +162,10 @@ export function ApprovalWorkflow() {
                   <CardDescription>{workflow.description}</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(workflow)}>
+                  <Button variant="ghost" size="icon">
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => confirmDelete(workflow)}>
+                  <Button variant="ghost" size="icon" className="text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -322,41 +237,6 @@ export function ApprovalWorkflow() {
           </Card>
         ))}
       </div>
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Fluxo</DialogTitle>
-            <DialogDescription>Atualize o nome e a descrição do fluxo</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Nome</label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Descrição</label>
-              <Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
-            <Button onClick={saveEdit}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleting} onOpenChange={(o) => { if (!o) { setIsDeleting(false); setDeleteId(null) } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Apagar Fluxo</DialogTitle>
-            <DialogDescription>Tem certeza que deseja apagar este fluxo? Esta ação não pode ser desfeita.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsDeleting(false); setDeleteId(null) }}>Cancelar</Button>
-            <Button variant="destructive" onClick={doDelete}>Apagar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

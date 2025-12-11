@@ -103,15 +103,23 @@ export async function POST(req: Request) {
         if (existingMember && existingMember.length > 0) {
           await supabaseServer
             .from("organization_members")
-            .update({ role: "member", status: "pending", joined_at: null })
+            .update({ status: "active", joined_at: new Date().toISOString() })
             .eq("organization_id", id)
             .eq("email", email)
         } else {
           await supabaseServer
             .from("organization_members")
-            .insert({ organization_id: id, email, role: "member", status: "pending", joined_at: null })
+            .insert({ organization_id: id, email, role: "member", status: "active", joined_at: new Date().toISOString() })
         }
-        await supabaseServer.from("profiles").update({ role: "member" }).eq("email", email)
+        const { data: profs } = await supabaseServer
+          .from("profiles")
+          .select("role")
+          .eq("email", email)
+          .limit(1)
+        const currentRole = String(profs?.[0]?.role || "")
+        if (!currentRole) {
+          await supabaseServer.from("profiles").update({ role: "member" }).eq("email", email)
+        }
       }
     } else if (orgName) {
       const { data: createdOrg, error: orgErr } = await supabaseServer

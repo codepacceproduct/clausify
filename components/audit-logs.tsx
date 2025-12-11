@@ -13,7 +13,7 @@ import { getUserEmail, getAuthToken } from "@/lib/auth"
 type LogItem = {
   id: string | number
   user: string
-  action: "login" | "download" | "upload" | "edit" | "delete" | "view" | "compare" | "ip_change"
+  action: "login" | "download" | "upload" | "edit" | "delete" | "view" | "compare"
   resource: string
   timestamp: string
   ip: string | null
@@ -28,7 +28,6 @@ const actionIcons = {
   view: Eye,
   login: User,
   compare: FileText,
-  ip_change: Calendar,
 }
 
 const actionLabels = {
@@ -39,7 +38,6 @@ const actionLabels = {
   view: "Visualização",
   login: "Login",
   compare: "Comparação",
-  ip_change: "Mudança de IP",
 }
 
 export function AuditLogs() {
@@ -47,8 +45,6 @@ export function AuditLogs() {
   const [filterAction, setFilterAction] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [logs, setLogs] = useState<LogItem[]>([])
-  const [page, setPage] = useState(1)
-  const pageSize = 20
 
   useEffect(() => {
     const email = getUserEmail()
@@ -89,15 +85,6 @@ export function AuditLogs() {
     const statusFilter = filterStatus === "all" ? () => true : (l: LogItem) => l.status === filterStatus
     return logs.filter((l) => matchesSearch(l) && actionFilter(l) && statusFilter(l))
   }, [logs, searchTerm, filterAction, filterStatus])
-
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize))
-  const startIndex = (page - 1) * pageSize
-  const currentLogs = filteredLogs.slice(startIndex, startIndex + pageSize)
-
-  useEffect(() => {
-    const id = setTimeout(() => setPage(1), 0)
-    return () => clearTimeout(id)
-  }, [searchTerm, filterAction, filterStatus])
 
   return (
     <Card>
@@ -172,8 +159,8 @@ export function AuditLogs() {
         {/* Logs List */}
         <ScrollArea className="h-[600px] pr-4">
           <div className="space-y-3">
-            {currentLogs.map((log) => {
-              const ActionIcon = actionIcons[log.action as keyof typeof actionIcons] || FileText
+            {filteredLogs.map((log) => {
+              const ActionIcon = actionIcons[log.action as keyof typeof actionIcons]
               return (
                 <div
                   key={log.id}
@@ -193,7 +180,7 @@ export function AuditLogs() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm">{log.user}</p>
                       <Badge variant="secondary" className="text-xs">
-                        {actionLabels[log.action as keyof typeof actionLabels] || log.action}
+                        {actionLabels[log.action as keyof typeof actionLabels]}
                       </Badge>
                       <Badge
                         className={
@@ -220,13 +207,6 @@ export function AuditLogs() {
             })}
           </div>
         </ScrollArea>
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-xs text-muted-foreground">Página {page} de {totalPages}</div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>Anterior</Button>
-            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>Próxima</Button>
-          </div>
-        </div>
       </CardContent>
     </Card>
   )

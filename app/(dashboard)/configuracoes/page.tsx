@@ -1,8 +1,10 @@
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { GeneralSettings } from "@/components/general-settings"
 import { NotificationSettings } from "@/components/notification-settings"
+import { SecuritySettings } from "@/components/security-settings"
 import { IntegrationSettings } from "@/components/integration-settings"
 import { TeamsSettings } from "@/components/teams-settings"
+import { AccessControl } from "@/components/access-control"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { supabaseServer } from "@/lib/supabase-server"
 import { redirect } from "next/navigation"
@@ -110,10 +112,11 @@ export default async function SettingsPage() {
   if (perms.configuracoes === false) {
     redirect("/dashboard")
   }
-  const order = ["general","notifications","integrations","teams"]
+  const order = ["general","notifications","security","integrations","teams"]
   const tabKeyToModule: Record<string, string> = {
     general: "configuracoes.general",
     notifications: "configuracoes.notifications",
+    security: "configuracoes.security",
     integrations: "configuracoes.integrations",
     teams: "configuracoes.teams",
   }
@@ -129,6 +132,7 @@ export default async function SettingsPage() {
         <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
           {perms["configuracoes.general"] !== false && (<TabsTrigger value="general">Geral</TabsTrigger>)}
           {perms["configuracoes.notifications"] !== false && (<TabsTrigger value="notifications">Notificações</TabsTrigger>)}
+          {perms["configuracoes.security"] !== false && (<TabsTrigger value="security">Segurança</TabsTrigger>)}
           {perms["configuracoes.integrations"] !== false && (<TabsTrigger value="integrations">Integrações</TabsTrigger>)}
           {perms["configuracoes.teams"] !== false && (<TabsTrigger value="teams">Equipes</TabsTrigger>)}
         </TabsList>
@@ -145,6 +149,11 @@ export default async function SettingsPage() {
           </TabsContent>
         )}
 
+        {perms["configuracoes.security"] !== false && (
+          <TabsContent value="security" className="space-y-6">
+            <SecuritySettings />
+          </TabsContent>
+        )}
 
         {perms["configuracoes.integrations"] !== false && (
           <TabsContent value="integrations" className="space-y-6">
@@ -155,6 +164,7 @@ export default async function SettingsPage() {
         {perms["configuracoes.teams"] !== false && (
           <TabsContent value="teams" className="space-y-6">
             <TeamsSettings />
+            <AccessControl />
           </TabsContent>
         )}
       </Tabs>
