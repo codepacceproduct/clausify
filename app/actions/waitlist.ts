@@ -19,6 +19,22 @@ export async function updateWaitlistStatus(id: string, status: string) {
   revalidatePath("/admin")
 }
 
+export async function deleteWaitlistLead(id: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("waitlist")
+    .delete()
+    .eq("id", id)
+
+  if (error) {
+    throw new Error("Failed to delete lead")
+  }
+
+  revalidatePath("/admin/listadeespera")
+  revalidatePath("/admin")
+}
+
 export async function getWaitlistCount() {
   const supabase = await createClient()
   const { count, error } = await supabase.from("waitlist").select("*", { count: "exact", head: true })

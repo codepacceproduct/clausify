@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Search, Mail, CheckCircle2 } from "lucide-react"
+import { MoreHorizontal, Search, Mail, CheckCircle2, Trash2 } from "lucide-react"
 import type { WaitlistLead } from "@/lib/admin/waitlist"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { updateWaitlistStatus } from "@/app/actions/waitlist"
+import { updateWaitlistStatus, deleteWaitlistLead } from "@/app/actions/waitlist"
 import { toast } from "sonner"
 
 interface WaitlistTableProps {
@@ -44,6 +44,21 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
       } catch (error) {
         toast.error("Erro ao atualizar status")
         // Revert (simplified: strictly we should restore previous state, but next revalidation might fix it)
+      }
+    })
+  }
+
+  const handleDelete = (id: string) => {
+    // Optimistic update
+    setLocalLeads(localLeads.filter((lead) => lead.id !== id))
+
+    startTransition(async () => {
+      try {
+        await deleteWaitlistLead(id)
+        toast.success("Lead removido com sucesso")
+      } catch (error) {
+        toast.error("Erro ao remover lead")
+        // Revert handled by revalidation on error usually, or manual revert could be added here
       }
     })
   }
@@ -135,6 +150,10 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                         <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "converted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
                           Marcar como convertido
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDelete(lead.id)} className="text-red-600 focus:text-red-600">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
