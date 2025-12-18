@@ -59,12 +59,12 @@ export function LandingHero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link href="/login">
+            <Link href="/listadeespera">
               <Button
                 size="lg"
                 className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 h-14 text-base font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all hover:scale-105"
               >
-                Começar Gratuitamente
+                Entrar na Lista de Espera
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>

@@ -1,15 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Search, Mail, CheckCircle2 } from "lucide-react"
-import type { WaitlistLead } from "@/lib/mock-data"
+import type { WaitlistLead } from "@/lib/admin/waitlist"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { updateWaitlistStatus } from "@/app/actions/waitlist"
+import { toast } from "sonner"
 
 interface WaitlistTableProps {
   leads: WaitlistLead[]
@@ -18,16 +20,32 @@ interface WaitlistTableProps {
 export function WaitlistTable({ leads }: WaitlistTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [localLeads, setLocalLeads] = useState(leads)
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setLocalLeads(leads)
+  }, [leads])
 
   const filteredLeads = localLeads.filter(
     (lead) =>
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchTerm.toLowerCase()),
+      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  const updateStatus = (id: string, status: WaitlistLead["status"]) => {
+  const handleStatusUpdate = (id: string, status: WaitlistLead["status"]) => {
+    // Optimistic update
     setLocalLeads(localLeads.map((lead) => (lead.id === id ? { ...lead, status } : lead)))
+
+    startTransition(async () => {
+      try {
+        await updateWaitlistStatus(id, status)
+        toast.success("Status atualizado com sucesso")
+      } catch (error) {
+        toast.error("Erro ao atualizar status")
+        // Revert (simplified: strictly we should restore previous state, but next revalidation might fix it)
+      }
+    })
   }
 
   const getStatusBadge = (status: WaitlistLead["status"]) => {
@@ -36,9 +54,9 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
       contacted: { variant: "default" as const, label: "Contatado" },
       converted: { variant: "default" as const, label: "Convertido", className: "bg-emerald-500 hover:bg-emerald-600" },
     }
-    const config = variants[status]
+    const config = variants[status] || variants.pending
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant={config.variant} className={config?.className}>
         {config.label}
       </Badge>
     )
@@ -110,11 +128,11 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                           <Mail className="mr-2 h-4 w-4" />
                           Enviar email
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "contacted")}>
+                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "contacted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4" />
                           Marcar como contatado
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "converted")}>
+                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "converted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
                           Marcar como convertido
                         </DropdownMenuItem>

@@ -28,6 +28,7 @@ export default function ListaDeEsperaPage() {
   const [company, setCompany] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const [queuePosition, setQueuePosition] = useState(0)
   const [totalSignups, setTotalSignups] = useState(2847)
   const counterRef = useRef<HTMLDivElement>(null)
@@ -64,14 +65,29 @@ export default function ListaDeEsperaPage() {
     if (!email || !name) return
 
     setIsSubmitting(true)
+    setErrorMessage("")
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, company }),
+      })
 
-    setQueuePosition(Math.floor(Math.random() * 500) + 100)
-    setTotalSignups((prev) => prev + 1)
-    setIsSubmitted(true)
-    setIsSubmitting(false)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao se inscrever")
+      }
+
+      setQueuePosition(Math.floor(Math.random() * 500) + 100) // Posição simulada por enquanto, ou poderia vir do back
+      setTotalSignups((prev) => prev + 1)
+      setIsSubmitted(true)
+    } catch (error: any) {
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const benefits = [
@@ -168,12 +184,12 @@ export default function ListaDeEsperaPage() {
                 <div className="flex flex-wrap gap-8 pt-4" ref={counterRef}>
                   <div>
                     <div className="text-3xl font-bold text-emerald-400">
-                      +{countedNumbers.contracts.toLocaleString()}
+                      +{countedNumbers.contracts.toLocaleString('pt-BR')}
                     </div>
                     <div className="text-sm text-gray-500">Contratos analisados em beta</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-emerald-400">+{countedNumbers.hours.toLocaleString()}h</div>
+                    <div className="text-3xl font-bold text-emerald-400">+{countedNumbers.hours.toLocaleString('pt-BR')}h</div>
                     <div className="text-sm text-gray-500">Economizadas por mês</div>
                   </div>
                   <div>
@@ -208,7 +224,7 @@ export default function ListaDeEsperaPage() {
                         <div className="text-center mb-8">
                           <h2 className="text-2xl font-bold mb-2">Entre na lista de espera</h2>
                           <p className="text-gray-400">
-                            <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString()}</span>{" "}
+                            <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString('pt-BR')}</span>{" "}
                             pessoas já garantiram seu lugar
                           </p>
                         </div>
@@ -270,6 +286,11 @@ export default function ListaDeEsperaPage() {
                               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 h-12 rounded-xl focus:border-emerald-500 focus:ring-emerald-500/20"
                             />
                           </div>
+                          {errorMessage && (
+                            <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-xl">
+                              {errorMessage}
+                            </div>
+                          )}
                           <Button
                             type="submit"
                             disabled={isSubmitting}

@@ -26,16 +26,16 @@ export function LandingCTA() {
               seu teste gratuito de 14 dias hoje.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/login">
+              <Link href="/listadeespera">
                 <Button
                   size="lg"
                   className="bg-white text-emerald-600 hover:bg-white/90 rounded-full px-8 h-14 text-base font-semibold shadow-xl"
                 >
-                  Começar Gratuitamente
+                  Entrar na Lista de Espera
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/listadeespera">
                 <Button
                   size="lg"
                   variant="outline"
