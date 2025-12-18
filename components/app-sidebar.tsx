@@ -73,10 +73,14 @@ export function AppSidebar({
       if (!email) return
       try {
         const token = getAuthToken()
-        const profRes = await fetch(`/api/settings/profile`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+        const profRes = await fetch(`/api/settings/profile`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
         const { profile } = await profRes.json()
         const role = String(profile?.role || "member").toLowerCase()
-        const permRes = await fetch(`/api/permissions/role`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+        const permRes = await fetch(`/api/permissions/role`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
         const j = await permRes.json()
         const perms = j?.permissions || {}
         const modules = perms[role] || {}
@@ -167,30 +171,32 @@ export function AppSidebar({
         </div>
 
         <nav className="flex-1 space-y-2 px-4 sm:px-3 overflow-y-auto pt-4 sm:pt-3">
-          {navigation.filter((item) => {
-            const key = moduleKeyForHref(item.href)
-            return allowedModules[key] !== false
-          }).map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={closeMobileMenu}
-                className={cn(
-                  "flex items-center gap-4 rounded-lg px-4 py-4 sm:gap-3 sm:px-3 sm:py-2.5 text-base sm:text-sm font-medium transition-all active:scale-95",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                  isCollapsed && "md:justify-center",
-                )}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <item.icon className="h-6 w-6 sm:h-5 sm:w-5 shrink-0" />
-                <span className={cn(isCollapsed && "md:hidden")}>{item.name}</span>
-              </Link>
-            )
-          })}
+          {navigation
+            .filter((item) => {
+              const key = moduleKeyForHref(item.href)
+              return allowedModules[key] !== false
+            })
+            .map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={closeMobileMenu}
+                  className={cn(
+                    "flex items-center gap-4 rounded-lg px-4 py-4 sm:gap-3 sm:px-3 sm:py-2.5 text-base sm:text-sm font-medium transition-all active:scale-95",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    isCollapsed && "md:justify-center",
+                  )}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  <item.icon className="h-6 w-6 sm:h-5 sm:w-5 shrink-0" />
+                  <span className={cn(isCollapsed && "md:hidden")}>{item.name}</span>
+                </Link>
+              )
+            })}
         </nav>
 
         <div className="border-t border-sidebar-border/50 p-4 sm:p-3 space-y-2">
