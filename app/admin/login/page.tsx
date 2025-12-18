@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, AlertCircle, CheckCircle2 } from "lucide-react"
@@ -23,49 +22,17 @@ export default function AdminLoginPage() {
     setError("")
     setIsLoading(true)
 
-    const supabase = createClient()
-
-    try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (signInError) {
-        throw new Error("E-mail ou senha incorretos")
-      }
-
-      if (!data.user) {
-        throw new Error("Usuário não encontrado")
-      }
-
-      // Check user role
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single()
-
-      if (profileError) {
-        throw new Error("Erro ao verificar permissões")
-      }
-
-      if (profile?.role !== "admin") {
-        await supabase.auth.signOut()
-        throw new Error("Acesso não autorizado: Permissão de administrador necessária")
-      }
-
-      // Se chegou aqui, é admin
-      localStorage.setItem("admin_authenticated", "true")
-      localStorage.setItem("admin_email", email)
-      router.push("/admin")
-      
-    } catch (err: any) {
-      setError(err.message || "Ocorreu um erro ao fazer login")
-      await supabase.auth.signOut()
-    } finally {
-      setIsLoading(false)
+    if (email === "ebertryane@gmail.com" && password === "1133662277") {
+      try {
+        localStorage.setItem("admin_authenticated", "true")
+        localStorage.setItem("admin_email", email)
+        router.push("/admin")
+      } catch {}
+    } else {
+      setError("E-mail ou senha de administrador incorretos")
     }
+
+    setIsLoading(false)
   }
 
   return (

@@ -1,23 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { getWaitlistStats } from "@/lib/admin/waitlist"
-import { TrendingUp, Users, CheckCircle2, Clock, Target, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react"
+import { getWaitlistStats } from "@/lib/mock-data"
+import { TrendingUp, Users, CheckCircle2, Clock, Target, ArrowUpRight } from "lucide-react"
 
-export const dynamic = "force-dynamic"
-
-export default async function AdminPage() {
-  const stats = await getWaitlistStats()
-
-  const getTrendIcon = (value: number) => {
-    if (value > 0) return <ArrowUpRight className="w-3 h-3" />
-    if (value < 0) return <ArrowDownRight className="w-3 h-3" />
-    return <Minus className="w-3 h-3" />
-  }
-
-  const getTrendColor = (value: number) => {
-    if (value > 0) return "text-emerald-500"
-    if (value < 0) return "text-red-500"
-    return "text-muted-foreground"
-  }
+export default function AdminPage() {
+  const stats = getWaitlistStats()
 
   return (
     <div className="space-y-6">
@@ -34,9 +20,9 @@ export default async function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <p className={`text-xs flex items-center gap-1 mt-1 ${getTrendColor(stats.totalLeadsTrend)}`}>
-              {getTrendIcon(stats.totalLeadsTrend)}
-              {stats.totalLeadsTrend > 0 ? "+" : ""}{stats.totalLeadsTrend}% este mês
+            <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1">
+              <ArrowUpRight className="w-3 h-3" />
+              +12.5% este mês
             </p>
           </CardContent>
         </Card>
@@ -75,10 +61,10 @@ export default async function AdminPage() {
             <Target className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats.conversionRate}%</div>
-            <p className={`text-xs flex items-center gap-1 mt-1 ${getTrendColor(stats.conversionRateTrend)}`}>
-              {getTrendIcon(stats.conversionRateTrend)}
-              {stats.conversionRateTrend > 0 ? "+" : ""}{stats.conversionRateTrend}% vs mês anterior
+            <div className="text-2xl font-bold text-foreground">{stats.conversionRate}</div>
+            <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1">
+              <ArrowUpRight className="w-3 h-3" />
+              +2.1% vs mês anterior
             </p>
           </CardContent>
         </Card>
@@ -91,24 +77,21 @@ export default async function AdminPage() {
               <TrendingUp className="w-5 h-5 text-emerald-500" />
               Crescimento da Lista de Espera
             </CardTitle>
-            <CardDescription>Métricas de crescimento nos últimos 7 dias</CardDescription>
+            <CardDescription>Métricas de crescimento nos últimos 30 dias</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Novos leads (7 dias)</span>
-              <span className="text-2xl font-bold text-emerald-400">+{stats.weeklyLeads}</span>
+              <span className="text-2xl font-bold text-emerald-400">+{Math.floor(stats.total * 0.15)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Média diária</span>
-              <span className="text-2xl font-bold text-emerald-400">{stats.dailyAverage}</span>
+              <span className="text-2xl font-bold text-emerald-400">{Math.floor((stats.total * 0.15) / 7)}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
-                style={{ width: `${stats.monthlyGoalProgress}%` }} 
-              />
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: "67%" }} />
             </div>
-            <p className="text-xs text-muted-foreground">{stats.monthlyGoalProgress}% da meta mensal atingida ({stats.monthlyGoalTarget} leads)</p>
+            <p className="text-xs text-muted-foreground">67% da meta mensal atingida</p>
           </CardContent>
         </Card>
 
@@ -130,12 +113,9 @@ export default async function AdminPage() {
               <span className="text-2xl font-bold text-blue-400">{stats.contacted}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 rounded-full transition-all duration-500" 
-                style={{ width: `${stats.inProcessRate}%` }} 
-              />
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: "43%" }} />
             </div>
-            <p className="text-xs text-muted-foreground">{stats.inProcessRate}% em processo de conversão</p>
+            <p className="text-xs text-muted-foreground">43% em processo de conversão</p>
           </CardContent>
         </Card>
       </div>

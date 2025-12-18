@@ -178,6 +178,15 @@
   }
 }
 
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-in;
 }
@@ -200,4 +209,8 @@
 
 .animate-bounce {
   animation: bounce 1s infinite;
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
 }

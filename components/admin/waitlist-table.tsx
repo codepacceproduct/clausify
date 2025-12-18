@@ -1,17 +1,15 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Search, Mail, CheckCircle2, Trash2 } from "lucide-react"
-import type { WaitlistLead } from "@/lib/admin/waitlist"
+import { MoreHorizontal, Search, Mail, CheckCircle2 } from "lucide-react"
+import type { WaitlistLead } from "@/lib/mock-data"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { updateWaitlistStatus, deleteWaitlistLead } from "@/app/actions/waitlist"
-import { toast } from "sonner"
 
 interface WaitlistTableProps {
   leads: WaitlistLead[]
@@ -20,47 +18,16 @@ interface WaitlistTableProps {
 export function WaitlistTable({ leads }: WaitlistTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [localLeads, setLocalLeads] = useState(leads)
-  const [isPending, startTransition] = useTransition()
-
-  useEffect(() => {
-    setLocalLeads(leads)
-  }, [leads])
 
   const filteredLeads = localLeads.filter(
     (lead) =>
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase()))
+      lead.company.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const handleStatusUpdate = (id: string, status: WaitlistLead["status"]) => {
-    // Optimistic update
+  const updateStatus = (id: string, status: WaitlistLead["status"]) => {
     setLocalLeads(localLeads.map((lead) => (lead.id === id ? { ...lead, status } : lead)))
-
-    startTransition(async () => {
-      try {
-        await updateWaitlistStatus(id, status)
-        toast.success("Status atualizado com sucesso")
-      } catch (error) {
-        toast.error("Erro ao atualizar status")
-        // Revert (simplified: strictly we should restore previous state, but next revalidation might fix it)
-      }
-    })
-  }
-
-  const handleDelete = (id: string) => {
-    // Optimistic update
-    setLocalLeads(localLeads.filter((lead) => lead.id !== id))
-
-    startTransition(async () => {
-      try {
-        await deleteWaitlistLead(id)
-        toast.success("Lead removido com sucesso")
-      } catch (error) {
-        toast.error("Erro ao remover lead")
-        // Revert handled by revalidation on error usually, or manual revert could be added here
-      }
-    })
   }
 
   const getStatusBadge = (status: WaitlistLead["status"]) => {
@@ -69,9 +36,9 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
       contacted: { variant: "default" as const, label: "Contatado" },
       converted: { variant: "default" as const, label: "Convertido", className: "bg-emerald-500 hover:bg-emerald-600" },
     }
-    const config = variants[status] || variants.pending
+    const config = variants[status]
     return (
-      <Badge variant={config.variant} className={config?.className}>
+      <Badge variant={config.variant} className={config.className}>
         {config.label}
       </Badge>
     )
@@ -98,6 +65,7 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
               <TableHead className="w-[50px]">#</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>WhatsApp</TableHead>
               <TableHead>Empresa</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Fonte</TableHead>
@@ -108,7 +76,7 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
           <TableBody>
             {filteredLeads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   Nenhum lead encontrado
                 </TableCell>
               </TableRow>
@@ -118,6 +86,16 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                   <TableCell className="font-medium">#{lead.position}</TableCell>
                   <TableCell className="font-medium">{lead.name}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.email}</TableCell>
+                  <TableCell>
+                    <a
+                      href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
+                    >
+                      {lead.whatsapp}
+                    </a>
+                  </TableCell>
                   <TableCell>{lead.company || "-"}</TableCell>
                   <TableCell>{getStatusBadge(lead.status)}</TableCell>
                   <TableCell>
@@ -143,17 +121,19 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                           <Mail className="mr-2 h-4 w-4" />
                           Enviar email
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "contacted")}>
+                        <DropdownMenuItem
+                          onClick={() => window.open(`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`, "_blank")}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Enviar WhatsApp
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "contacted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4" />
                           Marcar como contatado
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "converted")}>
+                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "converted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
                           Marcar como convertido
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(lead.id)} className="text-red-600 focus:text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

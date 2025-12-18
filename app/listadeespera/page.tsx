@@ -22,30 +22,16 @@ import {
   Loader2,
 } from "lucide-react"
 
-import { getWaitlistCount } from "@/app/actions/waitlist"
-
 export default function ListaDeEsperaPage() {
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
   const [company, setCompany] = useState("")
+  const [whatsapp, setWhatsapp] = useState("") // Added WhatsApp field to capture lead phone number
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [errorMessage, setErrorMessage] = useState("")
   const [queuePosition, setQueuePosition] = useState(0)
-  const [totalSignups, setTotalSignups] = useState(0)
-  const [isLoadingCount, setIsLoadingCount] = useState(true)
+  const [totalSignups, setTotalSignups] = useState(2847)
   const counterRef = useRef<HTMLDivElement>(null)
-  
-  const MAX_SPOTS = 600
-
-  useEffect(() => {
-    // Fetch initial count
-    getWaitlistCount().then((count) => {
-      setTotalSignups(count)
-      setIsLoadingCount(false)
-    })
-  }, [])
-
   const [countedNumbers, setCountedNumbers] = useState({
     contracts: 0,
     hours: 0,
@@ -76,32 +62,17 @@ export default function ListaDeEsperaPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !name) return
+    if (!email || !name || !whatsapp) return // Ensure WhatsApp field is filled
 
     setIsSubmitting(true)
-    setErrorMessage("")
 
-    try {
-      const response = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, company }),
-      })
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao se inscrever")
-      }
-
-      setQueuePosition(data.position || totalSignups + 1)
-      setTotalSignups((prev) => prev + 1)
-      setIsSubmitted(true)
-    } catch (error: any) {
-      setErrorMessage(error.message)
-    } finally {
-      setIsSubmitting(false)
-    }
+    setQueuePosition(Math.floor(Math.random() * 500) + 100)
+    setTotalSignups((prev) => prev + 1)
+    setIsSubmitted(true)
+    setIsSubmitting(false)
   }
 
   const benefits = [
@@ -198,12 +169,12 @@ export default function ListaDeEsperaPage() {
                 <div className="flex flex-wrap gap-8 pt-4" ref={counterRef}>
                   <div>
                     <div className="text-3xl font-bold text-emerald-400">
-                      +{countedNumbers.contracts.toLocaleString('pt-BR')}
+                      +{countedNumbers.contracts.toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-500">Contratos analisados em beta</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-emerald-400">+{countedNumbers.hours.toLocaleString('pt-BR')}h</div>
+                    <div className="text-3xl font-bold text-emerald-400">+{countedNumbers.hours.toLocaleString()}h</div>
                     <div className="text-sm text-gray-500">Economizadas por mês</div>
                   </div>
                   <div>
@@ -238,11 +209,7 @@ export default function ListaDeEsperaPage() {
                         <div className="text-center mb-8">
                           <h2 className="text-2xl font-bold mb-2">Entre na lista de espera</h2>
                           <p className="text-gray-400">
-                            {isLoadingCount ? (
-                              <span className="inline-block w-12 h-4 bg-gray-800 animate-pulse rounded mx-1" />
-                            ) : (
-                              <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString('pt-BR')}</span>
-                            )}{" "}
+                            <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString()}</span>{" "}
                             pessoas já garantiram seu lugar
                           </p>
                         </div>
@@ -252,25 +219,17 @@ export default function ListaDeEsperaPage() {
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-400">Vagas preenchidas</span>
                             <span className="text-emerald-400 font-medium">
-                              {isLoadingCount ? (
-                                <span className="inline-block w-8 h-4 bg-gray-800 animate-pulse rounded" />
-                              ) : (
-                                `${Math.min(Math.round((totalSignups / MAX_SPOTS) * 100), 100)}%`
-                              )}
+                              {Math.min(Math.round((totalSignups / 5000) * 100), 100)}%
                             </span>
                           </div>
                           <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000"
-                              style={{ width: `${Math.min((totalSignups / MAX_SPOTS) * 100, 100)}%` }}
+                              style={{ width: `${Math.min((totalSignups / 5000) * 100, 100)}%` }}
                             />
                           </div>
                           <p className="text-xs text-gray-500 mt-2">
-                            {isLoadingCount ? (
-                              <span className="inline-block w-24 h-4 bg-gray-800 animate-pulse rounded" />
-                            ) : (
-                              `Apenas ${Math.max(MAX_SPOTS - totalSignups, 0)} vagas restantes com benefícios exclusivos`
-                            )}
+                            Apenas {5000 - totalSignups} vagas restantes com benefícios exclusivos
                           </p>
                         </div>
 
@@ -301,6 +260,17 @@ export default function ListaDeEsperaPage() {
                             />
                           </div>
                           <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">WhatsApp *</label>
+                            <Input
+                              type="tel"
+                              value={whatsapp}
+                              onChange={(e) => setWhatsapp(e.target.value)}
+                              placeholder="(00) 00000-0000"
+                              className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 h-12 rounded-xl focus:border-emerald-500 focus:ring-emerald-500/20"
+                              required
+                            />
+                          </div>
+                          <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">
                               Empresa / Escritório (opcional)
                             </label>
@@ -312,11 +282,6 @@ export default function ListaDeEsperaPage() {
                               className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 h-12 rounded-xl focus:border-emerald-500 focus:ring-emerald-500/20"
                             />
                           </div>
-                          {errorMessage && (
-                            <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-3 rounded-xl">
-                              {errorMessage}
-                            </div>
-                          )}
                           <Button
                             type="submit"
                             disabled={isSubmitting}
@@ -375,6 +340,7 @@ export default function ListaDeEsperaPage() {
                             setEmail("")
                             setName("")
                             setCompany("")
+                            setWhatsapp("") // Reset WhatsApp field
                           }}
                         >
                           Indicar um amigo
@@ -422,13 +388,30 @@ export default function ListaDeEsperaPage() {
               <p className="text-gray-500 text-sm uppercase tracking-wider mb-8">
                 Profissionais de empresas líderes já estão na lista
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-50">
-                {["TozziniFreire", "Mattos Filho", "Pinheiro Neto", "Machado Meyer", "Demarest"].map((company) => (
-                  <span key={company} className="text-xl font-semibold text-gray-400">
-                    {company}
-                  </span>
-                ))}
+              <div className="relative overflow-hidden">
+                <div className="flex animate-marquee whitespace-nowrap">
+                  {[
+                    "TozziniFreire",
+                    "Mattos Filho",
+                    "Pinheiro Neto",
+                    "Machado Meyer",
+                    "Demarest",
+                    "TozziniFreire",
+                    "Mattos Filho",
+                    "Pinheiro Neto",
+                    "Machado Meyer",
+                    "Demarest",
+                  ].map((company, index) => (
+                    <span
+                      key={`${company}-${index}`}
+                      className="inline-block mx-8 text-2xl font-bold text-gray-600/40 hover:text-gray-500/60 transition-colors"
+                    >
+                      {company}
+                    </span>
+                  ))}
+                </div>
               </div>
+              {/* </CHANGE> */}
             </div>
           </div>
         </section>

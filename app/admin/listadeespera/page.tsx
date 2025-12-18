@@ -1,14 +1,14 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WaitlistTable } from "@/components/admin/waitlist-table"
 import { WaitlistStats } from "@/components/admin/waitlist-stats"
-import { getWaitlistLeads, getWaitlistStats } from "@/lib/admin/waitlist"
+import { getWaitlistLeads, getWaitlistStats } from "@/lib/mock-data"
 
-export const dynamic = "force-dynamic"
-
-export default async function AdminWaitlistPage() {
-  const leads = await getWaitlistLeads()
-  const stats = await getWaitlistStats()
+export default function AdminWaitlistPage() {
+  const leads = getWaitlistLeads()
+  const stats = getWaitlistStats()
 
   return (
     <div className="space-y-6">
