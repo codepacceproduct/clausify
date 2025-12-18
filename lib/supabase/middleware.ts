@@ -27,13 +27,17 @@ export async function updateSession(request: NextRequest) {
 
   const isAdminRoute = request.nextUrl.pathname.startsWith("/admin")
 
-  if (isAdminRoute) {
-    return supabaseResponse
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  if (isAdminRoute && !request.nextUrl.pathname.startsWith("/admin/login")) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin/login"
+      return NextResponse.redirect(url)
+    }
+  }
 
   const publicPaths = [
     "/",
@@ -58,6 +62,7 @@ export async function updateSession(request: NextRequest) {
     "/lgpd",
     "/cookies",
     "/listadeespera",
+    "/admin/login",
   ]
 
   const isPublicPath = publicPaths.some(

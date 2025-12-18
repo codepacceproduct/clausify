@@ -23,10 +23,18 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed }: AdminSidebarProps)
   const pathname = usePathname()
   const [isDarkMode, setIsDarkMode] = useState(false)
 
-  const handleLogout = () => {
-    localStorage.removeItem("admin_authenticated")
-    localStorage.removeItem("admin_email")
-    router.push("/admin/login")
+  const handleLogout = async () => {
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      localStorage.removeItem("admin_authenticated")
+      localStorage.removeItem("admin_email")
+      router.push("/admin/login")
+    }
   }
 
   const toggleSidebar = () => {

@@ -14,16 +14,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   useEffect(() => {
-    const adminAuth = typeof window !== "undefined" ? localStorage.getItem("admin_authenticated") : null
+    const checkAuth = async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
+        
+        const { data: { user } } = await supabase.auth.getUser()
 
-    if (!adminAuth && pathname !== "/admin/login") {
-      router.push("/admin/login")
-    } else if (adminAuth && pathname === "/admin/login") {
-      router.push("/admin")
-    } else {
-      setIsAuthenticated(true)
+        if (!user) {
+          if (pathname !== "/admin/login") {
+            router.push("/admin/login")
+          }
+          setIsLoading(false)
+          return
+        }
+
+        // Check admin role
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single()
+
+        if (profile?.role !== "admin") {
+          if (pathname !== "/admin/login") {
+            router.push("/admin/login")
+          }
+          setIsLoading(false)
+          return
+        }
+
+        // If authenticated and admin
+        if (pathname === "/admin/login") {
+          router.push("/admin")
+        } else {
+          setIsAuthenticated(true)
+        }
+      } catch (error) {
+        console.error("Auth check error:", error)
+        if (pathname !== "/admin/login") {
+          router.push("/admin/login")
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+
+    checkAuth()
   }, [router, pathname])
 
   useEffect(() => {

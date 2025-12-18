@@ -1,14 +1,34 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WaitlistTable } from "@/components/admin/waitlist-table"
 import { WaitlistStats } from "@/components/admin/waitlist-stats"
-import { getWaitlistLeads, getWaitlistStats } from "@/lib/mock-data"
+import { getWaitlistLeads } from "@/lib/admin/waitlist"
 
-export default function AdminWaitlistPage() {
-  const leads = getWaitlistLeads()
-  const stats = getWaitlistStats()
+export const dynamic = "force-dynamic"
+
+export default async function AdminWaitlistPage() {
+  const leads = await getWaitlistLeads()
+  
+  // Calculate stats
+  const total = leads.length
+  const pending = leads.filter(l => l.status === "pending").length
+  const contacted = leads.filter(l => l.status === "contacted").length
+  const converted = leads.filter(l => l.status === "converted").length
+  
+  // Calculate "today" signups
+  const today = new Date().toISOString().split('T')[0]
+  const todaySignups = leads.filter(l => l.createdAt.startsWith(today)).length
+  
+  const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0
+
+  const stats = {
+    total,
+    pending,
+    contacted,
+    converted,
+    todaySignups,
+    conversionRate
+  }
 
   return (
     <div className="space-y-6">

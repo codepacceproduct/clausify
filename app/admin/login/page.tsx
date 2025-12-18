@@ -22,17 +22,42 @@ export default function AdminLoginPage() {
     setError("")
     setIsLoading(true)
 
-    if (email === "ebertryane@gmail.com" && password === "1133662277") {
-      try {
-        localStorage.setItem("admin_authenticated", "true")
-        localStorage.setItem("admin_email", email)
-        router.push("/admin")
-      } catch {}
-    } else {
-      setError("E-mail ou senha de administrador incorretos")
-    }
+    try {
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
 
-    setIsLoading(false)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (signInError) {
+        throw new Error("E-mail ou senha incorretos")
+      }
+
+      if (!data.user) {
+        throw new Error("Erro ao autenticar")
+      }
+
+      // Check if user is admin
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single()
+
+      if (profileError || profile?.role !== "admin") {
+        await supabase.auth.signOut()
+        throw new Error("Acesso não autorizado. Apenas administradores podem acessar esta área.")
+      }
+
+      router.push("/admin")
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro ao fazer login")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

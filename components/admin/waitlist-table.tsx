@@ -1,15 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Search, Mail, CheckCircle2 } from "lucide-react"
-import type { WaitlistLead } from "@/lib/mock-data"
+import { MoreHorizontal, Search, Mail, CheckCircle2, Trash2 } from "lucide-react"
+import type { WaitlistLead } from "@/lib/admin/waitlist"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { updateWaitlistStatus, deleteWaitlistLead } from "@/app/actions/waitlist"
+import { toast } from "sonner"
 
 interface WaitlistTableProps {
   leads: WaitlistLead[]
@@ -18,16 +20,45 @@ interface WaitlistTableProps {
 export function WaitlistTable({ leads }: WaitlistTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [localLeads, setLocalLeads] = useState(leads)
+  const [isPending, startTransition] = useTransition()
 
   const filteredLeads = localLeads.filter(
     (lead) =>
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchTerm.toLowerCase()),
+      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
-  const updateStatus = (id: string, status: WaitlistLead["status"]) => {
+  const handleStatusUpdate = (id: string, status: WaitlistLead["status"]) => {
+    // Optimistic update
     setLocalLeads(localLeads.map((lead) => (lead.id === id ? { ...lead, status } : lead)))
+
+    startTransition(async () => {
+      try {
+        await updateWaitlistStatus(id, status)
+        toast.success("Status atualizado com sucesso")
+      } catch (error) {
+        toast.error("Erro ao atualizar status")
+        // Revert (simplified)
+      }
+    })
+  }
+  
+  const handleDelete = (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este lead?")) return
+
+    // Optimistic update
+    setLocalLeads(localLeads.filter((lead) => lead.id !== id))
+
+    startTransition(async () => {
+      try {
+        await deleteWaitlistLead(id)
+        toast.success("Lead excluído com sucesso")
+      } catch (error) {
+        toast.error("Erro ao excluir lead")
+        // Revert
+      }
+    })
   }
 
   const getStatusBadge = (status: WaitlistLead["status"]) => {
@@ -87,14 +118,16 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                   <TableCell className="font-medium">{lead.name}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.email}</TableCell>
                   <TableCell>
-                    <a
-                      href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
-                    >
-                      {lead.whatsapp}
-                    </a>
+                    {lead.whatsapp && (
+                      <a
+                        href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
+                      >
+                        {lead.whatsapp}
+                      </a>
+                    )}
                   </TableCell>
                   <TableCell>{lead.company || "-"}</TableCell>
                   <TableCell>{getStatusBadge(lead.status)}</TableCell>
@@ -121,19 +154,25 @@ export function WaitlistTable({ leads }: WaitlistTableProps) {
                           <Mail className="mr-2 h-4 w-4" />
                           Enviar email
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => window.open(`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`, "_blank")}
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          Enviar WhatsApp
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "contacted")}>
+                        {lead.whatsapp && (
+                          <DropdownMenuItem
+                            onClick={() => window.open(`https://wa.me/${lead.whatsapp?.replace(/\D/g, "")}`, "_blank")}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Enviar WhatsApp
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "contacted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4" />
                           Marcar como contatado
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateStatus(lead.id, "converted")}>
+                        <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "converted")}>
                           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
                           Marcar como convertido
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleDelete(lead.id)} className="text-red-500 focus:text-red-500">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
