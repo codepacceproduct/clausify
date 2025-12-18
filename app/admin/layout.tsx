@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   useEffect(() => {
     const adminAuth = typeof window !== "undefined" ? localStorage.getItem("admin_authenticated") : null
@@ -25,6 +25,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     setIsLoading(false)
   }, [router, pathname])
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1280) {
+        setIsCollapsed(true)
+      } else {
+        setIsCollapsed(false)
+      }
+    }
+
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   if (isLoading) {
     return (
@@ -43,13 +57,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
-        <AdminSidebar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-6 lg:p-8">{children}</div>
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full bg-background">
+      <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+      <main className={`flex-1 transition-all duration-300 ${isCollapsed ? "ml-20" : "ml-72"}`}>
+        <div className="p-6 lg:p-8">{children}</div>
+      </main>
+    </div>
   )
 }
