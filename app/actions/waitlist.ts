@@ -18,3 +18,15 @@ export async function updateWaitlistStatus(id: string, status: string) {
   revalidatePath("/admin/listadeespera")
   revalidatePath("/admin")
 }
+
+export async function getWaitlistCount() {
+  const supabase = await createClient()
+  const { count, error } = await supabase.from("waitlist").select("*", { count: "exact", head: true })
+  
+  if (error) {
+    console.error("Error fetching waitlist count:", error)
+    return 0
+  }
+  
+  return count || 0
+}

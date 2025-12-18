@@ -22,6 +22,8 @@ import {
   Loader2,
 } from "lucide-react"
 
+import { getWaitlistCount } from "@/app/actions/waitlist"
+
 export default function ListaDeEsperaPage() {
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
@@ -30,8 +32,20 @@ export default function ListaDeEsperaPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [queuePosition, setQueuePosition] = useState(0)
-  const [totalSignups, setTotalSignups] = useState(2847)
+  const [totalSignups, setTotalSignups] = useState(0)
+  const [isLoadingCount, setIsLoadingCount] = useState(true)
   const counterRef = useRef<HTMLDivElement>(null)
+  
+  const MAX_SPOTS = 600
+
+  useEffect(() => {
+    // Fetch initial count
+    getWaitlistCount().then((count) => {
+      setTotalSignups(count)
+      setIsLoadingCount(false)
+    })
+  }, [])
+
   const [countedNumbers, setCountedNumbers] = useState({
     contracts: 0,
     hours: 0,
@@ -80,7 +94,7 @@ export default function ListaDeEsperaPage() {
         throw new Error(data.error || "Erro ao se inscrever")
       }
 
-      setQueuePosition(Math.floor(Math.random() * 500) + 100) // Posição simulada por enquanto, ou poderia vir do back
+      setQueuePosition(data.position || totalSignups + 1)
       setTotalSignups((prev) => prev + 1)
       setIsSubmitted(true)
     } catch (error: any) {
@@ -224,7 +238,11 @@ export default function ListaDeEsperaPage() {
                         <div className="text-center mb-8">
                           <h2 className="text-2xl font-bold mb-2">Entre na lista de espera</h2>
                           <p className="text-gray-400">
-                            <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString('pt-BR')}</span>{" "}
+                            {isLoadingCount ? (
+                              <span className="inline-block w-12 h-4 bg-gray-800 animate-pulse rounded mx-1" />
+                            ) : (
+                              <span className="text-emerald-400 font-semibold">{totalSignups.toLocaleString('pt-BR')}</span>
+                            )}{" "}
                             pessoas já garantiram seu lugar
                           </p>
                         </div>
@@ -234,17 +252,25 @@ export default function ListaDeEsperaPage() {
                           <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-400">Vagas preenchidas</span>
                             <span className="text-emerald-400 font-medium">
-                              {Math.min(Math.round((totalSignups / 5000) * 100), 100)}%
+                              {isLoadingCount ? (
+                                <span className="inline-block w-8 h-4 bg-gray-800 animate-pulse rounded" />
+                              ) : (
+                                `${Math.min(Math.round((totalSignups / MAX_SPOTS) * 100), 100)}%`
+                              )}
                             </span>
                           </div>
                           <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000"
-                              style={{ width: `${Math.min((totalSignups / 5000) * 100, 100)}%` }}
+                              style={{ width: `${Math.min((totalSignups / MAX_SPOTS) * 100, 100)}%` }}
                             />
                           </div>
                           <p className="text-xs text-gray-500 mt-2">
-                            Apenas {5000 - totalSignups} vagas restantes com benefícios exclusivos
+                            {isLoadingCount ? (
+                              <span className="inline-block w-24 h-4 bg-gray-800 animate-pulse rounded" />
+                            ) : (
+                              `Apenas ${Math.max(MAX_SPOTS - totalSignups, 0)} vagas restantes com benefícios exclusivos`
+                            )}
                           </p>
                         </div>
 

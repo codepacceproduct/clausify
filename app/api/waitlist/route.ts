@@ -35,7 +35,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Erro ao salvar dados" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    // Obter a posição (count total)
+    const { count } = await supabase.from("waitlist").select("*", { count: "exact", head: true })
+
+    return NextResponse.json({ success: true, position: count })
   } catch (error) {
     console.error("Erro interno:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
