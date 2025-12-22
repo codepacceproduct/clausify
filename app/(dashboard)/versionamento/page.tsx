@@ -20,7 +20,7 @@ export default function VersionamentoPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="flex flex-col h-auto w-full max-w-lg sm:grid sm:grid-cols-3">
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="comparar">Comparar Versões</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>

@@ -21,11 +21,13 @@ interface TimelineEvent {
   date: string
   description: string
   details?: string
+  contractId: string
 }
 
 const timelineData: TimelineEvent[] = [
   {
     id: "1",
+    contractId: "alpha",
     type: "approved",
     version: "3.0",
     user: { name: "Roberto Silva", avatar: "", role: "Diretor" },
@@ -35,6 +37,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "2",
+    contractId: "alpha",
     type: "commented",
     version: "3.0",
     user: { name: "Patricia Lima", avatar: "", role: "Gestora" },
@@ -44,6 +47,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "3",
+    contractId: "alpha",
     type: "edited",
     version: "3.0",
     user: { name: "Maria Silva", avatar: "", role: "Analista" },
@@ -53,6 +57,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "4",
+    contractId: "alpha",
     type: "created",
     version: "3.0",
     user: { name: "Maria Silva", avatar: "", role: "Analista" },
@@ -62,6 +67,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "5",
+    contractId: "alpha",
     type: "approved",
     version: "2.1",
     user: { name: "Patricia Lima", avatar: "", role: "Gestora" },
@@ -71,6 +77,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "6",
+    contractId: "alpha",
     type: "edited",
     version: "2.1",
     user: { name: "Carlos Mendes", avatar: "", role: "Analista Sr." },
@@ -80,6 +87,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "7",
+    contractId: "alpha",
     type: "uploaded",
     version: "2.0",
     user: { name: "Maria Silva", avatar: "", role: "Analista" },
@@ -89,6 +97,7 @@ const timelineData: TimelineEvent[] = [
   },
   {
     id: "8",
+    contractId: "alpha",
     type: "created",
     version: "1.0",
     user: { name: "Maria Silva", avatar: "", role: "Analista" },
@@ -99,13 +108,13 @@ const timelineData: TimelineEvent[] = [
 ]
 
 const contracts = [
-  { id: "1", name: "Contrato Alpha Tech" },
-  { id: "2", name: "NDA Beta Corporation" },
-  { id: "3", name: "Contrato de Locação - Sede SP" },
+  { id: "alpha", name: "Contrato de Prestação de Serviços - Alpha Tech" },
+  { id: "nda", name: "NDA - Beta Corporation" },
+  { id: "locacao", name: "Contrato de Locação - Sede SP" },
 ]
 
 export function VersionTimeline() {
-  const [selectedContract, setSelectedContract] = useState("1")
+  const [selectedContract, setSelectedContract] = useState("alpha")
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -158,6 +167,10 @@ export function VersionTimeline() {
     }
   }
 
+  const filteredEvents = timelineData.filter(
+    (event) => event.contractId === selectedContract,
+  )
+
   return (
     <div className="space-y-6">
       {/* Contract Selection */}
@@ -195,68 +208,79 @@ export function VersionTimeline() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[600px] pr-4">
-            <div className="relative">
-              {/* Timeline Line */}
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
+            {filteredEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhum evento encontrado para este contrato.
+              </p>
+            ) : (
+              <div className="relative pl-2">
+                {/* Events */}
+                <div className="space-y-0">
+                  {filteredEvents.map((event, index) => {
+                    const isLast = index === filteredEvents.length - 1
+                    return (
+                      <div key={event.id} className="relative flex gap-6 pb-8 last:pb-0">
+                        {/* Timeline Line */}
+                        {!isLast && (
+                          <div className="absolute left-[23px] top-12 bottom-0 w-0.5 bg-border" />
+                        )}
 
-              {/* Events */}
-              <div className="space-y-6">
-                {timelineData.map((event, _index) => (
-                  <div key={event.id} className="relative flex gap-4">
-                    {/* Icon */}
-                    <div
-                      className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 bg-background ${getEventColor(event.type)}`}
-                    >
-                      {getEventIcon(event.type)}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 pb-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={getEventColor(event.type)}>
-                            {getEventLabel(event.type)}
-                          </Badge>
-                          <Badge variant="secondary">v{event.version}</Badge>
+                        {/* Icon */}
+                        <div
+                          className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 bg-background ${getEventColor(event.type)}`}
+                        >
+                          {getEventIcon(event.type)}
                         </div>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {event.date}
-                        </span>
-                      </div>
 
-                      <div className="p-4 bg-muted/50 rounded-lg border">
-                        <p className="font-medium">{event.description}</p>
-                        {event.details && <p className="text-sm text-muted-foreground mt-1">{event.details}</p>}
-                        <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={event.user.avatar || "/placeholder.svg"} />
-                            <AvatarFallback className="text-[10px]">
-                              {event.user.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="font-medium">{event.user.name}</span>
-                            <span className="text-muted-foreground">• {event.user.role}</span>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className={getEventColor(event.type)}>
+                                {getEventLabel(event.type)}
+                              </Badge>
+                              <Badge variant="secondary">v{event.version}</Badge>
+                            </div>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap">
+                              <Clock className="h-3 w-3" />
+                              {event.date}
+                            </span>
                           </div>
+
+                          <div className="p-4 bg-muted/30 rounded-lg border hover:bg-muted/50 transition-colors">
+                            <p className="font-medium text-sm sm:text-base">{event.description}</p>
+                            {event.details && <p className="text-sm text-muted-foreground mt-1">{event.details}</p>}
+                            <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={event.user.avatar || "/placeholder.svg"} />
+                                <AvatarFallback className="text-[10px]">
+                                  {event.user.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="font-medium">{event.user.name}</span>
+                                <span className="text-muted-foreground">• {event.user.role}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* View Version Button */}
+                          {(event.type === "created" || event.type === "approved") && (
+                            <Button variant="ghost" size="sm" className="mt-2 h-8 text-xs">
+                              <Eye className="h-3 w-3 mr-2" />
+                              Ver versão {event.version}
+                            </Button>
+                          )}
                         </div>
                       </div>
-
-                      {/* View Version Button */}
-                      {(event.type === "created" || event.type === "approved") && (
-                        <Button variant="ghost" size="sm" className="mt-2">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver versão {event.version}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>

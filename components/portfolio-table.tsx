@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const contracts = [
   {
@@ -108,10 +109,17 @@ const contracts = [
   },
 ]
 
+type Contract = (typeof contracts)[number]
+
 export function PortfolioTable() {
-  const [currentPage, setCurrentPage] = useState(1)
   const router = useRouter()
-  const itemsPerPage = 8
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+
+  const openDetails = (contract: Contract) => {
+    setSelectedContract(contract)
+    setIsDetailsOpen(true)
+  }
 
   const handleViewVersions = (contractId: string) => {
     router.push(`/versionamento?contract=${contractId}`)
@@ -130,153 +138,136 @@ export function PortfolioTable() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Contratos da Carteira</CardTitle>
+    <Card className="bg-card border-border">
+      <CardHeader className="gap-2">
+        <CardTitle className="text-base sm:text-lg">Contratos</CardTitle>
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Vigência</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Risco</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {contracts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((contract) => (
-              <TableRow key={contract.id}>
-                <TableCell className="font-mono text-xs">{contract.id}</TableCell>
-                <TableCell className="font-medium">{contract.client}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{contract.type}</Badge>
-                </TableCell>
-                <TableCell className="font-medium">{contract.value}</TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="text-sm">{contract.endDate}</div>
-                    {contract.nearExpiry && (
-                      <div className="flex items-center gap-1 text-xs text-amber-600">
-                        <Calendar className="h-3 w-3" />
-                        <span>{contract.daysToExpire} dias</span>
-                      </div>
-                    )}
-                    {contract.status === "expired" && (
-                      <div className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Vencido</span>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      contract.status === "active"
-                        ? "default"
-                        : contract.status === "pending"
-                          ? "secondary"
-                          : "destructive"
-                    }
-                    className={
-                      contract.status === "active"
-                        ? "bg-success/10 text-success hover:bg-success/20"
-                        : contract.status === "pending"
-                          ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                          : "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                    }
-                  >
-                    {contract.status === "active" ? "Ativo" : contract.status === "pending" ? "Pendente" : "Vencido"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    className={
-                      contract.risk === "low"
-                        ? "bg-success/10 text-success hover:bg-success/20"
-                        : contract.risk === "medium"
-                          ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                          : "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                    }
-                  >
-                    {contract.risk === "low" ? "Baixo" : contract.risk === "medium" ? "Médio" : "Alto"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Visualizar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleAnalyze(contract.id)}>
-                        <FileSearch className="h-4 w-4 mr-2" />
-                        Reanalisar com IA
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewVersions(contract.id)}>
-                        <GitBranch className="h-4 w-4 mr-2" />
-                        Ver Versões
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleRequestApproval(contract.id)}>
-                        <CheckSquare className="h-4 w-4 mr-2" />
-                        Solicitar Aprovação
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAddToCalendar(contract.id)}>
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Adicionar ao Calendário
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">Cancelar Contrato</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <CardContent className="space-y-4">
+        <div className="overflow-x-auto rounded-xl border border-border/60">
+          <Table className="min-w-[720px] text-sm">
+            <TableHeader className="bg-muted/40">
+              <TableRow className="text-xs sm:text-sm text-muted-foreground">
+                <TableHead className="whitespace-nowrap">Cliente</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">Tipo</TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Valor</TableHead>
+                <TableHead className="hidden md:table-cell whitespace-nowrap">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Vigência
+                  </span>
+                </TableHead>
+                <TableHead className="hidden lg:table-cell whitespace-nowrap">Risco</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Status</TableHead>
+                <TableHead className="hidden md:table-cell text-right pr-4 whitespace-nowrap">Ações</TableHead>
+                <TableHead className="md:hidden text-right pr-4">Detalhes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
 
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, contracts.length)}{" "}
-            de {contracts.length} contratos
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(Math.min(Math.ceil(contracts.length / itemsPerPage), currentPage + 1))}
-              disabled={currentPage >= Math.ceil(contracts.length / itemsPerPage)}
-            >
-              Próxima
-            </Button>
-          </div>
+            <TableBody>
+              {contracts.map((contract) => (
+                <TableRow key={contract.id} className="text-xs sm:text-sm">
+                  <TableCell className="font-medium whitespace-nowrap">{contract.client}</TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-nowrap">{contract.type}</TableCell>
+                  <TableCell className="hidden lg:table-cell whitespace-nowrap">{contract.value}</TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-nowrap">
+                    {contract.startDate} - {contract.endDate}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Badge
+                      variant={
+                        contract.risk === "high" ? "destructive" : contract.risk === "medium" ? "default" : "secondary"
+                      }
+                    >
+                      {contract.risk === "high" ? "Alto" : contract.risk === "medium" ? "Médio" : "Baixo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Badge
+                      variant={
+                        contract.status === "active"
+                          ? "secondary"
+                          : contract.status === "pending"
+                            ? "default"
+                            : "secondary"
+                      }
+                    >
+                      {contract.status === "active" ? "Ativo" : contract.status === "pending" ? "Pendente" : "Encerrado"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-right pr-4">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Visualizar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleAnalyze(contract.id)}>
+                          <FileSearch className="h-4 w-4 mr-2" />
+                          Reanalisar com IA
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewVersions(contract.id)}>
+                          <GitBranch className="h-4 w-4 mr-2" />
+                          Ver Versões
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleRequestApproval(contract.id)}>
+                          <CheckSquare className="h-4 w-4 mr-2" />
+                          Solicitar Aprovação
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddToCalendar(contract.id)}>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Adicionar ao Calendário
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive">Cancelar Contrato</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell className="md:hidden text-right pr-4">
+                    <Button size="sm" variant="secondary" onClick={() => openDetails(contract)}>
+                      Detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedContract?.client}</DialogTitle>
+            <DialogDescription>{selectedContract?.id}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              <strong>Tipo:</strong> {selectedContract?.type}
+            </p>
+            <p>
+              <strong>Valor:</strong> {selectedContract?.value}
+            </p>
+            <p>
+              <strong>Vigência:</strong> {selectedContract?.startDate} — {selectedContract?.endDate}
+            </p>
+            <p>
+              <strong>Status:</strong> {selectedContract?.status}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

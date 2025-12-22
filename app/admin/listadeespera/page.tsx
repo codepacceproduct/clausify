@@ -31,7 +31,7 @@ export default async function AdminWaitlistPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 py-10 md:py-14">
       <div className="space-y-1">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground">Lista de Espera</h1>
         <p className="text-sm sm:text-base text-muted-foreground">Gerencie leads da lista de espera</p>
@@ -46,11 +46,19 @@ export default async function AdminWaitlistPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="all">Todos ({stats.total})</TabsTrigger>
-              <TabsTrigger value="pending">Pendentes ({stats.pending})</TabsTrigger>
-              <TabsTrigger value="contacted">Contatados ({stats.contacted})</TabsTrigger>
-              <TabsTrigger value="converted">Convertidos ({stats.converted})</TabsTrigger>
+            <TabsList className="mb-6 flex w-full flex-wrap gap-2 overflow-x-auto">
+              <TabsTrigger className="min-w-[140px] flex-1 sm:flex-initial" value="all">
+                Todos ({stats.total})
+              </TabsTrigger>
+              <TabsTrigger className="min-w-[140px] flex-1 sm:flex-initial" value="pending">
+                Pendentes ({stats.pending})
+              </TabsTrigger>
+              <TabsTrigger className="min-w-[140px] flex-1 sm:flex-initial" value="contacted">
+                Contatados ({stats.contacted})
+              </TabsTrigger>
+              <TabsTrigger className="min-w-[140px] flex-1 sm:flex-initial" value="converted">
+                Convertidos ({stats.converted})
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="all">
               <WaitlistTable leads={leads} />

@@ -39,7 +39,7 @@ export default function EsqueciSenhaPage() {
   }
 
   return (
-    <div className="min-h-screen h-screen flex flex-col lg:flex-row overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
       {/* Left Side */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
@@ -65,7 +65,7 @@ export default function EsqueciSenhaPage() {
           </div>
 
           <div className="space-y-8 max-w-xl">
-            <h1 className="text-5xl xl:text-6xl font-bold leading-[1.1] tracking-tight">
+            <h1 className="text-3xl md:text-5xl xl:text-6xl font-bold leading-[1.1] tracking-tight">
               Sua segurança é nossa <span className="text-emerald-400">prioridade</span>
             </h1>
 
@@ -101,17 +101,17 @@ export default function EsqueciSenhaPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="space-y-1">
-              <div className="text-3xl font-bold text-emerald-400">+5.2k</div>
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-400">+5.2k</div>
               <p className="text-sm text-gray-400">Contratos analisados</p>
             </div>
             <div className="space-y-1">
-              <div className="text-3xl font-bold text-emerald-400">99.2%</div>
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-400">99.2%</div>
               <p className="text-sm text-gray-400">Taxa de precisão</p>
             </div>
             <div className="space-y-1">
-              <div className="text-3xl font-bold text-emerald-400">24/7</div>
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-400">24/7</div>
               <p className="text-sm text-gray-400">Suporte disponível</p>
             </div>
           </div>
