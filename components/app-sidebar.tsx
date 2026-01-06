@@ -16,6 +16,7 @@ import {
   CheckSquare,
   Calendar,
   GitBranch,
+  Calculator,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -36,6 +37,7 @@ const navigation = [
   { name: "Playbook", href: "/playbook", icon: BookOpen },
   { name: "Segurança", href: "/seguranca", icon: Shield },
   { name: "Assinaturas", href: "/assinaturas", icon: CreditCard },
+  { name: "Cálculos", href: "/calculos", icon: Calculator }, // Added Cálculos navigation item
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 
@@ -100,6 +102,7 @@ export function AppSidebar({
     if (href.startsWith("/playbook")) return "playbook"
     if (href.startsWith("/seguranca")) return "seguranca"
     if (href.startsWith("/assinaturas")) return "assinaturas"
+    if (href.startsWith("/calculos")) return "calculos" // Added Cálculos module key
     if (href.startsWith("/configuracoes")) return "configuracoes"
     if (href.startsWith("/integracoes")) return "integracoes"
     if (href.startsWith("/auditoria")) return "auditoria"

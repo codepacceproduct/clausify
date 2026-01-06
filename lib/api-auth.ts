@@ -14,8 +14,12 @@ export async function getAuthedEmail(req: Request): Promise<string | null> {
   if (!token) return emailCookie
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
     const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: supabaseAnonKey,
+      },
     })
     if (!res.ok) return emailCookie
     const j = await res.json().catch(() => null)
