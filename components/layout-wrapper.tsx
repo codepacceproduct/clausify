@@ -87,14 +87,12 @@ export function LayoutWrapper({ children }: { children: ReactNode }) {
       
       <div
         className={cn(
-          "flex-1 w-full min-h-screen pt-16 md:pt-0 transition-all duration-300",
+          "flex-1 transition-all duration-300 w-full min-h-screen",
           isMobile ? "ml-0" : isCollapsed ? "ml-20" : "ml-72"
         )}
       >
         <AppHeader />
-        <main className="space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 pb-12 lg:pb-16">
-          {children}
-        </main>
+        <main className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">{children}</main>
       </div>
     </div>
   )

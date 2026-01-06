@@ -57,16 +57,11 @@ function ResetPasswordContent() {
     const supabase = createClient()
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (
-        event: import("@supabase/supabase-js").AuthChangeEvent,
-        session: import("@supabase/supabase-js").Session | null
-      ) => {
-        if (event === "PASSWORD_RECOVERY") {
-          setIsValidSession(true)
-        }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsValidSession(true)
       }
-    )
+    })
 
     return () => subscription.unsubscribe()
   }, [])
@@ -108,7 +103,7 @@ function ResetPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+    <div className="min-h-screen h-screen flex flex-col lg:flex-row overflow-hidden">
       {/* Left Side */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0">

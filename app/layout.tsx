@@ -34,10 +34,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={_inter.className}>
-        <Analytics />
+    <html lang="pt-BR">
+      <body className={`${_inter.className} font-sans antialiased`}>
         {children}
+        <Analytics />
         <Toaster richColors position="top-center" />
       </body>
     </html>

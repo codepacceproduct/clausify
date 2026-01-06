@@ -82,15 +82,6 @@ const versions: ContractVersion[] = [
   },
 ]
 
-// helper para ordenar datas no formato "dd/mm/aaaa às HH:MM"
-function parseBrDate(value: string): number {
-  const [datePart, timePart] = value.split(" às ")
-  if (!datePart) return 0
-  const [day, month, year] = datePart.split("/").map(Number)
-  const [hour = 0, minute = 0] = (timePart || "").split(":").map(Number)
-  return new Date(year || 0, (month || 1) - 1, day || 1, hour, minute).getTime()
-}
-
 export function VersionHistory() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -100,16 +91,6 @@ export function VersionHistory() {
     const matchesStatus = statusFilter === "all" || v.status === statusFilter
     return matchesSearch && matchesStatus
   })
-
-  // métricas dinâmicas para o resumo
-  const uniqueContracts = new Set(versions.map((v) => v.contractName))
-  const activeContracts = new Set(
-    versions.filter((v) => v.status === "active").map((v) => v.contractName),
-  )
-  const reviewContracts = new Set(
-    versions.filter((v) => v.status === "review").map((v) => v.contractName),
-  )
-  const collaborators = new Set(versions.map((v) => v.createdBy.name))
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -157,13 +138,6 @@ export function VersionHistory() {
     {} as Record<string, ContractVersion[]>,
   )
 
-  // Ordenar versões de cada contrato por data (mais recente primeiro)
-  Object.keys(groupedVersions).forEach((name) => {
-    groupedVersions[name].sort(
-      (a, b) => parseBrDate(b.createdAt) - parseBrDate(a.createdAt),
-    )
-  })
-
   return (
     <div className="space-y-6">
       {/* Summary */}
@@ -188,7 +162,7 @@ export function VersionHistory() {
                 <FileText className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeContracts.size}</p>
+                <p className="text-2xl font-bold">3</p>
                 <p className="text-xs text-muted-foreground">Contratos Ativos</p>
               </div>
             </div>
@@ -201,7 +175,7 @@ export function VersionHistory() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{reviewContracts.size}</p>
+                <p className="text-2xl font-bold">1</p>
                 <p className="text-xs text-muted-foreground">Em Revisão</p>
               </div>
             </div>
@@ -214,7 +188,7 @@ export function VersionHistory() {
                 <User className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{collaborators.size}</p>
+                <p className="text-2xl font-bold">4</p>
                 <p className="text-xs text-muted-foreground">Colaboradores</p>
               </div>
             </div>
@@ -261,10 +235,7 @@ export function VersionHistory() {
                 <FileText className="h-5 w-5" />
                 {contractName}
               </CardTitle>
-              <CardDescription>
-                {contractVersions.length}{" "}
-                {contractVersions.length === 1 ? "versão" : "versões"}
-              </CardDescription>
+              <CardDescription>{contractVersions.length} versões</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-auto max-h-[400px]">

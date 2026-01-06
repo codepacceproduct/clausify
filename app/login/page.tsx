@@ -96,7 +96,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+    <div className="min-h-screen h-screen flex flex-col lg:flex-row overflow-hidden">
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
           <Image
@@ -121,12 +121,12 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-8 max-w-xl">
-            <h1 className="text-4xl md:text-5xl font-bold leading-[1.15] tracking-tight">
-              O lugar para advogados que querem{" "}
-              <span className="text-emerald-400">revolucionar</span> sua prática jurídica
+            <h1 className="text-5xl xl:text-6xl font-bold leading-[1.1] tracking-tight">
+              O lugar para advogados que querem <span className="text-emerald-400">revolucionar</span> sua prática
+              jurídica
             </h1>
 
-            <p className="text-base md:text-lg text-gray-300 leading-relaxed">
+            <p className="text-lg text-gray-300 leading-relaxed">
               Análise inteligente de contratos, identificação de riscos e gestão completa do seu portfólio jurídico em
               uma única plataforma.
             </p>

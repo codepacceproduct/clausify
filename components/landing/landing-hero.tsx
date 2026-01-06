@@ -43,7 +43,7 @@ export function LandingHero() {
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl font-bold leading-[1.15] text-balance">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight max-w-5xl mx-auto leading-[1.1]">
             <span className="text-white">Análise jurídica</span>
             <br />
             <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent font-extrabold">
@@ -52,7 +52,7 @@ export function LandingHero() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-base md:text-lg text-gray-400 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
             Revolucione sua prática jurídica com IA. Analise contratos em minutos, identifique riscos automaticamente e
             tome decisões estratégicas com confiança.
           </p>
@@ -79,7 +79,7 @@ export function LandingHero() {
           </div>
 
           {/* Trust Badges */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-emerald-500" />
               <span>Dados 100% seguros</span>
