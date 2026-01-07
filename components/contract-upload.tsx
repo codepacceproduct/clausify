@@ -1,24 +1,46 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Upload, FileText, X, ArrowRight } from "lucide-react"
+import { Upload, FileText, X, ArrowRight, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface ContractUploadProps {
-  onAnalysisStart?: () => void
+  onAnalysisStart?: (contractId: string, content: string) => void
 }
 
 export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
   const [files, setFiles] = useState<File[]>([])
+  const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [clientName, setClientName] = useState("")
+  const [notes, setNotes] = useState("")
+  const [contractType, setContractType] = useState("service")
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files) {
+      setFiles(Array.from(e.dataTransfer.files))
+    }
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -31,210 +53,168 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
   }
 
   const handleUpload = async () => {
+    if (files.length === 0) return
+    
     setUploading(true)
-    // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setUploading(false)
-    onAnalysisStart?.()
+    
     try {
-      await fetch(`/api/audit/logs/record`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
-      })
-    } catch {}
+        const formData = new FormData()
+        formData.append("file", files[0])
+        formData.append("type", contractType)
+        formData.append("clientName", clientName)
+        formData.append("notes", notes)
+
+        const response = await fetch("/api/contracts/upload", {
+            method: "POST",
+            body: formData
+        })
+
+        if (!response.ok) throw new Error("Upload failed")
+
+        const data = await response.json()
+        
+        // Log action
+        await fetch(`/api/audit/logs/record`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
+        })
+
+        onAnalysisStart?.(data.contract.id, data.contract.content)
+        
+    } catch (error) {
+        console.error("Upload error:", error)
+        // Handle error (show toast, etc.)
+    } finally {
+        setUploading(false)
+    }
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* Upload Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload de Contrato</CardTitle>
-          <CardDescription>Faça upload de documentos PDF, DOCX ou TXT</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="contract-type">Tipo de Contrato</Label>
-            <Select>
-              <SelectTrigger id="contract-type">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="service">Prestação de Serviços</SelectItem>
-                <SelectItem value="construction">Contrato de Obra</SelectItem>
-                <SelectItem value="lease">Locação</SelectItem>
-                <SelectItem value="supply">Fornecimento</SelectItem>
-                <SelectItem value="investment">Investimento</SelectItem>
-                <SelectItem value="partnership">Parceria</SelectItem>
-                <SelectItem value="employment">Trabalho</SelectItem>
-                <SelectItem value="other">Outros</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="client-name">Nome do Cliente/Parte</Label>
-            <Input id="client-name" placeholder="Ex: Empresa Alpha Tech" />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contract-value">Valor do Contrato (opcional)</Label>
-            <Input id="contract-value" type="text" placeholder="R$ 0,00" />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações (opcional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Adicione notas sobre pontos específicos que deseja analisar..."
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Arquivo do Contrato</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-              <input
-                type="file"
-                id="file-upload"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt"
-                multiple
-                onChange={handleFileChange}
-              />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-foreground font-medium">Clique para fazer upload</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, DOCX ou TXT (máx. 10MB)</p>
-              </label>
-            </div>
-          </div>
-
-          {files.length > 0 && (
-            <div className="space-y-2">
-              <Label>Arquivos Selecionados</Label>
-              <div className="space-y-2">
-                {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </Badge>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <Button className="w-full gap-2" onClick={handleUpload} disabled={files.length === 0 || uploading}>
-            {uploading ? (
-              "Processando..."
-            ) : (
-              <>
-                Iniciar Análise
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Analysis Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Opções de Análise</CardTitle>
-          <CardDescription>Personalize a profundidade da análise jurídica</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="risk-analysis" defaultChecked className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="risk-analysis" className="font-medium cursor-pointer">
-                  Análise de Risco
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Identifica cláusulas com alto risco jurídico e financeiro
+    <div className="grid gap-8 lg:grid-cols-3">
+      {/* Upload Section - 2 Columns */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* ... (Drag area remains same) ... */}
+        <Card className="border-dashed border-2 hover:border-emerald-500/50 transition-colors">
+            <CardContent 
+                className={cn(
+                    "flex flex-col items-center justify-center py-12 px-4 transition-colors rounded-lg",
+                    isDragging ? "bg-emerald-50/50 border-emerald-500" : ""
+                )}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                <div className="bg-emerald-100 p-4 rounded-full mb-4">
+                    <Upload className="h-8 w-8 text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Arraste seu contrato aqui</h3>
+                <p className="text-muted-foreground text-center mb-6 max-w-sm">
+                    Suportamos arquivos PDF, DOCX e TXT. O arquivo será processado pela nossa IA Jurídica com total confidencialidade.
                 </p>
-              </div>
-            </div>
+                
+                <input
+                    type="file"
+                    id="file-upload"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileChange}
+                />
+                <Button asChild variant="outline" className="cursor-pointer">
+                    <label htmlFor="file-upload">Selecionar Arquivo</label>
+                </Button>
+            </CardContent>
+        </Card>
 
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="compliance" defaultChecked className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="compliance" className="font-medium cursor-pointer">
-                  Conformidade Legal
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">Verifica adequação às normas e legislação vigente</p>
-              </div>
-            </div>
+        {files.length > 0 && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Arquivos Selecionados</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {files.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg border">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-background rounded border">
+                                    <FileText className="h-4 w-4 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium truncate max-w-[200px]">{file.name}</p>
+                                    <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => removeFile(index)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+      </div>
 
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="clauses" defaultChecked className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="clauses" className="font-medium cursor-pointer">
-                  Análise de Cláusulas
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">Avalia cada cláusula e sugere melhorias</p>
-              </div>
-            </div>
+      {/* Metadata Section - 1 Column */}
+      <div className="space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>Detalhes do Contrato</CardTitle>
+                <CardDescription>Informações para auxiliar a análise</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label>Tipo de Documento</Label>
+                    <Select value={contractType} onValueChange={setContractType}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="service">Prestação de Serviços</SelectItem>
+                            <SelectItem value="nda">NDA / Confidencialidade</SelectItem>
+                            <SelectItem value="lease">Locação</SelectItem>
+                            <SelectItem value="employment">Trabalho</SelectItem>
+                            <SelectItem value="other">Outros</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
 
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="comparison" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="comparison" className="font-medium cursor-pointer">
-                  Comparação com Playbook
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">Compara com modelos e padrões da empresa</p>
-              </div>
-            </div>
+                <div className="space-y-2">
+                    <Label>Parte Contrária</Label>
+                    <Input 
+                        placeholder="Ex: Empresa X Ltda" 
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                    />
+                </div>
 
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="financial" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="financial" className="font-medium cursor-pointer">
-                  Análise Financeira
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">Avalia valores, prazos e condições financeiras</p>
-              </div>
-            </div>
+                <div className="space-y-2">
+                    <Label>Observações</Label>
+                    <Textarea 
+                        placeholder="Pontos de atenção..." 
+                        className="resize-none" 
+                        rows={4} 
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                    />
+                </div>
 
-            <div className="flex items-start gap-3 p-3 border rounded-lg">
-              <input type="checkbox" id="obligations" className="mt-1" />
-              <div className="flex-1">
-                <Label htmlFor="obligations" className="font-medium cursor-pointer">
-                  Mapeamento de Obrigações
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1">Lista todas as obrigações e responsabilidades</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-sm font-medium">Nível de Análise</Label>
-            </div>
-            <Select defaultValue="detailed">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="quick">Rápida (5-10 min)</SelectItem>
-                <SelectItem value="standard">Padrão (15-20 min)</SelectItem>
-                <SelectItem value="detailed">Detalhada (30-45 min)</SelectItem>
-                <SelectItem value="comprehensive">Completa (1-2 horas)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+                <Button 
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" 
+                    size="lg"
+                    onClick={handleUpload}
+                    disabled={files.length === 0 || uploading}
+                >
+                    {uploading ? (
+                        <>Processando...</>
+                    ) : (
+                        <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Iniciar Análise Inteligente
+                        </>
+                    )}
+                </Button>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

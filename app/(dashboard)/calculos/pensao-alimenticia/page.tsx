@@ -18,23 +18,44 @@ export default function PensaoAlimenticiaPage() {
     valorPorDependente: number
     rendaLiquida: number
   } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleCalcular = () => {
+  const handleCalcular = async () => {
+    setError("")
     const renda = Number.parseFloat(rendaMensal.replace(/\./g, "").replace(",", "."))
-    const perc = Number.parseFloat(percentual) / 100
+    const perc = Number.parseFloat(percentual)
     const deps = Number.parseInt(numeroDependentes)
 
-    if (!renda || !deps) return
+    if (!renda) {
+      setError("Informe a renda mensal")
+      return
+    }
 
-    const valorPensao = renda * perc
-    const valorPorDependente = valorPensao / deps
-    const rendaLiquida = renda - valorPensao
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/calculos/pensao-alimenticia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rendaMensal: renda.toString(),
+          percentual: perc.toString(),
+          numeroDependentes: deps.toString()
+        })
+      })
 
-    setResultado({
-      valorPensao,
-      valorPorDependente,
-      rendaLiquida,
-    })
+      if (!response.ok) {
+        throw new Error("Erro ao realizar cálculo")
+      }
+
+      const data = await response.json()
+      setResultado(data)
+    } catch (err) {
+      setError("Ocorreu um erro ao calcular. Tente novamente.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -93,9 +114,10 @@ export default function PensaoAlimenticiaPage() {
                 />
               </div>
 
-              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Calcular Pensão
+              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
+                {isLoading ? "Calculando..." : "Calcular Pensão"}
               </Button>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
           </Card>
 

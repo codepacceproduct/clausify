@@ -21,22 +21,47 @@ export default function CorrecaoMonetariaPage() {
     correcao: number
     percentual: number
   } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleCalcular = () => {
+  const handleCalcular = async () => {
+    setError("")
     const val = Number.parseFloat(valor.replace(/\./g, "").replace(",", "."))
-    if (!val || !dataInicial || !dataFinal) return
+    
+    if (!val) {
+      setError("Informe um valor válido")
+      return
+    }
+    if (!dataInicial || !dataFinal) {
+      setError("Informe as datas inicial e final")
+      return
+    }
 
-    // Mock calculation - in production, use real index data
-    const percentual = Math.random() * 50 + 10 // 10-60%
-    const correcao = val * (percentual / 100)
-    const valorCorrigido = val + correcao
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/calculos/correcao-monetaria", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          valor: val.toString(),
+          dataInicial,
+          dataFinal,
+          indice
+        })
+      })
 
-    setResultado({
-      valorOriginal: val,
-      valorCorrigido,
-      correcao,
-      percentual,
-    })
+      if (!response.ok) {
+        throw new Error("Erro ao realizar cálculo")
+      }
+
+      const data = await response.json()
+      setResultado(data)
+    } catch (err) {
+      setError("Ocorreu um erro ao calcular. Tente novamente.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -106,9 +131,10 @@ export default function CorrecaoMonetariaPage() {
                 </div>
               </div>
 
-              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Calcular
+              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
+                {isLoading ? "Calculando..." : "Calcular"}
               </Button>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
           </Card>
 

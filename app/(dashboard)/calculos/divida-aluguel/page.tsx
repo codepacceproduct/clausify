@@ -20,26 +20,46 @@ export default function DividaAluguelPage() {
     valorJuros: number
     total: number
   } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleCalcular = () => {
+  const handleCalcular = async () => {
+    setError("")
     const val = Number.parseFloat(valorAluguel.replace(/\./g, "").replace(",", "."))
     const meses = Number.parseInt(mesesAtraso)
-    const pMulta = Number.parseFloat(multa) / 100
-    const pJuros = Number.parseFloat(juros) / 100
+    const pMulta = Number.parseFloat(multa)
+    const pJuros = Number.parseFloat(juros)
 
-    if (!val || !meses) return
+    if (!val || !meses) {
+      setError("Preencha o valor e os meses em atraso")
+      return
+    }
 
-    const valorBase = val * meses
-    const valorMulta = valorBase * pMulta
-    const valorJuros = valorBase * pJuros * meses
-    const total = valorBase + valorMulta + valorJuros
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/calculos/divida-aluguel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          valorAluguel: val.toString(),
+          mesesAtraso: meses.toString(),
+          multa: pMulta.toString(),
+          juros: pJuros.toString()
+        })
+      })
 
-    setResultado({
-      valorBase,
-      valorMulta,
-      valorJuros,
-      total,
-    })
+      if (!response.ok) {
+        throw new Error("Erro ao realizar cálculo")
+      }
+
+      const data = await response.json()
+      setResultado(data)
+    } catch (err) {
+      setError("Ocorreu um erro ao calcular. Tente novamente.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -98,9 +118,10 @@ export default function DividaAluguelPage() {
                 </div>
               </div>
 
-              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Calcular Dívida
+              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
+                {isLoading ? "Calculando..." : "Calcular Dívida"}
               </Button>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
           </Card>
 

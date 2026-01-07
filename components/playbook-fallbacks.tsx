@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,85 +17,50 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Plus, Copy, Edit, Trash2, ShieldAlert, ArrowRightLeft, BookOpen } from "lucide-react"
+import { Search, Plus, Copy, Edit, Trash2, ShieldAlert, ArrowRightLeft, BookOpen, Loader2, RefreshCcw, CheckCircle2 } from "lucide-react"
 import { getUserEmail } from "@/lib/auth"
 
-const fallbackClauses = [
-  {
-    id: "FB-001",
-    name: "Limitação de Responsabilidade - Alternativa",
-    category: "Responsabilidade",
-    originalClause: "A parte não será responsável por danos indiretos ou consequenciais.",
-    fallbackClause:
-      "A responsabilidade total de cada parte será limitada ao valor total pago nos últimos 12 meses, excluindo-se danos indiretos, lucros cessantes ou danos consequenciais.",
-    risk: "high" as const,
-    usageCount: 24,
-    lastUsed: "25/01/2025",
-    notes: "Usar quando a contraparte não aceitar limitação total de responsabilidade",
-  },
-  {
-    id: "FB-002",
-    name: "Prazo de Pagamento - Alternativa",
-    category: "Financeiro",
-    originalClause: "Pagamento à vista na assinatura do contrato.",
-    fallbackClause: "Pagamento em até 30 dias após a emissão da nota fiscal, mediante depósito bancário identificado.",
-    risk: "medium" as const,
-    usageCount: 45,
-    lastUsed: "27/01/2025",
-    notes: "Alternativa aceitável para clientes com histórico positivo",
-  },
-  {
-    id: "FB-003",
-    name: "Confidencialidade - Prazo Reduzido",
-    category: "Confidencialidade",
-    originalClause: "As informações confidenciais serão mantidas em sigilo por tempo indeterminado.",
-    fallbackClause:
-      "As informações confidenciais serão mantidas em sigilo pelo prazo de 5 (cinco) anos após o término do contrato.",
-    risk: "low" as const,
-    usageCount: 18,
-    lastUsed: "20/01/2025",
-    notes: "Usar quando prazo indeterminado não for aceito",
-  },
-  {
-    id: "FB-004",
-    name: "Rescisão - Aviso Prévio Estendido",
-    category: "Rescisão",
-    originalClause: "Rescisão mediante aviso prévio de 30 dias.",
-    fallbackClause: "Rescisão mediante aviso prévio de 60 dias, por escrito, com comprovação de recebimento.",
-    risk: "low" as const,
-    usageCount: 32,
-    lastUsed: "28/01/2025",
-    notes: "Alternativa quando 30 dias é considerado insuficiente pela contraparte",
-  },
-  {
-    id: "FB-005",
-    name: "Multa Contratual - Valor Reduzido",
-    category: "Penalidades",
-    originalClause: "Multa de 20% sobre o valor total do contrato.",
-    fallbackClause: "Multa de 10% sobre o valor total do contrato, sem prejuízo das demais penalidades previstas.",
-    risk: "medium" as const,
-    usageCount: 15,
-    lastUsed: "22/01/2025",
-    notes: "Usar como última alternativa quando 20% for recusado",
-  },
-  {
-    id: "FB-006",
-    name: "Foro - Arbitragem",
-    category: "Foro",
-    originalClause: "Fica eleito o foro da Comarca de São Paulo/SP.",
-    fallbackClause:
-      "As partes elegem a Câmara de Arbitragem da FIESP para dirimir quaisquer controvérsias decorrentes deste contrato.",
-    risk: "medium" as const,
-    usageCount: 8,
-    lastUsed: "15/01/2025",
-    notes: "Alternativa para contratos de alto valor ou com partes internacionais",
-  },
-]
+interface FallbackClause {
+  id: string
+  name: string
+  category: string
+  originalClause: string
+  fallbackClause: string
+  risk: "low" | "medium" | "high"
+  usageCount: number
+  lastUsed: string
+  notes: string
+  tags?: string[]
+}
 
 export function PlaybookFallbacks() {
+  const [fallbacks, setFallbacks] = useState<FallbackClause[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+  const fetchFallbacks = async () => {
+    setIsLoading(true)
+    setError("")
+    try {
+      const response = await fetch("/api/playbook/fallbacks")
+      if (!response.ok) throw new Error("Falha ao carregar fallbacks")
+      const data = await response.json()
+      setFallbacks(data)
+    } catch (err) {
+      setError("Erro ao carregar fallbacks. Tente novamente.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchFallbacks()
+  }, [])
+
   const logAction = async (action: string, resource: string) => {
     const email = getUserEmail() || ""
     if (!email) return
@@ -108,7 +73,7 @@ export function PlaybookFallbacks() {
     } catch {}
   }
 
-  const filteredFallbacks = fallbackClauses.filter((clause) => {
+  const filteredFallbacks = fallbacks.filter((clause) => {
     const matchesSearch =
       clause.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       clause.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -116,19 +81,40 @@ export function PlaybookFallbacks() {
     return matchesSearch && matchesCategory
   })
 
-  const categories = [...new Set(fallbackClauses.map((c) => c.category))]
+  const categories = ["all", ...Array.from(new Set(fallbacks.map((c) => c.category)))]
 
   const getRiskBadge = (risk: string) => {
     switch (risk) {
       case "low":
-        return <Badge className="bg-success/10 text-success hover:bg-success/20">Baixo Risco</Badge>
+        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200">Baixo Risco</Badge>
       case "medium":
-        return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20">Médio Risco</Badge>
+        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200">Médio Risco</Badge>
       case "high":
-        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">Alto Risco</Badge>
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200">Alto Risco</Badge>
       default:
         return null
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        <p className="text-muted-foreground">Carregando estratégias de fallback...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={fetchFallbacks} variant="outline">
+          <RefreshCcw className="h-4 w-4 mr-2" />
+          Tentar Novamente
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -141,10 +127,9 @@ export function PlaybookFallbacks() {
               <ShieldAlert className="h-5 w-5 text-amber-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-medium text-amber-900 dark:text-amber-100">O que são Fallback Clauses?</h3>
+              <h3 className="font-medium text-amber-900 dark:text-amber-100">Estratégias de Negociação (Fallbacks)</h3>
               <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                Cláusulas alternativas pré-aprovadas para usar em negociações quando a versão padrão não é aceita pela
-                contraparte. Cada fallback possui um nível de risco associado e notas de orientação para uso.
+                Utilize estas cláusulas alternativas quando a versão padrão for rejeitada. Cada opção inclui análise de risco e notas de aplicação.
               </p>
             </div>
           </div>
@@ -156,7 +141,7 @@ export function PlaybookFallbacks() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar fallback clauses..."
+            placeholder="Buscar por nome, categoria ou conteúdo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
@@ -168,7 +153,9 @@ export function PlaybookFallbacks() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
-            {categories.map((cat) => (
+            {categories
+              .filter(c => c !== "all")
+              .map((cat) => (
               <SelectItem key={cat} value={cat}>
                 {cat}
               </SelectItem>
@@ -177,7 +164,7 @@ export function PlaybookFallbacks() {
         </Select>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
               <Plus className="h-4 w-4 mr-2" />
               Novo Fallback
             </Button>
@@ -200,7 +187,7 @@ export function PlaybookFallbacks() {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
+                      {categories.filter(c => c !== "all").map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>
@@ -223,11 +210,11 @@ export function PlaybookFallbacks() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cláusula Original</label>
+                <label className="text-sm font-medium">Cláusula Original (Padrão)</label>
                 <Textarea placeholder="Texto da cláusula padrão..." rows={3} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cláusula Fallback</label>
+                <label className="text-sm font-medium">Cláusula Fallback (Alternativa)</label>
                 <Textarea placeholder="Texto da cláusula alternativa..." rows={3} />
               </div>
               <div className="space-y-2">
@@ -246,64 +233,68 @@ export function PlaybookFallbacks() {
       </div>
 
       {/* Fallback List */}
-      <ScrollArea className="h-[600px]">
+      <ScrollArea className="h-[600px] pr-4">
         <div className="space-y-4">
           {filteredFallbacks.map((clause) => (
-            <Card key={clause.id}>
-              <CardHeader className="pb-3">
+            <Card key={clause.id} className="overflow-hidden">
+              <CardHeader className="pb-3 bg-muted/20">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <CardTitle className="text-base">{clause.name}</CardTitle>
+                      <CardTitle className="text-base font-semibold">{clause.name}</CardTitle>
                       {getRiskBadge(clause.risk)}
                     </div>
-                    <CardDescription className="flex items-center gap-4">
+                    <CardDescription className="flex items-center gap-4 text-xs">
                       <span className="flex items-center gap-1">
                         <BookOpen className="h-3 w-3" />
                         {clause.category}
                       </span>
                       <span>Usado {clause.usageCount}x</span>
-                      <span>Último: {clause.lastUsed}</span>
+                      <span>Último: {new Date(clause.lastUsed).toLocaleDateString('pt-BR')}</span>
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => logAction("download", clause.name)}>
+                    <Button variant="ghost" size="sm" onClick={() => logAction("copy", clause.name)} title="Copiar">
                       <Copy className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => logAction("edit", clause.name)}>
+                    <Button variant="ghost" size="sm" onClick={() => logAction("edit", clause.name)} title="Editar">
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => logAction("delete", clause.name)}
+                      title="Excluir"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">Cláusula Original</p>
-                    <div className="p-3 bg-muted rounded-lg text-sm">{clause.originalClause}</div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Cláusula Original</p>
+                    <div className="p-3 bg-muted rounded-lg text-sm border border-border/50 text-muted-foreground">{clause.originalClause}</div>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-1">
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-wide flex items-center gap-1">
                       <ArrowRightLeft className="h-3 w-3" />
-                      Cláusula Fallback
+                      Cláusula Fallback (Alternativa)
                     </p>
-                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                    <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg text-sm text-emerald-900 shadow-sm">
                       {clause.fallbackClause}
                     </div>
                   </div>
                 </div>
                 {clause.notes && (
-                  <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                    <p className="text-xs font-medium text-amber-600 mb-1">Orientação de Uso</p>
-                    <p className="text-sm text-amber-800 dark:text-amber-200">{clause.notes}</p>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start">
+                    <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div>
+                        <p className="text-xs font-bold text-amber-700 mb-0.5 uppercase tracking-wide">Orientação de Uso</p>
+                        <p className="text-sm text-amber-800">{clause.notes}</p>
+                    </div>
                   </div>
                 )}
               </CardContent>

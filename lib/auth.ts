@@ -97,6 +97,10 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
 export async function logout(): Promise<void> {
   const supabase = createClient()
   await supabase.auth.signOut()
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("user_email")
+    localStorage.removeItem("user_name")
+  }
 }
 
 export async function getUser() {

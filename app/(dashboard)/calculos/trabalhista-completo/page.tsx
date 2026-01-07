@@ -27,29 +27,43 @@ export default function TrabalhistaCompletoPage() {
     total: number
   } | null>(null)
 
-  const handleCalcular = () => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleCalcular = async () => {
     const sal = Number.parseFloat(salario.replace(/\./g, "").replace(",", "."))
-    if (!sal || !dataAdmissao || !dataDemissao) return
+    if (!sal || !dataAdmissao || !dataDemissao) {
+        setError("Preencha todos os campos obrigatórios")
+        return
+    }
 
-    // Mock calculations
-    const saldoSalario = sal * 0.5 // proporção do mês
-    const ferias = incluirFerias ? sal + sal / 3 : 0 // férias + 1/3
-    const decimoTerceiro = incluir13 ? sal : 0
-    const avisoPrevi = incluirAviso ? sal : 0
-    const fgts = sal * 0.08 * 12 // 8% de 12 meses
-    const multaFgts = fgts * 0.4 // 40% do FGTS
+    setIsLoading(true)
+    setError("")
+    setResultado(null)
 
-    const total = saldoSalario + ferias + decimoTerceiro + avisoPrevi + fgts + multaFgts
+    try {
+        const response = await fetch("/api/calculos/trabalhista-completo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                salario: sal,
+                dataAdmissao,
+                dataDemissao,
+                incluirFerias,
+                incluir13,
+                incluirAviso
+            })
+        })
 
-    setResultado({
-      saldoSalario,
-      ferias,
-      decimoTerceiro,
-      avisoPrevi,
-      fgts,
-      multaFgts,
-      total,
-    })
+        if (!response.ok) throw new Error("Erro no cálculo")
+        
+        const data = await response.json()
+        setResultado(data)
+    } catch (err) {
+        setError("Erro ao calcular. Verifique os dados.")
+    } finally {
+        setIsLoading(false)
+    }
   }
 
   return (
@@ -143,9 +157,10 @@ export default function TrabalhistaCompletoPage() {
                 </div>
               </div>
 
-              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Calcular Verbas
+              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
+                {isLoading ? "Calculando..." : "Calcular Verbas"}
               </Button>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
           </Card>
 

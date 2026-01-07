@@ -45,10 +45,13 @@ export default function LoginPage() {
   useEffect(() => {
     const checkSession = async () => {
       const supabase = createClient()
+      // Use getUser to validate the session with the server
       const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
+      
+      if (user && !error) {
         router.push("/dashboard")
       }
     }

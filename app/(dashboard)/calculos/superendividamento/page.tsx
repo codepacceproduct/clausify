@@ -37,29 +37,42 @@ export default function SuperendividamentoPage() {
     setDividas(dividas.filter((d) => d.id !== id))
   }
 
-  const handleCalcular = () => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleCalcular = async () => {
     const renda = Number.parseFloat(rendaMensal.replace(/\./g, "").replace(",", "."))
     const despesas = Number.parseFloat(despesasEssenciais.replace(/\./g, "").replace(",", "."))
 
-    if (!renda || !despesas) return
-
-    const totalDividas = dividas.reduce((acc, d) => acc + d.parcela, 0)
-    const capacidadePagamento = renda - despesas
-    const percentualComprometimento = (totalDividas / renda) * 100
-
-    let situacao = "Saudável"
-    if (percentualComprometimento > 30 && percentualComprometimento <= 50) {
-      situacao = "Atenção"
-    } else if (percentualComprometimento > 50) {
-      situacao = "Superendividado"
+    if (!renda || !despesas) {
+        setError("Preencha todos os campos financeiros")
+        return
     }
 
-    setResultado({
-      totalDividas,
-      capacidadePagamento,
-      percentualComprometimento,
-      situacao,
-    })
+    setIsLoading(true)
+    setError("")
+    setResultado(null)
+
+    try {
+        const response = await fetch("/api/calculos/superendividamento", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                rendaMensal: renda,
+                despesasEssenciais: despesas,
+                dividas
+            })
+        })
+
+        if (!response.ok) throw new Error("Erro no cálculo")
+        
+        const data = await response.json()
+        setResultado(data)
+    } catch (err) {
+        setError("Erro ao calcular.")
+    } finally {
+        setIsLoading(false)
+    }
   }
 
   return (

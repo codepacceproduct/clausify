@@ -25,23 +25,46 @@ export default function FGTSPage() {
     correcao: number
     total: number
   } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleCalcular = () => {
-    // Mock calculation
+  const handleCalcular = async () => {
+    setError("")
     const sal = Number.parseFloat(salario.replace(/\./g, "").replace(",", "."))
-    if (!sal || !dataAdmissao || !dataCalculo) return
+    
+    if (!sal) {
+      setError("Informe o salário")
+      return
+    }
+    if (!dataAdmissao || !dataCalculo) {
+      setError("Informe as datas")
+      return
+    }
 
-    const saldoTotal = sal * 0.08 * 12 // 8% por mês durante 1 ano
-    const jurosMora = saldoTotal * 0.03
-    const correcao = saldoTotal * 0.15
-    const total = saldoTotal + jurosMora + correcao
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/calculos/fgts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          salario: sal.toString(),
+          dataAdmissao,
+          dataCalculo
+        })
+      })
 
-    setResultado({
-      saldoTotal,
-      jurosMora,
-      correcao,
-      total,
-    })
+      if (!response.ok) {
+        throw new Error("Erro ao realizar cálculo")
+      }
+
+      const data = await response.json()
+      setResultado(data)
+    } catch (err) {
+      setError("Ocorreu um erro ao calcular. Tente novamente.")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -99,9 +122,10 @@ export default function FGTSPage() {
                 </div>
               </div>
 
-              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Calcular FGTS
+              <Button onClick={handleCalcular} className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
+                {isLoading ? "Calculando..." : "Calcular FGTS"}
               </Button>
+              {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             </div>
           </Card>
 

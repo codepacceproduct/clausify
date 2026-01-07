@@ -43,9 +43,9 @@ function RegisterContent() {
   const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [nome, setNome] = useState("")
-  const [sobrenome, setSobrenome] = useState("")
-  const [email, setEmail] = useState("")
+  const [nome, setNome] = useState(searchParams.get("name") || "")
+  const [sobrenome, setSobrenome] = useState(searchParams.get("surname") || "")
+  const [email, setEmail] = useState(searchParams.get("email") || "")
   const [empresa, setEmpresa] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -53,16 +53,6 @@ function RegisterContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-
-  // Check URL params for invite
-  useEffect(() => {
-    const qEmail = searchParams.get("email")
-    const qName = searchParams.get("name")
-    const qSurname = searchParams.get("surname")
-    if (qEmail) setEmail(qEmail)
-    if (qName) setNome(qName)
-    if (qSurname) setSobrenome(qSurname)
-  }, [searchParams])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
