@@ -3,7 +3,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, Crown, ArrowUpRight } from "lucide-react"
 
-export function CurrentPlan() {
+export interface CurrentPlanProps {
+  plan: string
+  status: string
+  amount: string
+  interval: string
+  nextBillingDate: string
+}
+
+export function CurrentPlan({ plan, status, amount, interval, nextBillingDate }: CurrentPlanProps) {
+  const isFree = plan.toLowerCase() === "free"
+  
   return (
     <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
       <CardHeader>
@@ -11,16 +21,18 @@ export function CurrentPlan() {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="h-5 w-5 text-yellow-600" />
-              <CardTitle className="text-xl sm:text-2xl">Plano Professional</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl">Plano {plan}</CardTitle>
               <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100">
-                Ativo
+                {status === 'active' ? 'Ativo' : status}
               </Badge>
             </div>
-            <CardDescription className="text-sm sm:text-base">Próxima cobrança em 15 de Janeiro, 2025</CardDescription>
+            <CardDescription className="text-sm sm:text-base">
+              {isFree ? "Plano gratuito sem cobrança" : `Próxima cobrança em ${nextBillingDate}`}
+            </CardDescription>
           </div>
           <div className="text-left sm:text-right">
-            <div className="text-2xl sm:text-3xl font-bold text-foreground">R$ 299,00</div>
-            <div className="text-sm text-muted-foreground">por mês</div>
+            <div className="text-2xl sm:text-3xl font-bold text-foreground">{amount}</div>
+            <div className="text-sm text-muted-foreground">por {interval === 'month' ? 'mês' : 'ano'}</div>
           </div>
         </div>
       </CardHeader>

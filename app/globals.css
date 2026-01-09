@@ -199,6 +199,21 @@
   animation: floatCard 4s ease-in-out infinite 0.5s;
 }
 
+@media print {
+  aside, nav, header, footer, .no-print {
+    display: none !important;
+  }
+  main {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }

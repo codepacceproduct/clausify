@@ -30,13 +30,9 @@ import { getUserEmail, getAuthToken } from "@/lib/auth"
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
-  { name: "Portfólio", href: "/portfolio", icon: FolderOpen },
-  { name: "Aprovações", href: "/aprovacoes", icon: CheckSquare },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },
-  { name: "Segurança", href: "/seguranca", icon: Shield },
-  { name: "Assinaturas", href: "/assinaturas", icon: CreditCard },
   { name: "Cálculos", href: "/calculos", icon: Calculator }, // Added Cálculos navigation item
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ]
@@ -95,16 +91,11 @@ export function AppSidebar({
   const moduleKeyForHref = (href: string): string => {
     if (href.startsWith("/dashboard")) return "dashboard"
     if (href.startsWith("/contratos")) return "contratos"
-    if (href.startsWith("/portfolio")) return "portfolio"
-    if (href.startsWith("/aprovacoes")) return "aprovacoes"
     if (href.startsWith("/calendario")) return "calendario"
     if (href.startsWith("/versionamento")) return "versionamento"
     if (href.startsWith("/playbook")) return "playbook"
-    if (href.startsWith("/seguranca")) return "seguranca"
-    if (href.startsWith("/assinaturas")) return "assinaturas"
     if (href.startsWith("/calculos")) return "calculos" // Added Cálculos module key
     if (href.startsWith("/configuracoes")) return "configuracoes"
-    if (href.startsWith("/integracoes")) return "integracoes"
     if (href.startsWith("/auditoria")) return "auditoria"
     if (href.startsWith("/equipes")) return "equipes"
     if (href.startsWith("/analises")) return "analises"

@@ -18,11 +18,11 @@ export async function GET(req: Request) {
     .eq("id", orgId)
     .limit(1)
   const organization = orgs?.[0] || null
-  const { data: members } = await supabaseServer
-    .from("organization_members")
-    .select("id")
+  const { count } = await supabaseServer
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
     .eq("organization_id", orgId)
-  const member_count = members?.length || 0
+  const member_count = count || 0
   return Response.json({ organization, member_count })
 }
 
@@ -65,7 +65,7 @@ export async function DELETE(req: Request) {
   if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
   if (!hasPermission(callerRole, "delete_organization")) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
   await supabaseServer.from("audit_logs").delete().eq("organization_id", orgId)
-  await supabaseServer.from("organization_members").delete().eq("organization_id", orgId)
+  // No explicit organization_members table, profiles are linked directly
   await supabaseServer.from("profiles").update({ organization_id: null }).eq("organization_id", orgId)
   const { error } = await supabaseServer.from("organizations").delete().eq("id", orgId)
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })

@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Upload, FileText, X, ArrowRight, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface ContractUploadProps {
-  onAnalysisStart?: (contractId: string, content: string) => void
+  onAnalysisStart?: (contractId: string, content: string, filename: string) => void
 }
 
 export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
@@ -69,9 +70,11 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
             body: formData
         })
 
-        if (!response.ok) throw new Error("Upload failed")
-
         const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed")
+        }
         
         // Log action
         await fetch(`/api/audit/logs/record`, {
@@ -80,11 +83,12 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
             body: JSON.stringify({ action: "upload", resource: "Upload de Contrato", status: "success" }),
         })
 
-        onAnalysisStart?.(data.contract.id, data.contract.content)
+        onAnalysisStart?.(data.contract.id, data.contract.content, files[0].name)
+        toast.success("Upload concluído com sucesso!")
         
-    } catch (error) {
+    } catch (error: any) {
         console.error("Upload error:", error)
-        // Handle error (show toast, etc.)
+        toast.error(error.message || "Falha no upload do contrato")
     } finally {
         setUploading(false)
     }

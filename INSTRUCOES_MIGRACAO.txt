@@ -1,0 +1,52 @@
+-- 1. Acesse o Painel do Supabase (https://supabase.com/dashboard)
+-- 2. Vá para a seção SQL Editor (ícone de terminal na barra lateral)
+-- 3. Crie uma nova Query
+-- 4. Cole o código abaixo e clique em RUN
+
+CREATE TABLE IF NOT EXISTS contracts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT,
+  client_name TEXT,
+  content TEXT, -- Para RAG
+  status TEXT DEFAULT 'uploaded', -- uploaded, analyzed, failed
+  risk_level TEXT, -- high, medium, low
+  score INTEGER,
+  analysis JSONB, -- Resultado completo da IA
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Habilitar RLS (Segurança)
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+
+-- Política: Usuário só vê seus próprios contratos
+CREATE POLICY "Users can view their own contracts" 
+ON contracts FOR SELECT 
+USING (auth.uid() = user_id);
+
+-- Política: Usuário pode inserir seus próprios contratos
+CREATE POLICY "Users can insert their own contracts" 
+ON contracts FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+-- Política: Usuário pode atualizar seus próprios contratos
+CREATE POLICY "Users can update their own contracts" 
+ON contracts FOR UPDATE 
+USING (auth.uid() = user_id);
+
+-- Trigger para atualizar updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_contracts_updated_at
+    BEFORE UPDATE ON contracts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

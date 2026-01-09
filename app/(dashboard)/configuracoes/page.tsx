@@ -1,21 +1,23 @@
 import { LayoutWrapper } from "@/components/layout-wrapper"
-import { GeneralSettings } from "@/components/general-settings"
-import { NotificationSettings } from "@/components/notification-settings"
-import { SecuritySettings } from "@/components/security-settings"
-import { IntegrationSettings } from "@/components/integration-settings"
-import { TeamsSettings } from "@/components/teams-settings"
-import { AccessControl } from "@/components/access-control"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SettingsNav } from "@/components/settings/settings-nav"
+import { ProfileSettings } from "@/components/settings/profile-settings"
+import { OrganizationSettings } from "@/components/settings/organization-settings"
+import { TeamManagement } from "@/components/settings/team-management"
+import { SecuritySettings } from "@/components/settings/security-settings"
+import { SubscriptionSettings } from "@/components/settings/subscription-settings"
 import { supabaseServer } from "@/lib/supabase-server"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
 
 async function getInitialSettings() {
-  const cookieStore = await cookies()
-  const email = cookieStore.get("user_email")?.value || null
-  if (!email) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user || !user.email) {
     redirect("/login")
   }
+
+  const email = user.email
   let profile: any = null
   {
     const { data: profiles } = await supabaseServer
@@ -28,16 +30,11 @@ async function getInitialSettings() {
   if (!profile) {
     redirect("/login")
   }
-  let organization: any = null
-  if (profile?.organization_id) {
-    const { data: orgs } = await supabaseServer
-      .from("organizations")
-      .select("id, name, industry, size, timezone, locale")
-      .eq("id", profile.organization_id)
-      .limit(1)
-    organization = orgs?.[0] ?? null
-  }
-  return { profile, organization }
+  
+  // Organization data is fetched client-side in components now, but we check org existence here if needed
+  // For permission check, we need profile
+  
+  return { profile }
 }
 
 async function getRolePermissionsForProfile(profile: any): Promise<Record<string, boolean>> {
@@ -45,52 +42,35 @@ async function getRolePermissionsForProfile(profile: any): Promise<Record<string
   const orgId = profile.organization_id as string
   const role = String(profile?.role || "member").toLowerCase()
   const modules = [
-    "dashboard",
-    "contratos",
-    "portfolio",
-    "aprovacoes",
-    "calendario",
-    "versionamento",
-    "playbook",
-    "seguranca",
-    "assinaturas",
     "configuracoes",
     "configuracoes.general",
-    "configuracoes.notifications",
     "configuracoes.security",
-    "configuracoes.integrations",
     "configuracoes.teams",
-    "integracoes",
-    "auditoria",
-    "equipes",
-    "analises",
   ]
   const defaults: Record<string, Record<string, boolean>> = { admin: {}, moderator: {}, member: {} }
-  for (const m of modules) {
-    defaults.admin[m] = true
-    defaults.moderator[m] = !["seguranca"].includes(m)
-    defaults.member[m] = !["seguranca","configuracoes","aprovacoes","auditoria"].includes(m)
-  }
+  
+  defaults.admin["configuracoes"] = true
+  defaults.admin["configuracoes.general"] = true
+  defaults.admin["configuracoes.teams"] = true
+  defaults.admin["configuracoes.security"] = true
+
   defaults.moderator["configuracoes"] = true
   defaults.moderator["configuracoes.general"] = true
-  defaults.moderator["configuracoes.notifications"] = true
-  defaults.moderator["configuracoes.integrations"] = true
   defaults.moderator["configuracoes.teams"] = true
   defaults.moderator["configuracoes.security"] = false
-  for (const k of [
-    "configuracoes.general",
-    "configuracoes.notifications",
-    "configuracoes.security",
-    "configuracoes.integrations",
-    "configuracoes.teams",
-  ]) {
-    defaults.member[k] = false
-  }
+
+  defaults.member["configuracoes"] = false
+  defaults.member["configuracoes.general"] = false
+  defaults.member["configuracoes.teams"] = false
+  defaults.member["configuracoes.security"] = false
+
   const { data } = await supabaseServer
     .from("role_permissions")
     .select("module, allowed")
     .eq("organization_id", orgId)
     .eq("role", role)
+    .in("module", modules)
+
   const map: Record<string, boolean> = { ...defaults[role] }
   for (const row of data || []) {
     const key = String(row.module)
@@ -100,74 +80,77 @@ async function getRolePermissionsForProfile(profile: any): Promise<Record<string
       map[key] = !!row.allowed
     }
   }
-  if (role === "admin") {
-    for (const m of modules) map[m] = true
-  }
   return map
 }
 
-export default async function SettingsPage() {
-  const { profile, organization } = await getInitialSettings()
+export default async function ConfiguracoesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { profile } = await getInitialSettings()
   const perms = await getRolePermissionsForProfile(profile)
-  if (perms.configuracoes === false) {
+  const params = await searchParams
+
+  // Strict permission check for page access
+  if (perms["configuracoes"] === false) {
     redirect("/dashboard")
   }
-  const order = ["general","notifications","security","integrations","teams"]
-  const tabKeyToModule: Record<string, string> = {
-    general: "configuracoes.general",
-    notifications: "configuracoes.notifications",
-    security: "configuracoes.security",
-    integrations: "configuracoes.integrations",
-    teams: "configuracoes.teams",
+
+  const currentTab = params.tab || "profile"
+  
+  // Build allowed tabs
+  const allowedTabs = ["profile"]
+  
+  if (perms["configuracoes.general"] !== false) {
+      allowedTabs.push("organization")
   }
-  const defaultTab = order.find((t) => perms[tabKeyToModule[t]] !== false) || "general"
+
+  // Everyone (except maybe limited members) should see subscription if they are admin/owner, 
+  // but for now let's assume admins/mods can see it or map it to a specific permission.
+  // Using 'configuracoes.general' as a proxy for now or adding a new check.
+  // Actually, let's just allow it for admins/owners usually.
+  // Based on getRolePermissionsForProfile, let's assume it's part of 'configuracoes'.
+  // I will add it to allowedTabs if 'configuracoes' is true (which is checked at page level)
+  // BUT usually only admins manage billing. 
+  // Let's check role.
+  const role = profile?.role || "member"
+  if (role === "admin" || role === "owner") {
+    allowedTabs.push("subscription")
+  }
+  
+  if (perms["configuracoes.teams"] !== false) {
+      allowedTabs.push("team")
+  }
+  
+  if (perms["configuracoes.security"] !== false) {
+      allowedTabs.push("security")
+  }
+
   return (
     <LayoutWrapper>
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Configurações</h1>
-        <p className="text-muted-foreground mt-1 text-sm sm:text-base">Gerencie as configurações do sistema</p>
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-1 space-y-4 p-8 pt-6">
+          <div className="flex items-center justify-between space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">Configurações</h2>
+          </div>
+          <div className="hidden space-y-6 pb-16 md:block">
+            <div className="space-y-0.5">
+              <h3 className="text-lg font-medium">Preferências</h3>
+              <p className="text-muted-foreground">
+                Gerencie as configurações da sua conta e preferências de email.
+              </p>
+            </div>
+            <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+              <div className="flex-1 lg:max-w-7xl mx-auto w-full">
+                <SettingsNav allowedTabs={allowedTabs} className="mb-8" />
+                
+                {currentTab === "profile" && <ProfileSettings />}
+                {currentTab === "organization" && perms["configuracoes.general"] !== false && <OrganizationSettings />}
+                {currentTab === "subscription" && (profile?.role === "admin" || profile?.role === "owner") && <SubscriptionSettings />}
+                {currentTab === "team" && perms["configuracoes.teams"] !== false && <TeamManagement />}
+                {currentTab === "security" && perms["configuracoes.security"] !== false && <SecuritySettings />}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
-          {perms["configuracoes.general"] !== false && (<TabsTrigger value="general">Geral</TabsTrigger>)}
-          {perms["configuracoes.notifications"] !== false && (<TabsTrigger value="notifications">Notificações</TabsTrigger>)}
-          {perms["configuracoes.security"] !== false && (<TabsTrigger value="security">Segurança</TabsTrigger>)}
-          {perms["configuracoes.integrations"] !== false && (<TabsTrigger value="integrations">Integrações</TabsTrigger>)}
-          {perms["configuracoes.teams"] !== false && (<TabsTrigger value="teams">Equipes</TabsTrigger>)}
-        </TabsList>
-
-        {perms["configuracoes.general"] !== false && (
-          <TabsContent value="general" className="space-y-6">
-            <GeneralSettings initialProfile={profile ?? undefined} initialOrganization={organization ?? undefined} />
-          </TabsContent>
-        )}
-
-        {perms["configuracoes.notifications"] !== false && (
-          <TabsContent value="notifications" className="space-y-6">
-            <NotificationSettings />
-          </TabsContent>
-        )}
-
-        {perms["configuracoes.security"] !== false && (
-          <TabsContent value="security" className="space-y-6">
-            <SecuritySettings />
-          </TabsContent>
-        )}
-
-        {perms["configuracoes.integrations"] !== false && (
-          <TabsContent value="integrations" className="space-y-6">
-            <IntegrationSettings />
-          </TabsContent>
-        )}
-
-        {perms["configuracoes.teams"] !== false && (
-          <TabsContent value="teams" className="space-y-6">
-            <TeamsSettings />
-            <AccessControl />
-          </TabsContent>
-        )}
-      </Tabs>
     </LayoutWrapper>
   )
 }

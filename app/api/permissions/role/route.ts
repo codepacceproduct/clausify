@@ -24,15 +24,11 @@ export async function GET(req: Request) {
     "calendario",
     "versionamento",
     "playbook",
-    "seguranca",
     "assinaturas",
     "configuracoes",
     "configuracoes.general",
-    "configuracoes.notifications",
     "configuracoes.security",
-    "configuracoes.integrations",
     "configuracoes.teams",
-    "integracoes",
     "auditoria",
     "equipes",
     "analises",
@@ -41,20 +37,16 @@ export async function GET(req: Request) {
   for (const r of roles) byRole[r] = {}
   for (const m of modules) {
     byRole.admin[m] = true
-    byRole.moderator[m] = !["seguranca"].includes(m)
-    byRole.member[m] = !["seguranca","configuracoes","aprovacoes","auditoria"].includes(m)
+    byRole.moderator[m] = !["configuracoes.security"].includes(m)
+    byRole.member[m] = !["configuracoes","aprovacoes","auditoria"].includes(m)
   }
   byRole.moderator["configuracoes"] = true
   byRole.moderator["configuracoes.general"] = true
-  byRole.moderator["configuracoes.notifications"] = true
-  byRole.moderator["configuracoes.integrations"] = true
   byRole.moderator["configuracoes.teams"] = true
   byRole.moderator["configuracoes.security"] = false
   for (const k of [
     "configuracoes.general",
-    "configuracoes.notifications",
     "configuracoes.security",
-    "configuracoes.integrations",
     "configuracoes.teams",
   ]) {
     byRole.member[k] = false

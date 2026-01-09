@@ -63,30 +63,70 @@ export async function analyzeContractWithRAG(contractText: string, analysisType:
     })
   )
 
-  // 3. Define the prompt based on analysis type
-  let systemPrompt = ""
+  // 3. Define the prompt based on analysis type using ClausiBot Persona
+  const clausiBotPersona = `You are ClausiBot, an AI-powered legal assistant integrated into the CLAUSIFY SaaS platform.
+ClausiBot acts as a legal copilot specialized in contract analysis, risk detection, compliance, and contract lifecycle management (CLM).
+Your primary mission is to assist users in understanding, managing, improving, and making safer decisions about contracts.
+You operate exclusively within the CLAUSIFY ecosystem and must always align your responses with its modules, features, and legal context.
+
+## 🧠 PRODUCT CONTEXT (CLAUSIFY)
+CLAUSIFY is a LegalTech SaaS focused on AI-driven Contract Lifecycle Management (CLM).
+Core modules: Intelligent Contract Analysis, Legal Risk Detection, Contract Versioning, Legal Calendar, Approval Workflow, Playbook, Dashboard, Compliance, Audit Trail.
+
+## ⚖️ LEGAL ROLE AND LIMITATIONS
+ClausiBot provides legal analysis and guidance but does NOT replace a licensed lawyer.
+Never provide binding legal opinions or guarantees.
+
+## 🎯 TARGET USERS
+Lawyers, legal teams, business managers, executives.
+
+## 🗣️ TONE AND COMMUNICATION STYLE
+Professional, Clear, Practical, Neutral, Risk-aware.
+
+## 🧩 CORE CAPABILITIES
+Analyze contracts, Identify risks (low, medium, high), Summarize, Suggest improvements, Compare versions, Support negotiations.
+
+## 🧠 RESPONSE STRUCTURE
+You must output a valid JSON object with the following schema:
+{
+  "score": number (0-100, where 100 is safest),
+  "riskLevel": "low" | "medium" | "high",
+  "summary": "string (brief overview)",
+  "issues": [
+    {
+      "id": "string (unique)",
+      "severity": "high" | "medium" | "low",
+      "type": "string (category of risk)",
+      "clause": "string (clause name or reference)",
+      "originalText": "string (excerpt from contract)",
+      "suggestion": "string (improvement or fix)",
+      "explanation": "string (why it is a risk)"
+    }
+  ]
+}
+
+IMPORTANT: Always respond in Portuguese (pt-BR) unless the user explicitly asks for another language. Use Brazilian legal terminology (Código Civil, LGPD, etc.) when applicable.`
+
+  let systemPrompt = clausiBotPersona
   let userQuery = ""
 
   switch (analysisType) {
     case "risk":
-      systemPrompt = "Você é um advogado especialista em análise de riscos contratuais. Identifique cláusulas perigosas, multas abusivas e responsabilidades desproporcionais."
-      userQuery = "Quais são os principais riscos jurídicos e financeiros neste contrato? Liste-os com severidade (Alta, Média, Baixa) e sugira mitigações."
+      userQuery = "Analise este contrato focando EXCLUSIVAMENTE em riscos jurídicos e financeiros. Identifique cláusulas perigosas, multas abusivas e responsabilidades desproporcionais."
       break
     case "compliance":
-      systemPrompt = "Você é um especialista em compliance e LGPD. Verifique se o contrato está em conformidade com as leis brasileiras."
-      userQuery = "Este contrato está em conformidade com a LGPD e o Código Civil Brasileiro? Aponte violações ou pontos de atenção."
+      userQuery = "Analise este contrato focando em COMPLIANCE e LGPD. Verifique a adequação às leis brasileiras e proteção de dados."
       break
     case "financial":
-      systemPrompt = "Você é um analista financeiro. Foque em prazos de pagamento, multas, juros e reajustes."
-      userQuery = "Analise as condições financeiras: prazos de pagamento, índices de reajuste e penalidades por atraso. São justas?"
+      userQuery = "Analise este contrato focando em aspectos FINANCEIROS: prazos, pagamentos, multas, juros e reajustes."
       break
     default: // Detailed/Standard
-      systemPrompt = "Você é um assistente jurídico sênior. Faça uma análise completa do contrato."
-      userQuery = "Faça um resumo detalhado do contrato, destacando obrigações das partes, prazos, valores e pontos de atenção."
+      userQuery = "Faça uma ANÁLISE JURÍDICA COMPLETA deste contrato. Identifique partes, objeto, vigência, rescisão, e todos os riscos e pontos de atenção. Gere um score de 0 a 100 baseada na segurança jurídica. Retorne um JSON com: score (number), riskLevel (low/medium/high), summary (string), issues (array of objects: id, severity, type, clause, originalText, suggestion, explanation)."
   }
 
   // 4. Retrieve relevant chunks
-  const relevantDocs = await vectorStore.similaritySearch(userQuery, 5)
+  // Retrieve more chunks for better context since we are doing "full analysis"
+  const relevantDocs = await vectorStore.similaritySearch(userQuery, 8) 
   const context = relevantDocs.map(doc => doc.pageContent).join("\n\n")
 
   // 5. Call OpenAI with Context
@@ -96,10 +136,11 @@ export async function analyzeContractWithRAG(contractText: string, analysisType:
       { role: "system", content: systemPrompt },
       { 
         role: "user", 
-        content: `Contexto do Contrato:\n${context}\n\nPergunta: ${userQuery}\n\nResponda em formato JSON estruturado com os campos: score (0-100), riskLevel (low, medium, high), summary (texto), and issues (array de objetos com id, severity, type, clause, originalText, suggestion, explanation).` 
+        content: `Contexto do Contrato (Trechos Relevantes):\n${context}\n\nTarefa: ${userQuery}\n\nResponda estritamente em JSON compatível com a interface:\n{ score: number, riskLevel: "low"|"medium"|"high", summary: string, issues: [{ id: string, severity: "low"|"medium"|"high", type: string, clause: string, originalText: string, suggestion: string, explanation: string }] }` 
       }
     ],
-    response_format: { type: "json_object" }
+    response_format: { type: "json_object" },
+    temperature: 0.2 // Lower temperature for more consistent analysis
   })
 
   return JSON.parse(completion.choices[0].message.content || "{}")

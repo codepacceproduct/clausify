@@ -4,7 +4,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CreditCard, Building2, FileText } from "lucide-react"
 
-export function BillingInfo() {
+export interface BillingDetails {
+  legal_name?: string
+  tax_id?: string
+  email?: string
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+}
+
+interface BillingInfoProps {
+  billing?: BillingDetails
+}
+
+export function BillingInfo({ billing }: BillingInfoProps) {
   return (
     <div className="space-y-6">
       <Card>
@@ -55,29 +69,29 @@ export function BillingInfo() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="company">Nome da Empresa</Label>
-                <Input id="company" placeholder="Sua Empresa Ltda" defaultValue="Oliveira Advogados Associados" />
+                <Input id="company" placeholder="Sua Empresa Ltda" defaultValue={billing?.legal_name} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input id="cnpj" placeholder="00.000.000/0000-00" defaultValue="12.345.678/0001-90" />
+                <Input id="cnpj" placeholder="00.000.000/0000-00" defaultValue={billing?.tax_id} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Endereço</Label>
-              <Input id="address" placeholder="Rua, número" defaultValue="Av. Paulista, 1000" />
+              <Input id="address" placeholder="Rua, número" defaultValue={billing?.address} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">Cidade</Label>
-                <Input id="city" placeholder="São Paulo" defaultValue="São Paulo" />
+                <Input id="city" placeholder="São Paulo" defaultValue={billing?.city} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state">Estado</Label>
-                <Input id="state" placeholder="SP" defaultValue="SP" />
+                <Input id="state" placeholder="SP" defaultValue={billing?.state} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="zip">CEP</Label>
-                <Input id="zip" placeholder="00000-000" defaultValue="01310-100" />
+                <Input id="zip" placeholder="00000-000" defaultValue={billing?.zip} />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
@@ -101,7 +115,7 @@ export function BillingInfo() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg">
               <div>
                 <div className="font-medium">Email para envio de NF-e</div>
-                <div className="text-sm text-muted-foreground">financeiro@oliveira-advogados.com.br</div>
+                <div className="text-sm text-muted-foreground">{billing?.email || "Não configurado"}</div>
               </div>
               <Button variant="outline" size="sm">
                 Alterar Email

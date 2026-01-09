@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -19,7 +20,10 @@ import {
   ChevronDown,
   Scale,
   ShieldCheck,
-  Zap
+  Zap,
+  Save,
+  X,
+  RotateCcw
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -31,17 +35,76 @@ interface Issue {
   originalText: string
   suggestion: string
   explanation: string
+  resolved?: boolean
+  finalText?: string
 }
 
-export function ContractAnalysisResult({ onReset, result }: { onReset: () => void, result?: any }) {
+export function ContractAnalysisResult({ onReset, result, filename, contractId, onPreview }: { onReset: () => void, result?: any, filename?: string, contractId?: string, onPreview?: () => void }) {
   const issues: Issue[] = result?.issues || []
   const score = result?.score || 0
   const riskLevel = result?.riskLevel || "unknown"
   
   const [activeIssue, setActiveIssue] = useState<string | null>(issues[0]?.id || null)
+  const [editingIssue, setEditingIssue] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [resolvedIssues, setResolvedIssues] = useState<Set<string>>(new Set(issues.filter(i => i.resolved).map(i => i.id)))
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleStartEdit = (issue: Issue) => {
+    setEditingIssue(issue.id)
+    setEditContent(issue.suggestion)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingIssue(null)
+    setEditContent("")
+  }
+
+  const handleAccept = async (issueId: string, content: string) => {
+    if (!contractId) {
+        console.error("No contract ID available")
+        return
+    }
+
+    setIsSaving(true)
+    try {
+        const res = await fetch("/api/contracts/resolve-issue", {
+            method: "POST",
+            body: JSON.stringify({ contractId, issueId, resolution: content }),
+            headers: { "Content-Type": "application/json" }
+        })
+        
+        if (res.ok) {
+            setResolvedIssues(prev => {
+                const newSet = new Set(prev)
+                newSet.add(issueId)
+                return newSet
+            })
+            setEditingIssue(null)
+        } else {
+            console.error("Failed to resolve")
+        }
+    } catch (e) {
+        console.error(e)
+    } finally {
+        setIsSaving(false)
+    }
+  }
 
   const highRisks = issues.filter(i => i.severity === "high").length
   const mediumRisks = issues.filter(i => i.severity === "medium").length
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-emerald-600"
+    if (score >= 50) return "text-amber-600"
+    return "text-destructive"
+  }
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return "Alto nível de segurança"
+    if (score >= 50) return "Nível de segurança moderado"
+    return "Baixo nível de segurança"
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -55,11 +118,20 @@ export function ContractAnalysisResult({ onReset, result }: { onReset: () => voi
             </Badge>
           </div>
           <p className="text-muted-foreground">
-            Contrato de Prestação de Serviços - Alpha Tech.pdf
+            {filename || "Contrato sem nome"}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onReset}>Nova Análise</Button>
+        <div className="flex items-center gap-2">
+          {onPreview && (
+            <Button variant="outline" onClick={onPreview}>
+                <FileText className="h-4 w-4 mr-2" />
+                Visualizar Contrato Completo
+            </Button>
+          )}
+          <Button variant="outline" onClick={onReset}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Nova Análise
+          </Button>
           <Button variant="outline">
             <Share2 className="h-4 w-4 mr-2" />
             Compartilhar
@@ -73,17 +145,17 @@ export function ContractAnalysisResult({ onReset, result }: { onReset: () => voi
 
       {/* Score Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className={`border-l-4 ${score >= 80 ? "border-l-emerald-500" : score >= 50 ? "border-l-amber-500" : "border-l-destructive"}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Score Jurídico</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold text-amber-600">{score}</span>
+              <span className={`text-4xl font-bold ${getScoreColor(score)}`}>{score}</span>
               <span className="text-sm text-muted-foreground mb-1">/ 100</span>
             </div>
-            <Progress value={score} className="h-2 mt-2 bg-amber-100" />
-            <p className="text-xs text-muted-foreground mt-2">Nível de segurança moderado</p>
+            <Progress value={score} className={`h-2 mt-2 ${score >= 80 ? "bg-emerald-100" : score >= 50 ? "bg-amber-100" : "bg-red-100"}`} />
+            <p className="text-xs text-muted-foreground mt-2">{getScoreLabel(score)}</p>
           </CardContent>
         </Card>
 
@@ -95,7 +167,7 @@ export function ContractAnalysisResult({ onReset, result }: { onReset: () => voi
             <div className="flex items-center gap-2">
               <XCircle className="h-8 w-8 text-destructive" />
               <div className="flex flex-col">
-                <span className="text-2xl font-bold">2</span>
+                <span className="text-2xl font-bold">{highRisks}</span>
                 <span className="text-xs text-muted-foreground">Cláusulas de Alto Risco</span>
               </div>
             </div>
@@ -147,27 +219,34 @@ export function ContractAnalysisResult({ onReset, result }: { onReset: () => voi
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
               <div className="flex flex-col">
-                {issues.map((issue) => (
+                {issues.map((issue) => {
+                  const isResolved = resolvedIssues.has(issue.id)
+                  return (
                   <button
                     key={issue.id}
                     onClick={() => setActiveIssue(issue.id)}
                     className={cn(
                       "flex items-start gap-3 p-4 text-left transition-colors border-b last:border-0 hover:bg-muted/50",
-                      activeIssue === issue.id ? "bg-muted border-l-4 border-l-emerald-600" : "border-l-4 border-l-transparent"
+                      activeIssue === issue.id ? "bg-muted border-l-4 border-l-emerald-600" : 
+                      isResolved ? "bg-emerald-50/50 border-l-4 border-l-emerald-400" : "border-l-4 border-l-transparent"
                     )}
                   >
                     <div className="mt-1">
-                      {issue.severity === "high" && <XCircle className="h-4 w-4 text-destructive" />}
-                      {issue.severity === "medium" && <AlertTriangle className="h-4 w-4 text-amber-500" />}
-                      {issue.severity === "low" && <Zap className="h-4 w-4 text-blue-500" />}
+                      {isResolved ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : (
+                        <>
+                            {issue.severity === "high" && <XCircle className="h-4 w-4 text-destructive" />}
+                            {issue.severity === "medium" && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                            {issue.severity === "low" && <Zap className="h-4 w-4 text-blue-500" />}
+                        </>
+                      )}
                     </div>
                     <div className="space-y-1">
-                      <p className="font-medium text-sm leading-none">{issue.type}</p>
+                      <p className={cn("font-medium text-sm leading-none", isResolved && "text-emerald-700 line-through decoration-emerald-500/50")}>{issue.type}</p>
                       <p className="text-xs text-muted-foreground line-clamp-1">{issue.clause}</p>
                     </div>
                     <ChevronRight className={cn("h-4 w-4 ml-auto text-muted-foreground transition-transform", activeIssue === issue.id && "rotate-90")} />
                   </button>
-                ))}
+                )})}
               </div>
             </ScrollArea>
           </CardContent>
@@ -223,20 +302,47 @@ export function ContractAnalysisResult({ onReset, result }: { onReset: () => voi
                         <CheckCircle2 className="h-4 w-4" />
                         Sugestão Otimizada
                       </div>
-                      <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm leading-relaxed min-h-[120px] dark:bg-emerald-950/30 dark:border-emerald-900">
-                        "{issue.suggestion}"
-                      </div>
+                      {editingIssue === issue.id ? (
+                        <Textarea 
+                            value={editContent} 
+                            onChange={(e) => setEditContent(e.target.value)} 
+                            className="min-h-[120px] bg-white dark:bg-slate-950"
+                        />
+                      ) : (
+                        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm leading-relaxed min-h-[120px] dark:bg-emerald-950/30 dark:border-emerald-900">
+                            "{resolvedIssues.has(issue.id) ? issue.finalText || issue.suggestion : issue.suggestion}"
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                    <Button variant="ghost">Ignorar</Button>
-                    <Button variant="outline">Editar Manualmente</Button>
-                    <Button className="bg-emerald-600 hover:bg-emerald-700">
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Aceitar Sugestão
-                    </Button>
+                    {editingIssue === issue.id ? (
+                        <>
+                            <Button variant="ghost" onClick={handleCancelEdit} disabled={isSaving}>
+                                <X className="h-4 w-4 mr-2" /> Cancelar
+                            </Button>
+                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleAccept(issue.id, editContent)} disabled={isSaving}>
+                                <Save className="h-4 w-4 mr-2" /> 
+                                {isSaving ? "Salvando..." : "Salvar e Aceitar"}
+                            </Button>
+                        </>
+                    ) : resolvedIssues.has(issue.id) ? (
+                        <div className="flex items-center text-emerald-600 font-medium px-4 py-2 bg-emerald-50 rounded-md border border-emerald-100">
+                            <CheckCircle2 className="h-5 w-5 mr-2" />
+                            Resolvido
+                        </div>
+                    ) : (
+                        <>
+                            <Button variant="ghost">Ignorar</Button>
+                            <Button variant="outline" onClick={() => handleStartEdit(issue)}>Editar Manualmente</Button>
+                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleAccept(issue.id, issue.suggestion)} disabled={isSaving}>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                {isSaving ? "Salvando..." : "Aceitar Sugestão"}
+                            </Button>
+                        </>
+                    )}
                   </div>
                 </>
               )

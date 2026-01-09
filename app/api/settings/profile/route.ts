@@ -16,19 +16,9 @@ export async function GET(req: Request) {
   }
 
   if (!profile) {
-    const { data: authUsers } = await supabaseServer
-      .from("auth.users")
-      .select("id, email")
-      .eq("email", email)
-      .limit(1)
-    const authUser = authUsers?.[0]
-    if (authUser) {
-      const { data: created } = await supabaseServer
-        .from("profiles")
-        .upsert({ id: authUser.id, email: authUser.email }, { onConflict: "id" })
-        .select()
-      profile = created?.[0] ?? null
-    }
+    // Attempt to just use what we have or return null
+    // We cannot easily query auth.users from here without admin API access correctly configured
+    // So we skip auto-creation fallback for now if profile is missing
   }
 
   let organization = null as any
@@ -51,23 +41,15 @@ export async function POST(req: Request) {
   const { name, surname, phone, regional_preferences, organization, avatar_url } = body
   const email = authed
 
-  const { data: authUsers } = await supabaseServer
-    .from("auth.users")
-    .select("id, email")
+  let userId: string | undefined
+  
+  // fallback: keep existing profile id if found
+  const { data: existing } = await supabaseServer
+    .from("profiles")
+    .select("id")
     .eq("email", email)
     .limit(1)
-  const authUser = authUsers?.[0]
-
-  let userId = authUser?.id as string | undefined
-  if (!userId) {
-    // fallback: keep existing profile id if found
-    const { data: existing } = await supabaseServer
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .limit(1)
-    userId = existing?.[0]?.id
-  }
+  userId = existing?.[0]?.id
 
   const upsertPayload: any = { email, name, surname, phone }
   if (regional_preferences) {
@@ -94,23 +76,8 @@ export async function POST(req: Request) {
         } else {
           await supabaseServer.from("profiles").update({ organization_id: id }).eq("email", email)
         }
-        const { data: existingMember } = await supabaseServer
-          .from("organization_members")
-          .select("email")
-          .eq("organization_id", id)
-          .eq("email", email)
-          .limit(1)
-        if (existingMember && existingMember.length > 0) {
-          await supabaseServer
-            .from("organization_members")
-            .update({ status: "active", joined_at: new Date().toISOString() })
-            .eq("organization_id", id)
-            .eq("email", email)
-        } else {
-          await supabaseServer
-            .from("organization_members")
-            .insert({ organization_id: id, email, role: "member", status: "active", joined_at: new Date().toISOString() })
-        }
+        
+        // Ensure role is set
         const { data: profs } = await supabaseServer
           .from("profiles")
           .select("role")
@@ -135,30 +102,30 @@ export async function POST(req: Request) {
         } else {
           await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("email", email)
         }
-        await supabaseServer
-          .from("organization_members")
-          .insert({ organization_id: newOrgId, email, role: "admin", status: "active", joined_at: new Date().toISOString() })
       }
     }
   } else {
-    const domain = (email.split("@")[1] || "").split(".")[0]
-    const fallbackName = domain ? domain : (name ? `${name} Organização` : `Org de ${email}`)
-    const { data: createdOrg, error: orgErr } = await supabaseServer
-      .from("organizations")
-      .insert({ name: fallbackName, industry: null, size: null, timezone: "america-saopaulo", locale: "pt-br" })
-      .select("id")
-      .limit(1)
-    if (orgErr) return new Response(JSON.stringify({ error: orgErr.message }), { status: 500 })
-    const newOrgId = createdOrg?.[0]?.id
-    if (newOrgId) {
-      if (userId) {
-        await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("id", userId)
-      } else {
-        await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("email", email)
-      }
-      await supabaseServer
-        .from("organization_members")
-        .insert({ organization_id: newOrgId, email, role: "admin", status: "active", joined_at: new Date().toISOString() })
+    // If no organization provided and user has no org, create one default
+    // Check if user already has org
+    const { data: existingProf } = await supabaseServer.from("profiles").select("organization_id").eq("email", email).single()
+    
+    if (!existingProf?.organization_id) {
+        const domain = (email.split("@")[1] || "").split(".")[0]
+        const fallbackName = domain ? domain : (name ? `${name} Organização` : `Org de ${email}`)
+        const { data: createdOrg, error: orgErr } = await supabaseServer
+          .from("organizations")
+          .insert({ name: fallbackName, industry: null, size: null, timezone: "america-saopaulo", locale: "pt-br" })
+          .select("id")
+          .limit(1)
+        if (orgErr) return new Response(JSON.stringify({ error: orgErr.message }), { status: 500 })
+        const newOrgId = createdOrg?.[0]?.id
+        if (newOrgId) {
+          if (userId) {
+            await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("id", userId)
+          } else {
+            await supabaseServer.from("profiles").update({ organization_id: newOrgId, role: "admin" }).eq("email", email)
+          }
+        }
     }
   }
 

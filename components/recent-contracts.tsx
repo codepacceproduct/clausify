@@ -1,34 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 type Risk = "low" | "medium" | "high"
 
 async function fetchRecentContracts() {
+  const supabase = await createClient()
   const { data } = await supabase
-    .from("contract_versions")
-    .select("contract_name, status, created_at")
+    .from("contracts")
+    .select("name, type, created_at, risk_level, status")
     .order("created_at", { ascending: false })
     .limit(5)
 
   // Map DB statuses to risk tags heuristically
   const statusToRisk: Record<string, Risk> = {
-    approved: "low",
-    active: "low",
-    review: "medium",
-    draft: "medium",
-    expired: "high",
+    analyzed: "low",
+    uploaded: "medium",
+    failed: "high",
   }
 
   return (
     data?.map((row) => ({
-      client: row.contract_name ?? "Contrato",
-      type: row.status ?? "—",
-      risk: statusToRisk[row.status ?? "review"] ?? "medium",
+      client: row.name ?? "Contrato",
+      type: row.type ?? "—",
+      risk: (row.risk_level as Risk) || (statusToRisk[row.status ?? "uploaded"] ?? "medium"),
       date: new Date(row.created_at).toLocaleString("pt-BR"),
       value: "—",
-      status: row.status ?? "—",
+      status: row.status === "analyzed" ? "Analisado" : row.status === "uploaded" ? "Pendente" : "Erro",
     })) ?? []
   )
 }

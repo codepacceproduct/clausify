@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,81 +19,62 @@ import {
   CheckCircle,
   AlertTriangle,
   Clock,
+  Trash2,
 } from "lucide-react"
 
-const analysisHistory = [
-  {
-    id: "AN-2025-042",
-    contractName: "Contrato Alpha Tech - Serviços de TI",
-    client: "Empresa Alpha Tech Ltda",
-    type: "Prestação de Serviços",
-    analyzedAt: "28/01/2025 14:32",
-    duration: "12 min",
-    status: "completed" as const,
-    riskLevel: "low" as const,
-    findings: { high: 0, medium: 2, low: 5 },
-  },
-  {
-    id: "AN-2025-041",
-    contractName: "Contrato Beta Construção - Obra Civil",
-    client: "Construtora Beta S/A",
-    type: "Contrato de Obra",
-    analyzedAt: "27/01/2025 09:15",
-    duration: "18 min",
-    status: "completed" as const,
-    riskLevel: "high" as const,
-    findings: { high: 4, medium: 6, low: 3 },
-  },
-  {
-    id: "AN-2025-040",
-    contractName: "Locação Comercial Gamma",
-    client: "Imobiliária Gamma",
-    type: "Locação Comercial",
-    analyzedAt: "26/01/2025 16:48",
-    duration: "8 min",
-    status: "completed" as const,
-    riskLevel: "medium" as const,
-    findings: { high: 1, medium: 4, low: 2 },
-  },
-  {
-    id: "AN-2025-039",
-    contractName: "Fornecimento Delta - Insumos",
-    client: "Indústria Delta Manufatura",
-    type: "Fornecimento",
-    analyzedAt: "25/01/2025 11:22",
-    duration: "15 min",
-    status: "completed" as const,
-    riskLevel: "medium" as const,
-    findings: { high: 2, medium: 3, low: 4 },
-  },
-  {
-    id: "AN-2025-038",
-    contractName: "Investimento Epsilon Ventures",
-    client: "Startup Epsilon Ventures",
-    type: "Investimento",
-    analyzedAt: "24/01/2025 10:05",
-    duration: "22 min",
-    status: "failed" as const,
-    riskLevel: "unknown" as const,
-    findings: { high: 0, medium: 0, low: 0 },
-  },
-  {
-    id: "AN-2025-037",
-    contractName: "Parceria Tech Zeta",
-    client: "Tech Zeta Corporation",
-    type: "Parceria",
-    analyzedAt: "23/01/2025 15:30",
-    duration: "14 min",
-    status: "completed" as const,
-    riskLevel: "low" as const,
-    findings: { high: 0, medium: 1, low: 6 },
-  },
-]
-
-export function ContractHistory() {
+export function ContractHistoryList({ 
+  onSelect, 
+  onReanalyze, 
+  onDelete, 
+  onExportPDF,
+  refreshTrigger = 0
+}: { 
+  onSelect?: (id: string) => void, 
+  onReanalyze?: (id: string) => void,
+  onDelete?: (id: string) => void,
+  onExportPDF?: (id: string) => void,
+  refreshTrigger?: number
+}) {
+  const [contracts, setContracts] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [riskFilter, setRiskFilter] = useState("all")
+
+  useEffect(() => {
+    fetchContracts()
+  }, [refreshTrigger])
+
+  const fetchContracts = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch("/api/contracts/list")
+      if (res.ok) {
+        const data = await res.json()
+        setContracts(data.contracts || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch history", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const analysisHistory = contracts.map(c => ({
+    id: c.id,
+    contractName: c.name,
+    client: c.client_name || "Cliente não informado",
+    type: c.type || "Geral",
+    analyzedAt: new Date(c.created_at).toLocaleString("pt-BR"),
+    duration: "—", 
+    status: (c.status === "analyzed" ? "completed" : c.status === "uploaded" ? "pending" : "failed") as "completed" | "pending" | "failed",
+    riskLevel: (c.risk_level || "unknown") as "low" | "medium" | "high" | "unknown",
+    findings: c.analysis?.issues ? {
+        high: c.analysis.issues.filter((i:any) => i.severity === 'high').length,
+        medium: c.analysis.issues.filter((i:any) => i.severity === 'medium').length,
+        low: c.analysis.issues.filter((i:any) => i.severity === 'low').length,
+    } : { high: 0, medium: 0, low: 0 }
+  }))
 
   const filteredHistory = analysisHistory.filter((item) => {
     const matchesSearch =
@@ -245,75 +226,89 @@ export function ContractHistory() {
             </div>
           </div>
 
-          <Table>
+          <div className={`rounded-md border overflow-x-auto transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Contrato</TableHead>
+                <TableHead className="w-[250px] sm:w-[300px]">Contrato</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>Duração</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Risco</TableHead>
-                <TableHead>Achados</TableHead>
+                <TableHead className="hidden md:table-cell">Risco</TableHead>
+                <TableHead className="hidden lg:table-cell">Achados</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredHistory.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                  <TableCell>
+                  <TableCell className="max-w-[250px] sm:max-w-[300px]">
                     <div>
-                      <p className="font-medium text-sm">{item.contractName}</p>
-                      <p className="text-xs text-muted-foreground">{item.client}</p>
+                      <p className="font-medium text-sm truncate" title={item.contractName}>{item.contractName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.client}</p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{item.type}</Badge>
+                    <Badge variant="secondary" className="whitespace-nowrap">{item.type}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{item.analyzedAt}</TableCell>
-                  <TableCell className="text-sm">{item.duration}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{item.analyzedAt}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
-                  <TableCell>{getRiskBadge(item.riskLevel)}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">{getRiskBadge(item.riskLevel)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {item.status === "completed" ? (
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-destructive font-medium">{item.findings.high}</span>
-                        <span className="text-amber-600 font-medium">{item.findings.medium}</span>
-                        <span className="text-success font-medium">{item.findings.low}</span>
+                        <span className="text-destructive font-medium" title="Alto Risco">{item.findings.high}</span>
+                        <span className="text-amber-600 font-medium" title="Médio Risco">{item.findings.medium}</span>
+                        <span className="text-success font-medium" title="Baixo Risco">{item.findings.low}</span>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Relatório
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="h-4 w-4 mr-2" />
-                          Exportar PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Reanalisar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => onReanalyze?.(item.id)}
+                        className="text-muted-foreground hover:text-primary"
+                        title="Reanalisar Contrato"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onSelect?.(item.id)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Relatório
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onExportPDF?.(item.id)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onReanalyze?.(item.id)}>
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                            Reanalisar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDelete?.(item.id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

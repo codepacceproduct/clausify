@@ -24,22 +24,45 @@ export async function POST(request: Request) {
     }
 
     if (!contractText) {
-        // Fallback mock text if DB failed or no content provided
-        contractText = "CONTRATO DE PRESTAÇÃO DE SERVIÇOS... (Texto simulado para análise)"
+        throw new Error("No contract content found for analysis. Please ensure the file was uploaded correctly.")
     }
 
     // Perform RAG Analysis
     const analysisResult = await analyzeContractWithRAG(contractText, analysisType || "detailed")
 
-    // Update DB with results
+    // Update DB with results and create new version
     if (contractId && !contractId.startsWith("mock-")) {
+        // 1. Get current version number
+        const { data: currentContract } = await supabase
+            .from("contracts")
+            .select("current_version")
+            .eq("id", contractId)
+            .single()
+
+        const nextVersion = (currentContract?.current_version || 0) + 1
+
+        // 2. Insert new version
+        const { error: versionError } = await supabase.from("contract_versions").insert({
+            contract_id: contractId,
+            version_number: nextVersion,
+            content: contractText,
+            analysis: analysisResult,
+            status: "analyzed"
+        })
+
+        if (versionError) {
+            console.error("Error creating contract version:", versionError)
+        }
+
+        // 3. Update main contract
         await supabase
             .from("contracts")
             .update({ 
                 analysis: analysisResult, 
                 status: "analyzed",
                 risk_level: analysisResult.riskLevel,
-                score: analysisResult.score
+                score: analysisResult.score,
+                current_version: nextVersion
             })
             .eq("id", contractId)
     }

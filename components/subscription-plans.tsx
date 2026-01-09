@@ -42,7 +42,11 @@ const plans = [
   },
 ]
 
-export function SubscriptionPlans() {
+export interface SubscriptionPlansProps {
+  currentPlan?: string
+}
+
+export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
   return (
     <div>
       <div className="mb-6">
@@ -51,7 +55,10 @@ export function SubscriptionPlans() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {plans.map((plan) => (
+        {plans.map((plan) => {
+          const isCurrent = currentPlan?.toLowerCase() === plan.name.toLowerCase()
+          
+          return (
           <Card key={plan.name} className={plan.popular ? "border-2 border-blue-500 relative shadow-lg" : ""}>
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -82,8 +89,8 @@ export function SubscriptionPlans() {
               </ul>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
-                {plan.name === "Professional"
+              <Button className="w-full" variant={plan.popular ? "default" : "outline"} disabled={isCurrent}>
+                {isCurrent
                   ? "Plano Atual"
                   : plan.price === "Personalizado"
                     ? "Falar com Vendas"
@@ -91,7 +98,7 @@ export function SubscriptionPlans() {
               </Button>
             </CardFooter>
           </Card>
-        ))}
+        )})}
       </div>
     </div>
   )

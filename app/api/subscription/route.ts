@@ -1,0 +1,99 @@
+
+import { supabaseServer } from "@/lib/supabase-server"
+import { getAuthedEmail } from "@/lib/api-auth"
+
+export async function GET(req: Request) {
+  const email = await getAuthedEmail(req)
+  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+
+  const { data: profiles } = await supabaseServer
+    .from("profiles")
+    .select("organization_id, role")
+    .eq("email", email)
+    .limit(1)
+  const orgId = profiles?.[0]?.organization_id
+  const role = profiles?.[0]?.role
+  
+  if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
+
+  // Fetch subscription
+  const { data: subs } = await supabaseServer
+    .from("subscriptions")
+    .select("*")
+    .eq("organization_id", orgId)
+    .limit(1)
+  
+  const subscription = subs?.[0] || { plan: "free", status: "active" } // Default to free
+
+  // Fetch invoices
+  const { data: invoices } = await supabaseServer
+    .from("invoices")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("date", { ascending: false })
+
+  // Fetch organization billing details
+  const { data: orgs } = await supabaseServer
+    .from("organizations")
+    .select("legal_name, tax_id, email, address_line1, city, region, postal_code")
+    .eq("id", orgId)
+    .limit(1)
+  
+  const organization = orgs?.[0] || {}
+
+  return Response.json({ 
+    subscription: {
+        ...subscription,
+        role // pass role to frontend if needed
+    }, 
+    invoices: invoices || [],
+    billing: {
+      legal_name: organization.legal_name,
+      tax_id: organization.tax_id,
+      email: organization.email,
+      address: organization.address_line1,
+      city: organization.city,
+      state: organization.region,
+      zip: organization.postal_code
+    }
+  })
+}
+
+// POST to update plan (simplified, usually involves Stripe)
+export async function POST(req: Request) {
+    const body = await req.json()
+    const email = await getAuthedEmail(req)
+    if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  
+    const { data: profiles } = await supabaseServer
+      .from("profiles")
+      .select("organization_id, role")
+      .eq("email", email)
+      .limit(1)
+    const orgId = profiles?.[0]?.organization_id
+    const role = profiles?.[0]?.role
+    
+    if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
+    if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
+
+    const { plan } = body
+    if (!["free", "pro", "enterprise"].includes(plan)) {
+        return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
+    }
+
+    // Upsert subscription
+    const { error } = await supabaseServer
+        .from("subscriptions")
+        .upsert({ 
+            organization_id: orgId, 
+            plan, 
+            status: "active",
+            current_period_start: new Date().toISOString(),
+            // Set end date to 1 month from now
+            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        }, { onConflict: "organization_id" })
+
+    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    
+    return Response.json({ ok: true })
+}
