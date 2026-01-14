@@ -18,6 +18,7 @@ import {
   GitBranch,
   Calculator,
   Search,
+  Bot,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
   { name: "Consultas", href: "/consultas", icon: Search },
+  { name: "ClausiChat", href: "/clausichat", icon: Bot },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },
@@ -94,6 +96,7 @@ export function AppSidebar({
     if (href.startsWith("/dashboard")) return "dashboard"
     if (href.startsWith("/contratos")) return "contratos"
     if (href.startsWith("/consultas")) return "consultas"
+    if (href.startsWith("/clausichat")) return "clausichat"
     if (href.startsWith("/calendario")) return "calendario"
     if (href.startsWith("/versionamento")) return "versionamento"
     if (href.startsWith("/playbook")) return "playbook"

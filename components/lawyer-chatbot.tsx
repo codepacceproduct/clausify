@@ -14,8 +14,12 @@ interface Message {
   content: string
 }
 
+import { usePathname } from "next/navigation"
+
 export function LawyerChatbot() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = React.useState(false)
+
   const [messages, setMessages] = React.useState<Message[]>([
     {
       role: "assistant",
@@ -40,6 +44,8 @@ export function LawyerChatbot() {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isOpen])
+
+  if (pathname === "/clausichat") return null
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
