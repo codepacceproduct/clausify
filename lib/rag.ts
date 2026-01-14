@@ -1,6 +1,6 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"
 import { OpenAIEmbeddings } from "@langchain/openai"
-import { openai } from "./openai"
+import { getOpenAIClient } from "./openai"
 
 // Simple in-memory vector search
 class SimpleVectorStore {
@@ -47,6 +47,10 @@ class SimpleVectorStore {
 }
 
 export async function analyzeContractWithRAG(contractText: string, analysisType: string) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Serviço de IA não está configurado (OPENAI_API_KEY ausente).")
+  }
+
   // 1. Split text into chunks
   const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
@@ -130,7 +134,12 @@ IMPORTANT: Always respond in Portuguese (pt-BR) unless the user explicitly asks 
   const context = relevantDocs.map(doc => doc.pageContent).join("\n\n")
 
   // 5. Call OpenAI with Context
-  const completion = await openai.chat.completions.create({
+  const client = getOpenAIClient()
+  if (!client) {
+    throw new Error("Serviço de IA não está configurado (OPENAI_API_KEY ausente).")
+  }
+
+  const completion = await client.chat.completions.create({
     model: "gpt-4-turbo-preview",
     messages: [
       { role: "system", content: systemPrompt },

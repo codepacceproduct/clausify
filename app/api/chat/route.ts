@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server"
-import { openai } from "@/lib/openai"
+import { getOpenAIClient } from "@/lib/openai"
 
 export async function POST(req: Request) {
   try {
+    const openai = getOpenAIClient()
+    if (!openai) {
+      return NextResponse.json(
+        { error: "Serviço de IA não está configurado (OPENAI_API_KEY ausente)." },
+        { status: 503 }
+      )
+    }
+
     const { messages } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {

@@ -63,6 +63,7 @@ export async function updateSession(request: NextRequest) {
     "/cookies",
     "/listadeespera",
     "/admin/login",
+    "/preview",
   ]
 
   const isPublicPath = publicPaths.some(
