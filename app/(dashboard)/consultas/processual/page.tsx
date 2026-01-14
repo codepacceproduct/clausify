@@ -155,13 +155,23 @@ export default function ProcessualPage() {
   }
 
   const handleDeletePreview = async (token: string) => {
+    const confirmed = window.confirm(
+      "Tem certeza que deseja apagar este link público? Essa ação remove o registro do histórico e do banco de dados."
+    )
+
+    if (!confirmed) return
+
     try {
       await deletePublicProcessPreview(token)
       setPreviewHistory((current) => current.filter((item) => item.token !== token))
-      toast.success("Link público removido do histórico.")
-    } catch (error) {
-      console.error(error)
-      toast.error("Erro ao remover link público.")
+      toast.success("Link público removido do histórico e do banco de dados.")
+    } catch (error: any) {
+      console.error("Erro ao remover link público:", error)
+      const message =
+        typeof error?.message === "string"
+          ? error.message
+          : "Erro ao remover link público. Verifique se você está autenticado."
+      toast.error(message)
     }
   }
 
@@ -170,6 +180,24 @@ export default function ProcessualPage() {
       loadHistory()
     }
   }, [activeTab])
+
+  if (viewState === "loading") {
+    return (
+      <LayoutWrapper>
+        <div className="min-h-[calc(100vh-100px)] flex flex-col justify-center">
+          <div className="flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full border-4 border-slate-200 border-t-emerald-500 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-emerald-500 font-bold text-xs">JUS</span>
+              </div>
+            </div>
+            <p className="text-muted-foreground animate-pulse">Consultando tribunais...</p>
+          </div>
+        </div>
+      </LayoutWrapper>
+    )
+  }
 
   return (
     <LayoutWrapper>
@@ -224,18 +252,6 @@ export default function ProcessualPage() {
               </Card>
                 </div>
               </div>
-            )}
-
-            {viewState === "loading" && (
-          <div className="flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
-            <div className="relative">
-              <div className="h-16 w-16 rounded-full border-4 border-slate-200 border-t-emerald-500 animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-emerald-500 font-bold text-xs">JUS</span>
-              </div>
-            </div>
-            <p className="text-muted-foreground animate-pulse">Consultando tribunais...</p>
-          </div>
             )}
 
             {viewState === "result" && resultData && (
