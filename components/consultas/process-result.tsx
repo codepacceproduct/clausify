@@ -28,7 +28,7 @@ interface ProcessResultProps {
   status: string
   events: ProcessEvent[]
   documents?: ProcessDocument[]
-  onBack: () => void
+  onBack?: () => void
   showBackButton?: boolean
 }
 
@@ -57,6 +57,7 @@ function getTribunalPortal(processNumber: string) {
 }
 
 export function ProcessResult({ processNumber, title, status, events, documents, onBack, showBackButton = true }: ProcessResultProps) {
+  const handleBack = onBack ?? (() => {})
   const safeEvents = Array.isArray(events) ? events : []
   const latestEvent = safeEvents[0]
   const portal = getTribunalPortal(processNumber)
@@ -66,7 +67,7 @@ export function ProcessResult({ processNumber, title, status, events, documents,
       {showBackButton && (
         <Button 
           variant="ghost" 
-          onClick={onBack}
+          onClick={handleBack}
           className="text-muted-foreground hover:text-foreground pl-0"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />

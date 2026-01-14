@@ -77,6 +77,13 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
 
   const cleanNumber = payload.processNumber.replace(/\D/g, "")
 
+  console.log("PublicProcessPreview:create:start", {
+    token,
+    cnj_number: cleanNumber,
+    expiresAt: expiresAt.toISOString(),
+    expiresInHours,
+  })
+
   const { data, error } = await supabase
     .from("process_public_previews")
     .insert({
@@ -89,9 +96,19 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
     .single()
 
   if (error) {
-    console.error("Error creating process public preview:", error)
+    console.error("PublicProcessPreview:create:error", {
+      token,
+      cnj_number: cleanNumber,
+      expiresAt: expiresAt.toISOString(),
+      error,
+    })
     return null
   }
+
+  console.log("PublicProcessPreview:create:success", {
+    token: data.token,
+    expires_at: data.expires_at,
+  })
 
   return {
     token: data.token as string,

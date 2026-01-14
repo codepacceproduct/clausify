@@ -7,6 +7,8 @@ type PreviewRecord = {
 }
 
 async function getPreview(token: string): Promise<PreviewRecord | null> {
+  console.log("PublicProcessPreview:getPreview:start", { token })
+
   const supabase = await createClient()
   const now = new Date().toISOString()
 
@@ -18,16 +20,36 @@ async function getPreview(token: string): Promise<PreviewRecord | null> {
     .single()
 
   if (error || !data) {
+    console.error("PublicProcessPreview:getPreview:error_or_not_found", {
+      token,
+      now,
+      errorCode: error?.code,
+      errorMessage: error?.message,
+      errorDetails: error?.details,
+      errorHint: error?.hint,
+      hasData: !!data,
+    })
     return null
   }
+
+  console.log("PublicProcessPreview:getPreview:success", {
+    token,
+    expires_at: data.expires_at,
+  })
 
   return data as PreviewRecord
 }
 
-export default async function PublicProcessPreviewPage({ params }: { params: { token: string } }) {
-  const preview = await getPreview(params.token)
+export default async function PublicProcessPreviewPage(props: { params: Promise<{ token: string }> }) {
+  const { token } = await props.params
+
+  console.log("PublicProcessPreview:page:request", { token })
+
+  const preview = await getPreview(token)
 
   if (!preview) {
+    console.warn("PublicProcessPreview:page:no_preview", { token })
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="max-w-md w-full text-center space-y-3">
@@ -68,11 +90,9 @@ export default async function PublicProcessPreviewPage({ params }: { params: { t
           status={payload.status}
           events={payload.events || []}
           documents={payload.documents || []}
-          onBack={() => {}}
           showBackButton={false}
         />
       </div>
     </div>
   )
 }
-
