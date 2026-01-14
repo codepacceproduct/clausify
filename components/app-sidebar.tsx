@@ -17,6 +17,7 @@ import {
   Calendar,
   GitBranch,
   Calculator,
+  Search,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -30,6 +31,7 @@ import { getUserEmail, getAuthToken } from "@/lib/auth"
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
+  { name: "Consultas", href: "/consultas", icon: Search },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },
@@ -91,6 +93,7 @@ export function AppSidebar({
   const moduleKeyForHref = (href: string): string => {
     if (href.startsWith("/dashboard")) return "dashboard"
     if (href.startsWith("/contratos")) return "contratos"
+    if (href.startsWith("/consultas")) return "consultas"
     if (href.startsWith("/calendario")) return "calendario"
     if (href.startsWith("/versionamento")) return "versionamento"
     if (href.startsWith("/playbook")) return "playbook"

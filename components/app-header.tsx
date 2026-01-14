@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, Search, LogOut, User, Settings } from 'lucide-react'
+import { Bell, Search, LogOut, User, Settings, Plus } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -111,6 +111,15 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        <Button 
+          className="bg-emerald-500 hover:bg-emerald-600 text-white mr-1 shadow-sm transition-all hover:shadow-md h-9 sm:h-10"
+          size="sm"
+          onClick={() => router.push('/contratos')}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Análise
+        </Button>
+
         <Button variant="ghost" size="icon" className="relative shrink-0 h-9 w-9 sm:h-10 sm:w-10">
           <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />

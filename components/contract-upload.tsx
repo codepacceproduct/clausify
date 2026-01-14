@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, FileText, X, ArrowRight, Sparkles } from "lucide-react"
@@ -24,6 +25,8 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
   const [clientName, setClientName] = useState("")
   const [notes, setNotes] = useState("")
   const [contractType, setContractType] = useState("service")
+  const [useStandardRules, setUseStandardRules] = useState(true)
+  const [useCustomRules, setUseCustomRules] = useState(false)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -64,6 +67,8 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
         formData.append("type", contractType)
         formData.append("clientName", clientName)
         formData.append("notes", notes)
+        formData.append("useStandardRules", String(useStandardRules))
+        formData.append("useCustomRules", String(useCustomRules))
 
         const response = await fetch("/api/contracts/upload", {
             method: "POST",
@@ -188,6 +193,28 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
                         value={clientName}
                         onChange={(e) => setClientName(e.target.value)}
                     />
+                </div>
+
+                <div className="space-y-3">
+                    <Label>Validar contra quais regras?</Label>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id="standard-rules" 
+                                checked={useStandardRules}
+                                onCheckedChange={(checked) => setUseStandardRules(checked as boolean)}
+                            />
+                            <Label htmlFor="standard-rules" className="font-normal cursor-pointer">Padrão Clausify</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox 
+                                id="custom-rules" 
+                                checked={useCustomRules}
+                                onCheckedChange={(checked) => setUseCustomRules(checked as boolean)}
+                            />
+                            <Label htmlFor="custom-rules" className="font-normal cursor-pointer">Minhas Regras Personalizadas</Label>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="space-y-2">

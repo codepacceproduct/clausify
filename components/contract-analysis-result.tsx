@@ -1,29 +1,25 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
 import { 
-  CheckCircle2, 
   AlertTriangle, 
   XCircle, 
-  ArrowRight, 
-  FileText, 
+  CheckCircle2, 
   Download, 
   Share2, 
-  ChevronRight, 
-  ChevronDown,
-  Scale,
-  ShieldCheck,
+  RotateCcw, 
+  Play, 
+  Pause, 
+  MessageCircle,
+  FileText,
   Zap,
-  Save,
-  X,
-  RotateCcw
+  ArrowRightLeft,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -39,314 +35,200 @@ interface Issue {
   finalText?: string
 }
 
-export function ContractAnalysisResult({ onReset, result, filename, contractId, onPreview }: { onReset: () => void, result?: any, filename?: string, contractId?: string, onPreview?: () => void }) {
+interface ContractAnalysisResultProps {
+  onReset: () => void
+  result?: any
+  filename?: string
+  contractId?: string
+  content?: string
+  onPreview?: () => void
+}
+
+export function ContractAnalysisResult({ 
+  onReset, 
+  result, 
+  filename, 
+  contractId, 
+  content 
+}: ContractAnalysisResultProps) {
   const issues: Issue[] = result?.issues || []
   const score = result?.score || 0
-  const riskLevel = result?.riskLevel || "unknown"
-  
-  const [activeIssue, setActiveIssue] = useState<string | null>(issues[0]?.id || null)
-  const [editingIssue, setEditingIssue] = useState<string | null>(null)
-  const [editContent, setEditContent] = useState("")
-  const [resolvedIssues, setResolvedIssues] = useState<Set<string>>(new Set(issues.filter(i => i.resolved).map(i => i.id)))
-  const [isSaving, setIsSaving] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(null)
 
-  const handleStartEdit = (issue: Issue) => {
-    setEditingIssue(issue.id)
-    setEditContent(issue.suggestion)
+  // Sort issues: High risk first
+  const sortedIssues = [...issues].sort((a, b) => {
+    const severityOrder = { high: 0, medium: 1, low: 2 }
+    return severityOrder[a.severity] - severityOrder[b.severity]
+  })
+
+  const handleWhatsAppShare = (issue: Issue) => {
+    const message = `Olá! Analisando o contrato "${filename}", identifiquei um ponto de atenção importante:\n\n*${issue.type}*\n\n${issue.explanation}\n\nSugestão: ${issue.suggestion}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
   }
 
-  const handleCancelEdit = () => {
-    setEditingIssue(null)
-    setEditContent("")
+  const handleDownloadPDF = () => {
+    // Mock PDF download
+    const link = document.createElement('a')
+    link.href = '#'
+    link.download = `parecer-${filename || 'contrato'}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
-  const handleAccept = async (issueId: string, content: string) => {
-    if (!contractId) {
-        console.error("No contract ID available")
-        return
-    }
-
-    setIsSaving(true)
-    try {
-        const res = await fetch("/api/contracts/resolve-issue", {
-            method: "POST",
-            body: JSON.stringify({ contractId, issueId, resolution: content }),
-            headers: { "Content-Type": "application/json" }
-        })
-        
-        if (res.ok) {
-            setResolvedIssues(prev => {
-                const newSet = new Set(prev)
-                newSet.add(issueId)
-                return newSet
-            })
-            setEditingIssue(null)
-        } else {
-            console.error("Failed to resolve")
-        }
-    } catch (e) {
-        console.error(e)
-    } finally {
-        setIsSaving(false)
-    }
-  }
-
-  const highRisks = issues.filter(i => i.severity === "high").length
-  const mediumRisks = issues.filter(i => i.severity === "medium").length
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-emerald-600"
-    if (score >= 50) return "text-amber-600"
-    return "text-destructive"
-  }
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return "Alto nível de segurança"
-    if (score >= 50) return "Nível de segurança moderado"
-    return "Baixo nível de segurança"
+  const scrollToClause = (issueId: string) => {
+    setActiveIssueId(issueId)
+    // In a real implementation, this would scroll the document viewer to the specific clause
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header Summary */}
-      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+    <div className="space-y-6 animate-in fade-in duration-500 h-[calc(100vh-100px)] flex flex-col">
+      {/* Header Actions */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between shrink-0">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-3xl font-bold tracking-tight">Resultado da Análise</h2>
-            <Badge variant="outline" className="text-sm border-emerald-500 text-emerald-600 bg-emerald-50">
-              Concluído
-            </Badge>
-          </div>
-          <p className="text-muted-foreground">
-            {filename || "Contrato sem nome"}
-          </p>
+          <h2 className="text-2xl font-bold tracking-tight">Resultado da Análise</h2>
+          <p className="text-sm text-muted-foreground">{filename}</p>
         </div>
         <div className="flex items-center gap-2">
-          {onPreview && (
-            <Button variant="outline" onClick={onPreview}>
-                <FileText className="h-4 w-4 mr-2" />
-                Visualizar Contrato Completo
-            </Button>
-          )}
-          <Button variant="outline" onClick={onReset}>
+           <Button variant="outline" onClick={onReset}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Nova Análise
           </Button>
           <Button variant="outline">
-            <Share2 className="h-4 w-4 mr-2" />
-            Compartilhar
+            <ArrowRightLeft className="h-4 w-4 mr-2" />
+            Comparar Versões
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-2" />
-            Exportar Relatório
+            Baixar Parecer PDF
           </Button>
         </div>
       </div>
 
-      {/* Score Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className={`border-l-4 ${score >= 80 ? "border-l-emerald-500" : score >= 50 ? "border-l-amber-500" : "border-l-destructive"}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Score Jurídico</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className={`text-4xl font-bold ${getScoreColor(score)}`}>{score}</span>
-              <span className="text-sm text-muted-foreground mb-1">/ 100</span>
+      {/* Audio Player (Top) */}
+      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none shrink-0 shadow-md">
+        <CardContent className="p-4 flex items-center gap-4">
+          <Button 
+            size="icon" 
+            className="h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shrink-0 shadow-lg border-2 border-emerald-400/20"
+            onClick={() => setIsPlaying(!isPlaying)}
+          >
+            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
+          </Button>
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-sm">Resumo Executivo (IA)</span>
+              <span className="text-xs text-slate-400">02:14</span>
             </div>
-            <Progress value={score} className={`h-2 mt-2 ${score >= 80 ? "bg-emerald-100" : score >= 50 ? "bg-amber-100" : "bg-red-100"}`} />
-            <p className="text-xs text-muted-foreground mt-2">{getScoreLabel(score)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Riscos Críticos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <XCircle className="h-8 w-8 text-destructive" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold">{highRisks}</span>
-                <span className="text-xs text-muted-foreground">Cláusulas de Alto Risco</span>
-              </div>
+            <div className="h-1.5 w-full bg-slate-700/50 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
+                style={{ width: isPlaying ? '45%' : '0%' }} 
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pontos de Atenção</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold">{mediumRisks}</span>
-                <span className="text-xs text-muted-foreground">Risco Médio</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Conformidade</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-bold">95%</span>
-                <span className="text-xs text-muted-foreground">Adequação à LGPD</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Analysis View */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Sidebar List */}
-        <Card className="lg:col-span-1 h-fit">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Scale className="h-5 w-5" />
-              Pontos Encontrados
+      {/* Main Content Grid */}
+      <div className="grid lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        
+        {/* Left: Document Viewer */}
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden border-slate-200 shadow-sm">
+          <CardHeader className="pb-3 border-b bg-muted/20">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Visualização do Contrato
             </CardTitle>
-            <CardDescription>Selecione um item para ver detalhes</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
-              <div className="flex flex-col">
-                {issues.map((issue) => {
-                  const isResolved = resolvedIssues.has(issue.id)
-                  return (
-                  <button
-                    key={issue.id}
-                    onClick={() => setActiveIssue(issue.id)}
+          <CardContent className="p-0 flex-1 overflow-hidden relative bg-white dark:bg-slate-950">
+             <ScrollArea className="h-full">
+                <div className="p-8 max-w-3xl mx-auto text-sm leading-relaxed font-mono whitespace-pre-wrap text-slate-700 dark:text-slate-300">
+                  {content || "Conteúdo do contrato não disponível para visualização."}
+                </div>
+             </ScrollArea>
+             {/* Overlay for "Analysis Mode" visual effect */}
+             <div className="absolute top-4 right-4 pointer-events-none">
+                <Badge variant="outline" className="bg-white/80 backdrop-blur text-xs">
+                    Modo Leitura
+                </Badge>
+             </div>
+          </CardContent>
+        </Card>
+
+        {/* Right: Traffic Light Sidebar (Semáforo) */}
+        <Card className="flex flex-col overflow-hidden border-slate-200 shadow-sm bg-slate-50/50 dark:bg-slate-900/50">
+          <CardHeader className="pb-3 border-b bg-white dark:bg-slate-950">
+            <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Pontos de Atenção</CardTitle>
+                <Badge variant={score >= 70 ? "default" : "destructive"} className={score >= 70 ? "bg-emerald-500" : ""}>
+                    Score: {score}
+                </Badge>
+            </div>
+            <CardDescription>
+                {sortedIssues.length} itens encontrados
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full p-4">
+              <div className="space-y-4">
+                {sortedIssues.map((issue) => (
+                  <div 
+                    key={issue.id} 
                     className={cn(
-                      "flex items-start gap-3 p-4 text-left transition-colors border-b last:border-0 hover:bg-muted/50",
-                      activeIssue === issue.id ? "bg-muted border-l-4 border-l-emerald-600" : 
-                      isResolved ? "bg-emerald-50/50 border-l-4 border-l-emerald-400" : "border-l-4 border-l-transparent"
+                        "rounded-lg border bg-white dark:bg-slate-950 p-4 shadow-sm transition-all hover:shadow-md cursor-pointer",
+                        activeIssueId === issue.id ? "ring-2 ring-primary" : "",
+                        issue.severity === 'high' ? "border-l-4 border-l-destructive" :
+                        issue.severity === 'medium' ? "border-l-4 border-l-amber-500" :
+                        "border-l-4 border-l-emerald-500"
                     )}
+                    onClick={() => scrollToClause(issue.id)}
                   >
-                    <div className="mt-1">
-                      {isResolved ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : (
-                        <>
-                            {issue.severity === "high" && <XCircle className="h-4 w-4 text-destructive" />}
-                            {issue.severity === "medium" && <AlertTriangle className="h-4 w-4 text-amber-500" />}
-                            {issue.severity === "low" && <Zap className="h-4 w-4 text-blue-500" />}
-                        </>
-                      )}
+                    <div className="flex items-start justify-between mb-2">
+                        <Badge 
+                            variant="outline" 
+                            className={cn(
+                                "text-xs font-semibold border-none px-2 py-0.5 rounded-full",
+                                issue.severity === 'high' ? "bg-destructive/10 text-destructive" :
+                                issue.severity === 'medium' ? "bg-amber-500/10 text-amber-600" :
+                                "bg-emerald-500/10 text-emerald-600"
+                            )}
+                        >
+                            {issue.severity === 'high' ? "🔴 Risco Alto" : issue.severity === 'medium' ? "🟡 Risco Médio" : "🟢 Informativo"}
+                        </Badge>
+                        {issue.severity === 'high' && <AlertTriangle className="h-4 w-4 text-destructive" />}
                     </div>
-                    <div className="space-y-1">
-                      <p className={cn("font-medium text-sm leading-none", isResolved && "text-emerald-700 line-through decoration-emerald-500/50")}>{issue.type}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{issue.clause}</p>
+                    
+                    <h4 className="font-semibold text-sm mb-1">{issue.type}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+                        {issue.explanation}
+                    </p>
+
+                    <Button 
+                        size="sm" 
+                        variant="secondary" 
+                        className="w-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-sm"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleWhatsAppShare(issue)
+                        }}
+                    >
+                        <MessageCircle className="h-3.5 w-3.5 mr-2" />
+                        Explicar pro Cliente
+                    </Button>
+                  </div>
+                ))}
+
+                {sortedIssues.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500/50" />
+                        <p>Nenhum risco detectado.</p>
+                        <p className="text-xs">O contrato parece seguro.</p>
                     </div>
-                    <ChevronRight className={cn("h-4 w-4 ml-auto text-muted-foreground transition-transform", activeIssue === issue.id && "rotate-90")} />
-                  </button>
-                )})}
+                )}
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Detailed Diff View */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Detalhamento da Cláusula</span>
-              {activeIssue && (
-                <Badge variant={
-                    issues.find(i => i.id === activeIssue)?.severity === "high" ? "destructive" :
-                    issues.find(i => i.id === activeIssue)?.severity === "medium" ? "secondary" : "default"
-                }>
-                  {issues.find(i => i.id === activeIssue)?.severity === "high" ? "Alto Risco" : 
-                   issues.find(i => i.id === activeIssue)?.severity === "medium" ? "Médio Risco" : "Sugestão"}
-                </Badge>
-              )}
-            </CardTitle>
-            <CardDescription>Comparativo entre o texto original e a sugestão da IA</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {activeIssue && issues.find(i => i.id === activeIssue) && (() => {
-              const issue = issues.find(i => i.id === activeIssue)!
-              return (
-                <>
-                   {/* Explanation */}
-                   <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-100 dark:border-blue-900 flex gap-3">
-                    <ShieldCheck className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-blue-900 dark:text-blue-100 text-sm mb-1">Análise da IA</h4>
-                      <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
-                        {issue.explanation}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Comparison */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-destructive font-medium text-sm">
-                        <XCircle className="h-4 w-4" />
-                        Texto Original
-                      </div>
-                      <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20 text-sm leading-relaxed min-h-[120px]">
-                        "{issue.originalText}"
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-emerald-600 font-medium text-sm">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Sugestão Otimizada
-                      </div>
-                      {editingIssue === issue.id ? (
-                        <Textarea 
-                            value={editContent} 
-                            onChange={(e) => setEditContent(e.target.value)} 
-                            className="min-h-[120px] bg-white dark:bg-slate-950"
-                        />
-                      ) : (
-                        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm leading-relaxed min-h-[120px] dark:bg-emerald-950/30 dark:border-emerald-900">
-                            "{resolvedIssues.has(issue.id) ? issue.finalText || issue.suggestion : issue.suggestion}"
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t">
-                    {editingIssue === issue.id ? (
-                        <>
-                            <Button variant="ghost" onClick={handleCancelEdit} disabled={isSaving}>
-                                <X className="h-4 w-4 mr-2" /> Cancelar
-                            </Button>
-                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleAccept(issue.id, editContent)} disabled={isSaving}>
-                                <Save className="h-4 w-4 mr-2" /> 
-                                {isSaving ? "Salvando..." : "Salvar e Aceitar"}
-                            </Button>
-                        </>
-                    ) : resolvedIssues.has(issue.id) ? (
-                        <div className="flex items-center text-emerald-600 font-medium px-4 py-2 bg-emerald-50 rounded-md border border-emerald-100">
-                            <CheckCircle2 className="h-5 w-5 mr-2" />
-                            Resolvido
-                        </div>
-                    ) : (
-                        <>
-                            <Button variant="ghost">Ignorar</Button>
-                            <Button variant="outline" onClick={() => handleStartEdit(issue)}>Editar Manualmente</Button>
-                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleAccept(issue.id, issue.suggestion)} disabled={isSaving}>
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                {isSaving ? "Salvando..." : "Aceitar Sugestão"}
-                            </Button>
-                        </>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
           </CardContent>
         </Card>
       </div>

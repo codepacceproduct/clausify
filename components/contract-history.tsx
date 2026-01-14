@@ -256,10 +256,19 @@ export function ContractHistoryList({
                   <TableCell className="hidden md:table-cell">{getRiskBadge(item.riskLevel)}</TableCell>
                   <TableCell className="hidden lg:table-cell">
                     {item.status === "completed" ? (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-destructive font-medium" title="Alto Risco">{item.findings.high}</span>
-                        <span className="text-amber-600 font-medium" title="Médio Risco">{item.findings.medium}</span>
-                        <span className="text-success font-medium" title="Baixo Risco">{item.findings.low}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="flex items-center gap-1" title="Alto Risco">
+                          <div className="h-2 w-2 rounded-full bg-destructive" />
+                          <span className="font-medium text-muted-foreground">{item.findings.high}</span>
+                        </div>
+                        <div className="flex items-center gap-1" title="Médio Risco">
+                          <div className="h-2 w-2 rounded-full bg-amber-500" />
+                          <span className="font-medium text-muted-foreground">{item.findings.medium}</span>
+                        </div>
+                        <div className="flex items-center gap-1" title="Baixo Risco">
+                          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                          <span className="font-medium text-muted-foreground">{item.findings.low}</span>
+                        </div>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>

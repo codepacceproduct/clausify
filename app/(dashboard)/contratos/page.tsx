@@ -353,6 +353,7 @@ export default function ContractsPage() {
                 onReset={handleReset} 
                 filename={currentContract?.filename}
                 contractId={currentContract?.id}
+                content={currentContract?.content}
                 onPreview={handlePreview}
             />
           )}

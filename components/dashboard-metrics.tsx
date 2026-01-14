@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCircle2, Clock } from "lucide-react"
+import { TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCircle2, Clock, Zap } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 async function getMetrics() {
@@ -83,6 +83,9 @@ async function getMetrics() {
   const riskLabel = maxPrio === "low" ? "Baixo" : maxPrio === "high" ? "Alto" : "Médio"
 
   const last = versions?.[0]
+  
+  // Calculate saved hours (approx 2h per contract)
+  const savedHours = (totalContracts ?? 0) * 2
 
   return {
     totalContracts: totalContracts ?? 0,
@@ -94,6 +97,7 @@ async function getMetrics() {
     riskLabel,
     analisadosDelta,
     riskDelta,
+    savedHours,
   }
 }
 
@@ -129,29 +133,30 @@ export async function DashboardMetrics() {
           <AlertTriangle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold flex items-center gap-2 flex-wrap">
-            {metrics.riskLevel === "high" ? "A" : metrics.riskLevel === "low" ? "C" : "B"}
-            <Badge className={
-              metrics.riskLevel === "low"
-                ? "bg-success/10 text-success"
-                : metrics.riskLevel === "high"
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-amber-500/10 text-amber-600"
-            }>
-              {metrics.riskLabel}
-            </Badge>
+          <div className="mt-2 mb-2">
+            <div className="h-3 w-full bg-secondary/50 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  metrics.riskLevel === 'low' ? 'bg-emerald-500 w-1/3' :
+                  metrics.riskLevel === 'medium' ? 'bg-amber-500 w-2/3' :
+                  'bg-red-500 w-full'
+                }`}
+              />
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.riskDelta < 0 ? (
-              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
-            ) : (
-              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
-            )}
-            <span className={getDeltaColor(metrics.riskDelta)}>
-              {metrics.riskDelta > 0 ? "+" : ""}{metrics.riskDelta}%
-            </span>
-            vs mês anterior
-          </p>
+          <div className="flex justify-between items-center">
+             <span className="text-2xl font-bold">{metrics.riskLabel}</span>
+             <p className="text-xs text-muted-foreground flex items-center gap-1">
+                {metrics.riskDelta < 0 ? (
+                  <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
+                ) : (
+                  <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
+                )}
+                <span className={getDeltaColor(metrics.riskDelta)}>
+                  {metrics.riskDelta > 0 ? "+" : ""}{metrics.riskDelta}%
+                </span>
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -178,12 +183,12 @@ export async function DashboardMetrics() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Última Análise</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Tempo Economizado</CardTitle>
+          <Zap className="h-4 w-4 text-amber-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{metrics.lastSince ? "recente" : "—"}</div>
-          <p className="text-xs text-muted-foreground mt-1 truncate">{metrics.lastContractName}</p>
+          <div className="text-2xl font-bold">{metrics.savedHours} horas</div>
+          <p className="text-xs text-muted-foreground mt-1">em processos manuais</p>
         </CardContent>
       </Card>
     </div>
