@@ -19,6 +19,7 @@ import {
   Calculator,
   Search,
   Bot,
+  MessageSquare,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -33,7 +34,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Contratos", href: "/contratos", icon: FileText },
   { name: "Consultas", href: "/consultas", icon: Search },
-  { name: "ClausiChat", href: "/clausichat", icon: Bot },
+  { name: "ClausiChat", href: "/clausichat", icon: MessageSquare },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },

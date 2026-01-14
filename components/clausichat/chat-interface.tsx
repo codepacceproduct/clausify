@@ -9,9 +9,11 @@ import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import Image from "next/image"
 
 interface Message {
   role: "user" | "assistant" | "system"
+
   content: string
 }
 
@@ -110,13 +112,15 @@ export function ChatInterface() {
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ opacity: 1 }}>
-            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-6 rounded-full ring-4 ring-emerald-50 dark:ring-emerald-900/10">
-              <Bot className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
+            <div className="relative w-24 h-24 rounded-full overflow-hidden bg-emerald-100 dark:bg-emerald-900/30 ring-4 ring-emerald-50 dark:ring-emerald-900/10 p-2">
+              <Image 
+                src="/images/02.jpg" 
+                alt="Clausify Logo" 
+                fill
+                className="object-contain"
+              />
             </div>
             <div className="space-y-2 max-w-md">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                ClausiChat
-              </h2>
               <p className="text-slate-500 dark:text-slate-400">
                 Seu assistente jurídico inteligente. Pergunte sobre contratos, leis, ou peça análises de documentos.
               </p>
@@ -156,8 +160,13 @@ export function ChatInterface() {
             >
               <div className="flex-shrink-0 mt-1">
                 {msg.role === "assistant" ? (
-                  <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm">
-                    <Bot className="w-5 h-5" />
+                  <div className="relative h-8 w-8 rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
+                    <Image 
+                      src="/images/02.jpg" 
+                      alt="ClausiBot" 
+                      fill 
+                      className="object-contain" 
+                    />
                   </div>
                 ) : (
                   <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
@@ -184,8 +193,13 @@ export function ChatInterface() {
         {isLoading && (
           <div className="flex w-full gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
             <div className="flex-shrink-0 mt-1">
-              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm">
-                <Bot className="w-5 h-5" />
+              <div className="relative h-8 w-8 rounded-full overflow-hidden bg-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
+                <Image 
+                  src="/images/02.jpg" 
+                  alt="ClausiBot" 
+                  fill 
+                  className="object-contain" 
+                />
               </div>
             </div>
             <div className="flex items-center gap-1">
