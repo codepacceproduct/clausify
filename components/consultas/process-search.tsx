@@ -21,6 +21,15 @@ export function ProcessSearch({ onSearch }: ProcessSearchProps) {
     onSearch(searchTerm, searchType)
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    if (searchType === "process") {
+      setSearchTerm(formatCNJ(value))
+    } else {
+      setSearchTerm(formatCPF(value))
+    }
+  }
+
   return (
     <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
       {/* Left Column: Value Proposition */}
