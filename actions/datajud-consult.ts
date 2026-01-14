@@ -6,21 +6,38 @@ import { ProcessService } from "@/lib/datajud/db"
 import { createClient } from "@/lib/supabase/server"
 
 export async function consultDataJud(term: string, type: "process" | "cpf") {
+  const supabase = await createClient()
+
   if (type === "process") {
     try {
-      // 1. Consult DataJud via isolated client
       const processData = await DataJudClient.consultProcess(term)
       
       if (processData) {
-        // 2. Save to database (asynchronous, best effort)
         try {
           await ProcessService.saveProcess(processData)
         } catch (dbError) {
           console.error("Warning: Failed to save process to database:", dbError)
-          // Continue to return data even if save fails
         }
 
-        // 3. Map response for UI
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
+
+          if (user) {
+            const cleanNumber = processData.numeroProcesso?.replace(/\D/g, "") || null
+
+            await supabase.from("process_consult_history").insert({
+              user_id: user.id,
+              term,
+              type,
+              cnj_number: cleanNumber,
+            })
+          }
+        } catch (historyError) {
+          console.error("Warning: Failed to save process consult history:", historyError)
+        }
+
         return mapDataJudResponse(processData)
       }
       
@@ -31,14 +48,28 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
     }
   } else {
     try {
-      // CPF search implementation - Defaulting to TJSE as requested
       const processes = await DataJudClient.consultByCpf(term, "tjse")
       
       if (processes && processes.length > 0) {
-        // Map all results
         const mapped = processes.map(mapDataJudResponse)
+
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser()
+
+          if (user) {
+            await supabase.from("process_consult_history").insert({
+              user_id: user.id,
+              term,
+              type,
+              cnj_number: null,
+            })
+          }
+        } catch (historyError) {
+          console.error("Warning: Failed to save cpf consult history:", historyError)
+        }
         
-        // If only one result, return it as single object to maintain compatibility where possible
         if (mapped.length === 1) {
           return mapped[0]
         }
@@ -67,6 +98,22 @@ export interface ProcessPreviewPayload {
   status: string
   events: any[]
   documents?: ProcessDocument[]
+}
+
+export interface PublicProcessPreviewHistoryItem {
+  id: string
+  token: string
+  cnj_number: string
+  expires_at: string
+  created_at: string
+}
+
+export interface ProcessConsultHistoryItem {
+  id: string
+  term: string
+  type: "process" | "cpf"
+  cnj_number: string | null
+  created_at: string
 }
 
 export async function createPublicProcessPreview(payload: ProcessPreviewPayload, expiresInHours: number) {
@@ -114,6 +161,70 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
     token: data.token as string,
     expiresAt: data.expires_at as string,
   }
+}
+
+export async function getPublicProcessPreviewHistory(): Promise<PublicProcessPreviewHistoryItem[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("process_public_previews")
+    .select("id, token, cnj_number, expires_at, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100)
+
+  if (error || !data) {
+    console.error("Error fetching public process preview history:", error)
+    return []
+  }
+
+  return data as PublicProcessPreviewHistoryItem[]
+}
+
+export async function deletePublicProcessPreview(token: string): Promise<void> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const { error } = await supabase
+    .from("process_public_previews")
+    .delete()
+    .eq("token", token)
+
+  if (error) {
+    console.error("Error deleting public process preview:", error)
+    throw new Error(error.message)
+  }
+}
+
+export async function getProcessConsultHistory(): Promise<ProcessConsultHistoryItem[]> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from("process_consult_history")
+    .select("id, term, type, cnj_number, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100)
+
+  if (error || !data) {
+    console.error("Error fetching process consult history:", error)
+    return []
+  }
+
+  return data as ProcessConsultHistoryItem[]
 }
 
 function mapDataJudResponse(process: DataJudProcess) {

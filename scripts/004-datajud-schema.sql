@@ -75,3 +75,21 @@ ALTER TABLE process_public_previews ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow insert for authenticated users on process_public_previews" ON process_public_previews FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Allow select on process_public_previews" ON process_public_previews FOR SELECT USING (true);
+CREATE POLICY "Allow delete for authenticated users on process_public_previews" ON process_public_previews FOR DELETE USING (auth.role() = 'authenticated');
+
+CREATE TABLE IF NOT EXISTS process_consult_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    term TEXT NOT NULL,
+    type VARCHAR(10) NOT NULL,
+    cnj_number VARCHAR(25),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE process_consult_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow select own consult history" ON process_consult_history
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Allow insert own consult history" ON process_consult_history
+    FOR INSERT WITH CHECK (auth.uid() = user_id);

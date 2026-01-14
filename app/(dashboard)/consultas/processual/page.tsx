@@ -4,21 +4,38 @@ import { useState, useEffect } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { ProcessSearch } from "@/components/consultas/process-search"
 import { ProcessResult } from "@/components/consultas/process-result"
-import { consultDataJud, createPublicProcessPreview, ProcessPreviewPayload } from "@/actions/datajud-consult"
+import {
+  consultDataJud,
+  createPublicProcessPreview,
+  ProcessPreviewPayload,
+  getPublicProcessPreviewHistory,
+  deletePublicProcessPreview,
+  getProcessConsultHistory,
+  type PublicProcessPreviewHistoryItem,
+  type ProcessConsultHistoryItem,
+} from "@/actions/datajud-consult"
 import { toast } from "sonner"
 import { useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, FileText, Calendar } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+type ViewState = "search" | "loading" | "result"
+type ActiveTab = "consulta" | "historico"
 
 export default function ProcessualPage() {
-  const [viewState, setViewState] = useState<"search" | "loading" | "result">("search")
+  const [activeTab, setActiveTab] = useState<ActiveTab>("consulta")
+  const [viewState, setViewState] = useState<ViewState>("search")
   const [searchData, setSearchData] = useState<{term: string, type: string} | null>(null)
   const [resultData, setResultData] = useState<any>(null)
   const [publicLink, setPublicLink] = useState<string | null>(null)
   const [linkExpiresAt, setLinkExpiresAt] = useState<string | null>(null)
   const [linkDuration, setLinkDuration] = useState<"1h" | "24h" | "7d">("24h")
   const [linkLoading, setLinkLoading] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [previewHistory, setPreviewHistory] = useState<PublicProcessPreviewHistoryItem[]>([])
+  const [consultHistory, setConsultHistory] = useState<ProcessConsultHistoryItem[]>([])
   
   const searchParams = useSearchParams()
   const queryTerm = searchParams.get("q")
@@ -120,14 +137,63 @@ export default function ProcessualPage() {
     setResultData(null)
   }
 
+  const loadHistory = async () => {
+    try {
+      setHistoryLoading(true)
+      const [previews, consults] = await Promise.all([
+        getPublicProcessPreviewHistory(),
+        getProcessConsultHistory(),
+      ])
+      setPreviewHistory(previews)
+      setConsultHistory(consults)
+    } catch (error) {
+      console.error(error)
+      toast.error("Erro ao carregar histórico.")
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  const handleDeletePreview = async (token: string) => {
+    try {
+      await deletePublicProcessPreview(token)
+      setPreviewHistory((current) => current.filter((item) => item.token !== token))
+      toast.success("Link público removido do histórico.")
+    } catch (error) {
+      console.error(error)
+      toast.error("Erro ao remover link público.")
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "historico") {
+      loadHistory()
+    }
+  }, [activeTab])
+
   return (
     <LayoutWrapper>
       <div className="min-h-[calc(100vh-100px)] flex flex-col justify-center">
-        {viewState === "search" && (
-          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-            <ProcessSearch onSearch={handleSearch} />
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Consulta processual</h1>
+              <p className="text-sm text-muted-foreground">
+                Pesquise processos pelo número CNJ e acompanhe o histórico de consultas e links públicos.
+              </p>
+            </div>
+            <TabsList>
+              <TabsTrigger value="consulta">Consulta</TabsTrigger>
+              <TabsTrigger value="historico">Histórico</TabsTrigger>
+            </TabsList>
+          </div>
 
-            <div className="max-w-5xl mx-auto">
+          <TabsContent value="consulta" className="flex-1">
+            {viewState === "search" && (
+              <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                <ProcessSearch onSearch={handleSearch} />
+
+                <div className="max-w-5xl mx-auto">
               <Card className="border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -156,11 +222,11 @@ export default function ProcessualPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        )}
+                </div>
+              </div>
+            )}
 
-        {viewState === "loading" && (
+            {viewState === "loading" && (
           <div className="flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
             <div className="relative">
               <div className="h-16 w-16 rounded-full border-4 border-slate-200 border-t-emerald-500 animate-spin" />
@@ -170,9 +236,9 @@ export default function ProcessualPage() {
             </div>
             <p className="text-muted-foreground animate-pulse">Consultando tribunais...</p>
           </div>
-        )}
+            )}
 
-        {viewState === "result" && resultData && (
+            {viewState === "result" && resultData && (
           Array.isArray(resultData) ? (
             <div className="max-w-4xl mx-auto space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center gap-4">
@@ -326,7 +392,157 @@ export default function ProcessualPage() {
               </div>
             </div>
           )
-        )}
+            )}
+          </TabsContent>
+
+          <TabsContent value="historico" className="flex-1">
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">Histórico</h2>
+                <p className="text-xs text-muted-foreground">
+                  Veja os processos consultados recentemente e todos os links públicos de acompanhamento gerados.
+                </p>
+              </div>
+
+              {historyLoading ? (
+                <div className="flex flex-col items-center justify-center space-y-3 py-10">
+                  <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-emerald-500 animate-spin" />
+                  <p className="text-xs text-muted-foreground">Carregando histórico...</p>
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">Consultas recentes</CardTitle>
+                      <CardDescription className="text-xs">
+                        Últimos números de processo consultados nesta conta.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {consultHistory.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Nenhum histórico de consulta ainda. Faça uma busca para começar.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                          {consultHistory.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-xs"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-mono text-foreground">
+                                  {item.cnj_number || item.term}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {new Intl.DateTimeFormat("pt-BR", {
+                                    dateStyle: "short",
+                                    timeStyle: "short",
+                                  }).format(new Date(item.created_at))}
+                                </span>
+                              </div>
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {item.type === "process" ? "Processo" : "CPF"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">Links públicos gerados</CardTitle>
+                      <CardDescription className="text-xs">
+                        Histórico de links de visualização pública de processos. Você pode acessar ou apagar.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {previewHistory.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Nenhum link público gerado ainda.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                          {previewHistory.map((item) => {
+                            const url =
+                              typeof window !== "undefined"
+                                ? `${window.location.origin}/preview/processo/${item.token}`
+                                : `/preview/processo/${item.token}`
+
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex flex-col gap-2 rounded-md border bg-card px-3 py-2 text-xs"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex flex-col">
+                                    <span className="font-mono text-foreground">
+                                      {item.cnj_number}
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      Criado em{" "}
+                                      {new Intl.DateTimeFormat("pt-BR", {
+                                        dateStyle: "short",
+                                        timeStyle: "short",
+                                      }).format(new Date(item.created_at))}
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      Válido até{" "}
+                                      {new Intl.DateTimeFormat("pt-BR", {
+                                        dateStyle: "short",
+                                        timeStyle: "short",
+                                      }).format(new Date(item.expires_at))}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center justify-between">
+                                  <input
+                                    value={url}
+                                    readOnly
+                                    className="w-full flex-1 rounded-md border border-input bg-background px-2 py-1 text-[11px] font-mono"
+                                  />
+                                  <div className="flex gap-2 justify-end">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-[11px]"
+                                      onClick={async () => {
+                                        try {
+                                          await navigator.clipboard.writeText(url)
+                                          toast.success("Link copiado.")
+                                        } catch {
+                                          toast.error("Não foi possível copiar o link.")
+                                        }
+                                      }}
+                                    >
+                                      Copiar
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-[11px] text-destructive border-destructive/50"
+                                      onClick={() => handleDeletePreview(item.token)}
+                                    >
+                                      Apagar
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </LayoutWrapper>
   )
