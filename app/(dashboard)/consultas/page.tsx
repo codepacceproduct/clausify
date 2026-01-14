@@ -3,10 +3,7 @@
 import { 
   Scale, 
   Activity, 
-  BellRing, 
-  Siren, 
   Database, 
-  ShieldAlert, 
   ArrowRight,
   Search,
   ExternalLink
@@ -44,26 +41,6 @@ export default function ConsultasPage() {
       borderColor: "border-blue-200 dark:border-blue-800"
     },
     {
-      title: "Novas Ações (Distribuição)",
-      description: "Seja notificado imediatamente quando novas ações forem distribuídas contra seus clientes ou CNPJs monitorados.",
-      icon: BellRing,
-      href: "/consultas/novas-acoes",
-      badge: "Alerta",
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
-      borderColor: "border-emerald-200 dark:border-emerald-800"
-    },
-    {
-      title: "Mandados de Prisão",
-      description: "Verifique a existência de mandados de prisão em aberto no Banco Nacional (BNMP) de forma sigilosa.",
-      icon: Siren,
-      href: "/consultas/mandados",
-      badge: "Criminal",
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
-      borderColor: "border-emerald-200 dark:border-emerald-800"
-    },
-    {
       title: "Data Lake (Dados Cadastrais)",
       description: "Consulta completa de PF e PJ. Localize endereços, telefones, e-mails, sócios e bens patrimoniais.",
       icon: Database,
@@ -72,16 +49,6 @@ export default function ConsultasPage() {
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
       borderColor: "border-purple-200 dark:border-purple-800"
-    },
-    {
-      title: "Antecedentes Criminais",
-      description: "Busca varredura em tribunais estaduais e federais para identificação de processos criminais.",
-      icon: ShieldAlert,
-      href: "/consultas/criminais",
-      badge: "Compliance",
-      color: "text-slate-500",
-      bgColor: "bg-slate-500/10",
-      borderColor: "border-slate-200 dark:border-slate-800"
     }
   ]
 

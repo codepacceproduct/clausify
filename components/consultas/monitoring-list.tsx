@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import Link from "next/link"
 
 export interface MonitoredProcess {
   id: string
@@ -14,7 +15,9 @@ export interface MonitoredProcess {
   status: "active" | "suspended" | "archived" | "error"
   lastUpdate: string
   movements: number
-  notifications: { email: boolean; push: boolean; whatsapp: boolean }
+  notifications?: { email: boolean; push: boolean; whatsapp: boolean }
+  frequency?: "daily" | "6h" | "1h"
+  nextCheck?: string
 }
 
 interface MonitoringListProps {
@@ -59,9 +62,11 @@ export function MonitoringList({ processes, onDelete, onStatusChange }: Monitori
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
                   {process.processNumber}
-                  <Button variant="ghost" size="icon" className="h-4 w-4 text-slate-400 hover:text-emerald-500">
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
+                  <Link href={`/consultas/processual?q=${process.processNumber}`} passHref>
+                    <Button variant="ghost" size="icon" className="h-4 w-4 text-slate-400 hover:text-emerald-500">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </Link>
                 </div>
                 <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
@@ -70,9 +75,14 @@ export function MonitoringList({ processes, onDelete, onStatusChange }: Monitori
                   </span>
                   <div className="flex items-center gap-2 border-l pl-4 border-slate-200 dark:border-slate-800">
                     <span className="sr-only">Notificações:</span>
-                    {process.notifications.email && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Email</Badge>}
-                    {process.notifications.push && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Push</Badge>}
-                    {process.notifications.whatsapp && <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-green-500 text-green-500">Zap</Badge>}
+                    {process.frequency && (
+                      <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-slate-100 dark:bg-slate-900">
+                        {process.frequency === 'daily' ? '1x/dia' : process.frequency === '6h' ? '6h' : '1h'}
+                      </Badge>
+                    )}
+                    {process.notifications?.email && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Email</Badge>}
+                    {process.notifications?.push && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Push</Badge>}
+                    {process.notifications?.whatsapp && <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-green-500 text-green-500">Zap</Badge>}
                   </div>
                 </div>
               </div>

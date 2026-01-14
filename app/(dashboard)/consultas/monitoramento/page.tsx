@@ -1,73 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { MonitoringList, MonitoredProcess } from "@/components/consultas/monitoring-list"
 import { MonitoringAdd } from "@/components/consultas/monitoring-add"
-import { Plus, Filter } from "lucide-react"
+import { Plus, Filter, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-// Mock Data
-const INITIAL_PROCESSES: MonitoredProcess[] = [
-  {
-    id: "1",
-    processNumber: "1023456-78.2023.8.26.0100",
-    nickname: "Ação Indenizatória - Silva vs Souza",
-    status: "active",
-    lastUpdate: "2024-01-10T14:30:00Z",
-    movements: 2,
-    notifications: { email: true, push: true, whatsapp: false }
-  },
-  {
-    id: "2",
-    processNumber: "0004567-12.2022.4.03.6100",
-    nickname: "Execução Fiscal - Empresa ABC",
-    status: "suspended",
-    lastUpdate: "2023-12-15T09:00:00Z",
-    movements: 0,
-    notifications: { email: true, push: false, whatsapp: false }
-  },
-  {
-    id: "3",
-    processNumber: "5001234-56.2024.8.13.0024",
-    nickname: "Divórcio Consensual",
-    status: "active",
-    lastUpdate: "2024-01-12T16:45:00Z",
-    movements: 0,
-    notifications: { email: true, push: true, whatsapp: true }
-  }
-]
+import { getMonitoredProcesses, deleteMonitoredProcess, updateMonitoringStatus } from "@/actions/monitoring"
+import { toast } from "sonner"
 
 export default function MonitoramentoPage() {
   const [viewState, setViewState] = useState<"list" | "add">("list")
-  const [processes, setProcesses] = useState<MonitoredProcess[]>(INITIAL_PROCESSES)
+  const [processes, setProcesses] = useState<MonitoredProcess[]>([])
   const [filter, setFilter] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [isLoading, setIsLoading] = useState(true)
 
-  const handleAddProcess = (newProcess: any) => {
-    const process: MonitoredProcess = {
-      ...newProcess,
-      id: Math.random().toString(36).substr(2, 9),
+  const loadProcesses = async () => {
+    setIsLoading(true)
+    try {
+      const data = await getMonitoredProcesses()
+      setProcesses(data as any) // Type casting for simplicity as action returns compatible shape
+    } catch (error) {
+      toast.error("Erro ao carregar processos monitorados")
+    } finally {
+      setIsLoading(false)
     }
-    setProcesses([process, ...processes])
+  }
+
+  useEffect(() => {
+    loadProcesses()
+  }, [])
+
+  const handleAddProcess = () => {
+    loadProcesses()
     setViewState("list")
   }
 
-  const handleDelete = (id: string) => {
-    setProcesses(processes.filter(p => p.id !== id))
+  const handleDelete = async (id: string) => {
+    const result = await deleteMonitoredProcess(id)
+    if (result.success) {
+      setProcesses(processes.filter(p => p.id !== id))
+      toast.success("Monitoramento removido")
+    } else {
+      toast.error("Erro ao remover monitoramento")
+    }
   }
 
-  const handleStatusChange = (id: string, status: MonitoredProcess["status"]) => {
+  const handleStatusChange = async (id: string, status: MonitoredProcess["status"]) => {
+    // Optimistic update
     setProcesses(processes.map(p => 
       p.id === id ? { ...p, status } : p
     ))
+    
+    const result = await updateMonitoringStatus(id, status)
+    if (!result.success) {
+      // Revert if failed
+      loadProcesses()
+      toast.error("Erro ao atualizar status")
+    }
   }
 
   const filteredProcesses = processes.filter(p => {
-    const matchesSearch = p.nickname.toLowerCase().includes(filter.toLowerCase()) ||
-      p.processNumber.includes(filter)
+    const matchesSearch = p.nickname?.toLowerCase().includes(filter.toLowerCase()) ||
+      p.processNumber?.includes(filter)
     
     if (!matchesSearch) return false
 
@@ -88,12 +86,19 @@ export default function MonitoramentoPage() {
               Gerencie seus processos e receba notificações automáticas.
             </p>
           </div>
-          {viewState === "list" && (
-            <Button onClick={() => setViewState("add")} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Monitoramento
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {viewState === "list" && (
+              <>
+                <Button variant="outline" size="icon" onClick={loadProcesses} disabled={isLoading}>
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button onClick={() => setViewState("add")} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Monitoramento
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {viewState === "list" ? (
@@ -117,11 +122,17 @@ export default function MonitoramentoPage() {
               </Tabs>
             </div>
 
-            <MonitoringList 
-              processes={filteredProcesses}
-              onDelete={handleDelete}
-              onStatusChange={handleStatusChange}
-            />
+            {isLoading ? (
+               <div className="flex items-center justify-center py-12">
+                 <RefreshCw className="h-8 w-8 text-emerald-500 animate-spin" />
+               </div>
+            ) : (
+              <MonitoringList 
+                processes={filteredProcesses}
+                onDelete={handleDelete}
+                onStatusChange={handleStatusChange}
+              />
+            )}
           </div>
         ) : (
           <div className="animate-in fade-in zoom-in-95 duration-300 max-w-2xl mx-auto mt-8">

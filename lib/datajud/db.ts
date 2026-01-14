@@ -3,7 +3,7 @@ import { DataJudClient, DataJudProcess } from "./client"
 
 export class ProcessService {
   static async saveProcess(data: DataJudProcess) {
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // 1. Upsert Process
     const lastMovement = data.movimentos && data.movimentos.length > 0 
@@ -85,7 +85,7 @@ export class ProcessService {
   }
 
   static async getProcess(cnjNumber: string) {
-    const supabase = createClient()
+    const supabase = await createClient()
     const cleanTerm = cnjNumber.replace(/\D/g, "")
     
     const { data, error } = await supabase

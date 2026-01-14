@@ -1,45 +1,51 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Plus, Bell, Smartphone, Mail, CheckCircle2 } from "lucide-react"
+import { Search, Plus, Bell, Smartphone, Mail, CheckCircle2, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+import { addMonitoredProcess, MonitoringFrequency } from "@/actions/monitoring"
 
 interface MonitoringAddProps {
-  onAdd: (data: any) => void
+  onAdd: () => void
   onCancel: () => void
 }
 
 export function MonitoringAdd({ onAdd, onCancel }: MonitoringAddProps) {
   const [processNumber, setProcessNumber] = useState("")
   const [nickname, setNickname] = useState("")
+  const [frequency, setFrequency] = useState<MonitoringFrequency>("daily")
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
     whatsapp: false
   })
-  const [isValidating, setIsValidating] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsValidating(true)
+    setIsSubmitting(true)
     
-    // Simulate validation
-    setTimeout(() => {
-      onAdd({
-        processNumber,
-        nickname: nickname || `Processo ${processNumber}`,
-        notifications,
-        status: "active",
-        lastUpdate: new Date().toISOString(),
-        movements: 0
-      })
-      setIsValidating(false)
-    }, 1500)
+    try {
+      const result = await addMonitoredProcess(processNumber, nickname, frequency)
+      
+      if (result.success) {
+        toast.success("Monitoramento iniciado com sucesso!")
+        onAdd()
+      } else {
+        toast.error(result.error || "Erro ao iniciar monitoramento")
+      }
+    } catch (error) {
+      toast.error("Ocorreu um erro inesperado")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -76,15 +82,46 @@ export function MonitoringAdd({ onAdd, onCancel }: MonitoringAddProps) {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="nickname">Apelido (Opcional)</Label>
-              <Input
-                id="nickname"
-                placeholder="Ex: Ação de Cobrança - Cliente X"
-                className="border-emerald-100 dark:border-emerald-900 focus-visible:ring-emerald-500"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nickname">Apelido (Opcional)</Label>
+                <Input
+                  id="nickname"
+                  placeholder="Ex: Ação de Cobrança - Cliente X"
+                  className="border-emerald-100 dark:border-emerald-900 focus-visible:ring-emerald-500"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="frequency">Frequência de Atualização</Label>
+                <Select value={frequency} onValueChange={(v) => setFrequency(v as MonitoringFrequency)}>
+                  <SelectTrigger className="border-emerald-100 dark:border-emerald-900 focus:ring-emerald-500">
+                    <SelectValue placeholder="Selecione a frequência" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Pessoa Física (Diário)</span>
+                        <span className="text-xs text-muted-foreground">Atualização 1x por dia</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="6h">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Empresa Média (6h)</span>
+                        <span className="text-xs text-muted-foreground">Atualização a cada 6 horas</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="1h">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Compliance / Banco (1h)</span>
+                        <span className="text-xs text-muted-foreground">Atualização a cada 1 hora</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-4 pt-4 border-t border-emerald-100 dark:border-emerald-900">
@@ -143,9 +180,9 @@ export function MonitoringAdd({ onAdd, onCancel }: MonitoringAddProps) {
             <Button 
               type="submit" 
               className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
-              disabled={isValidating || !processNumber}
+              disabled={isSubmitting || !processNumber}
             >
-              {isValidating ? (
+              {isSubmitting ? (
                 <>Validando...</>
               ) : (
                 <>

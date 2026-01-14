@@ -1,16 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { ProcessSearch } from "@/components/consultas/process-search"
 import { ProcessResult } from "@/components/consultas/process-result"
 import { consultDataJud } from "@/actions/datajud-consult"
 import { toast } from "sonner"
+import { useSearchParams } from "next/navigation"
 
 export default function ProcessualPage() {
   const [viewState, setViewState] = useState<"search" | "loading" | "result">("search")
   const [searchData, setSearchData] = useState<{term: string, type: string} | null>(null)
   const [resultData, setResultData] = useState<any>(null)
+  
+  const searchParams = useSearchParams()
+  const queryTerm = searchParams.get("q")
 
   const handleSearch = async (term: string, type: "process" | "cpf") => {
     setSearchData({ term, type })
@@ -32,6 +36,13 @@ export default function ProcessualPage() {
       setViewState("search")
     }
   }
+
+  useEffect(() => {
+    if (queryTerm && viewState === "search") {
+      // Auto-trigger search if query param exists
+      handleSearch(queryTerm, "process")
+    }
+  }, [queryTerm])
 
   const handleBack = () => {
     setViewState("search")
