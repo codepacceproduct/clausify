@@ -82,7 +82,7 @@ export default function ConsultasPage() {
           {filteredTools.map((tool, index) => (
             <Card 
               key={index} 
-              className="group relative overflow-hidden border transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+              className="group relative overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer"
             >
               <div className={`absolute top-0 left-0 w-1 h-full ${tool.color.replace('text-', 'bg-')} opacity-80`} />
               

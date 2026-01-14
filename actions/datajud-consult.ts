@@ -1,10 +1,11 @@
 "use server"
 
+import { randomUUID } from "crypto"
 import { DataJudClient, DataJudProcess } from "@/lib/datajud/client"
 import { ProcessService } from "@/lib/datajud/db"
+import { createClient } from "@/lib/supabase/server"
 
 export async function consultDataJud(term: string, type: "process" | "cpf") {
-  // Only process search is supported for now in this robust implementation
   if (type === "process") {
     try {
       // 1. Consult DataJud via isolated client
@@ -29,9 +30,27 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
       return null
     }
   } else {
-    // CPF search implementation pending or via different client method
-    console.warn("CPF search not fully implemented in new architecture")
-    return null
+    try {
+      // CPF search implementation - Defaulting to TJSE as requested
+      const processes = await DataJudClient.consultByCpf(term, "tjse")
+      
+      if (processes && processes.length > 0) {
+        // Map all results
+        const mapped = processes.map(mapDataJudResponse)
+        
+        // If only one result, return it as single object to maintain compatibility where possible
+        if (mapped.length === 1) {
+          return mapped[0]
+        }
+        
+        return mapped
+      }
+      
+      return null
+    } catch (error) {
+      console.error("Error in consultDataJud action (CPF):", error)
+      return null
+    }
   }
 }
 
@@ -40,6 +59,44 @@ interface ProcessDocument {
   title: string
   date: string
   type: string
+}
+
+export interface ProcessPreviewPayload {
+  processNumber: string
+  title: string
+  status: string
+  events: any[]
+  documents?: ProcessDocument[]
+}
+
+export async function createPublicProcessPreview(payload: ProcessPreviewPayload, expiresInHours: number) {
+  const supabase = await createClient()
+  const token = randomUUID().replace(/-/g, "")
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + expiresInHours * 60 * 60 * 1000)
+
+  const cleanNumber = payload.processNumber.replace(/\D/g, "")
+
+  const { data, error } = await supabase
+    .from("process_public_previews")
+    .insert({
+      token,
+      cnj_number: cleanNumber,
+      payload,
+      expires_at: expiresAt.toISOString(),
+    })
+    .select("token, expires_at")
+    .single()
+
+  if (error) {
+    console.error("Error creating process public preview:", error)
+    return null
+  }
+
+  return {
+    token: data.token as string,
+    expiresAt: data.expires_at as string,
+  }
 }
 
 function mapDataJudResponse(process: DataJudProcess) {

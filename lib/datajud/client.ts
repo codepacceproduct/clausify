@@ -91,39 +91,83 @@ export class DataJudClient {
       }
     }
 
+    return this.executeSearch(apiUrl, payload)
+  }
+
+  static async consultByCpf(cpf: string, tribunal: string = "tjse"): Promise<DataJudProcess[]> {
+    const cleanCpf = cpf.replace(/\D/g, "")
+    // Ensure we use the specific tribunal endpoint if provided, otherwise default logic (though for CPF we need a target)
+    // User requested TJSE specifically for CPF, so default is tjse.
+    const apiUrl = `https://api-publica.datajud.cnj.jus.br/api_publica_${tribunal}/_search`
+
+    const payload = {
+      query: {
+        bool: {
+          should: [
+            { match: { "dadosBasicos.poloAtivo.parte.pessoa.numeroDocumentoPrincipal": cleanCpf } },
+            { match: { "dadosBasicos.poloPassivo.parte.pessoa.numeroDocumentoPrincipal": cleanCpf } }
+          ]
+        }
+      },
+      sort: [{ "dataAjuizamento": { "order": "desc" } }],
+      size: 20
+    }
+
+    const results = await this.executeSearchList(apiUrl, payload)
+    return results
+  }
+
+  private static async executeSearch(url: string, payload: any): Promise<DataJudProcess | null> {
     const start = Date.now()
     try {
-      const response = await fetch(apiUrl, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": DATAJUD_API_KEY,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload),
-        cache: "no-store"
+        body: JSON.stringify(payload)
       })
 
-      const duration = Date.now() - start
-
-      // TODO: Log query result (async to not block)
-      // logQuery(cleanTerm, apiUrl, response.status, duration, response.ok)
-
       if (!response.ok) {
-        const errorBody = await response.text()
-        console.error(`DataJud API Error (${apiUrl}): ${response.status} ${response.statusText}`, errorBody)
+        console.error(`DataJud API Error (${response.status}):`, await response.text())
         return null
       }
 
       const data = await response.json() as DataJudResponse
       
-      if (data.hits && data.hits.hits && data.hits.hits.length > 0) {
+      if (data.hits.hits.length > 0) {
         return data.hits.hits[0]._source
       }
       
       return null
     } catch (error) {
-      console.error("Error consulting DataJud:", error)
+      console.error("DataJud Client Error:", error)
       return null
+    }
+  }
+
+  private static async executeSearchList(url: string, payload: any): Promise<DataJudProcess[]> {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": DATAJUD_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        console.error(`DataJud API Error (${response.status}):`, await response.text())
+        return []
+      }
+
+      const data = await response.json() as DataJudResponse
+      return data.hits.hits.map(h => h._source)
+    } catch (error) {
+      console.error("DataJud Client Error:", error)
+      return []
     }
   }
 

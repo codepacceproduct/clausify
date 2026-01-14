@@ -29,6 +29,7 @@ interface ProcessResultProps {
   events: ProcessEvent[]
   documents?: ProcessDocument[]
   onBack: () => void
+  showBackButton?: boolean
 }
 
 function getTribunalPortal(processNumber: string) {
@@ -55,20 +56,23 @@ function getTribunalPortal(processNumber: string) {
   return portals[key] || { name: "Portal do Tribunal", url: "https://www.cnj.jus.br" }
 }
 
-export function ProcessResult({ processNumber, title, status, events, documents, onBack }: ProcessResultProps) {
-  const latestEvent = events[0]
+export function ProcessResult({ processNumber, title, status, events, documents, onBack, showBackButton = true }: ProcessResultProps) {
+  const safeEvents = Array.isArray(events) ? events : []
+  const latestEvent = safeEvents[0]
   const portal = getTribunalPortal(processNumber)
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Button 
-        variant="ghost" 
-        onClick={onBack}
-        className="text-muted-foreground hover:text-foreground pl-0"
-      >
-        <ChevronLeft className="h-4 w-4 mr-2" />
-        Voltar para busca
-      </Button>
+      {showBackButton && (
+        <Button 
+          variant="ghost" 
+          onClick={onBack}
+          className="text-muted-foreground hover:text-foreground pl-0"
+        >
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Voltar para busca
+        </Button>
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -83,91 +87,95 @@ export function ProcessResult({ processNumber, title, status, events, documents,
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Timeline */}
-        <Card className="lg:col-span-1 bg-slate-950 text-slate-200 border-slate-800">
+        <Card className="lg:col-span-1 bg-white text-slate-900 border-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:border-slate-800">
           <CardHeader>
-            <CardTitle className="text-lg text-white">Linha do tempo</CardTitle>
+            <CardTitle className="text-lg">Linha do tempo</CardTitle>
             <p className="text-xs text-slate-500">Do mais recente ao mais antigo</p>
           </CardHeader>
           <CardContent>
-            <div className="relative pl-4 border-l border-slate-800 space-y-8">
-              {events.map((event, index) => (
-                <div key={event.id} className="relative">
-                  {/* Timeline Dot */}
-                  <div className={`absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-slate-950 ${index === 0 ? 'bg-emerald-500' : 'bg-slate-700'}`} />
-                  
-                  <div className="flex flex-col gap-1">
-                    <span className={`text-xs font-mono ${index === 0 ? 'text-emerald-500 font-bold' : 'text-slate-500'}`}>
-                      {event.date}
-                    </span>
-                    <p className={`text-sm ${index === 0 ? 'text-white font-medium' : 'text-slate-400'}`}>
-                      {event.description}
-                    </p>
+            {safeEvents.length > 0 ? (
+              <div className="relative pl-4 border-l border-slate-200 dark:border-slate-800 space-y-8">
+                {safeEvents.map((event, index) => (
+                  <div key={event.id} className="relative">
+                    <div className={`absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-white dark:border-slate-950 ${
+                      index === 0 ? "bg-emerald-500" : "bg-slate-400 dark:bg-slate-700"
+                    }`} />
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-xs font-mono ${index === 0 ? "text-emerald-600 dark:text-emerald-500 font-bold" : "text-slate-500"}`}>
+                        {event.date}
+                      </span>
+                      <p className={`text-sm ${index === 0 ? "text-slate-900 dark:text-white font-medium" : "text-slate-500 dark:text-slate-400"}`}>
+                        {event.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">Nenhuma movimentação encontrada para este processo.</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Right Column: Details */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-slate-950 border-slate-800 overflow-hidden">
-            <CardHeader className="border-b border-slate-800 pb-4">
+          <Card className="bg-white border-slate-200 overflow-hidden dark:bg-slate-950 dark:border-slate-800">
+            <CardHeader className="border-b border-slate-100 pb-4 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg text-white">Última atualização (detalhes)</CardTitle>
-                <div className="h-1 flex-1 bg-slate-800 rounded-full overflow-hidden">
+                <CardTitle className="text-lg">Última atualização (detalhes)</CardTitle>
+                <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden dark:bg-slate-800">
                     <div className="h-full w-20 bg-emerald-500 rounded-full" />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-2xl font-bold text-white">
-                  <Calendar className="h-6 w-6 text-slate-500" />
-                  {latestEvent.date}
-                </div>
-                
-                <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 space-y-4">
-                  <p className="text-slate-300">
-                    {latestEvent.details || latestEvent.description}
-                  </p>
-
-                  {(!latestEvent.details || latestEvent.details.trim() === "") && (
-                    <div className="pt-2">
-                       <Button 
-                          variant="link" 
-                          className="text-emerald-500 p-0 h-auto font-normal hover:text-emerald-400"
-                          onClick={() => window.open(portal.url, '_blank')}
-                       >
-                          Ver teor completo no {portal.name} <ExternalLink className="ml-1 h-3 w-3" />
-                       </Button>
-                       <p className="text-xs text-slate-500 mt-1">
-                         * O conteúdo completo desta publicação está disponível apenas no portal oficial do tribunal.
-                       </p>
+                {latestEvent ? (
+                  <>
+                    <div className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
+                      <Calendar className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                      {latestEvent.date}
                     </div>
-                  )}
-                  
-                  {latestEvent.translation && (
-                    <div className="pl-4 border-l-4 border-emerald-500">
-                      <p className="text-xs text-emerald-500 font-bold mb-1 uppercase tracking-wider">Tradução rápida:</p>
-                      <p className="text-white font-medium text-lg">
-                        {latestEvent.translation}
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-4 dark:bg-slate-900 dark:border-slate-800">
+                      <p className="text-slate-700 dark:text-slate-300">
+                        {latestEvent.details || latestEvent.description}
                       </p>
+                      {(!latestEvent.details || latestEvent.details.trim() === "") && (
+                        <div className="pt-2">
+                          <Button
+                            variant="link"
+                            className="text-emerald-600 p-0 h-auto font-normal hover:text-emerald-500"
+                            onClick={() => window.open(portal.url, "_blank")}
+                          >
+                            Ver teor completo no {portal.name} <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                          <p className="text-xs text-slate-500 mt-1">
+                            * O conteúdo completo desta publicação está disponível apenas no portal oficial do tribunal.
+                          </p>
+                        </div>
+                      )}
+                      {latestEvent.translation && (
+                        <div className="pl-4 border-l-4 border-emerald-500">
+                          <p className="text-xs text-emerald-500 font-bold mb-1 uppercase tracking-wider">Tradução rápida:</p>
+                          <p className="text-slate-900 dark:text-white font-medium text-lg">
+                            {latestEvent.translation}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500">Nenhuma movimentação registrada para este processo até o momento.</p>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Documentos Anexos Section */}
           {documents && documents.length > 0 && (
-            <Card className="bg-slate-950 border-slate-800">
-              <CardHeader className="border-b border-slate-800 pb-4">
+            <Card className="bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800">
+              <CardHeader className="border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg text-white">Documentos anexos</CardTitle>
+                    <CardTitle className="text-lg">Documentos anexos</CardTitle>
                     <Info className="h-4 w-4 text-slate-500" />
                   </div>
                 </div>
@@ -175,13 +183,13 @@ export function ProcessResult({ processNumber, title, status, events, documents,
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-900 transition-colors gap-4">
+                    <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors gap-4 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-900">
                       <div className="flex items-center gap-4">
                         <div className="p-2 rounded-lg bg-red-500/10 text-red-500">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div>
-                          <h4 className="font-medium text-slate-200">
+                          <h4 className="font-medium text-slate-900 dark:text-slate-200">
                             {doc.title}
                           </h4>
                           <p className="text-sm text-slate-500">{doc.date}</p>
@@ -190,7 +198,7 @@ export function ProcessResult({ processNumber, title, status, events, documents,
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="text-slate-400 border-slate-700 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
+                        className="text-slate-700 border-slate-300 hover:text-slate-900 hover:bg-slate-100 w-full sm:w-auto dark:text-slate-400 dark:border-slate-700 dark:hover:text-white dark:hover:bg-slate-800"
                         onClick={() => window.open(portal.url, '_blank')}
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
@@ -203,7 +211,7 @@ export function ProcessResult({ processNumber, title, status, events, documents,
             </Card>
           )}
 
-          {latestEvent.nextStep && (
+          {latestEvent && latestEvent.nextStep && (
             <Card className="bg-slate-900/50 border-slate-800">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base text-slate-300">Próximo passo</CardTitle>

@@ -61,3 +61,17 @@ ALTER TABLE judicial_movements ENABLE ROW LEVEL SECURITY;
 -- Política simples: permitir tudo para autenticados (ajustar conforme necessidade real)
 CREATE POLICY "Enable all access for authenticated users" ON judicial_processes FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Enable all access for authenticated users" ON judicial_movements FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE TABLE IF NOT EXISTS process_public_previews (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    cnj_number VARCHAR(25) NOT NULL,
+    payload JSONB NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE process_public_previews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow insert for authenticated users on process_public_previews" ON process_public_previews FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow select on process_public_previews" ON process_public_previews FOR SELECT USING (true);
