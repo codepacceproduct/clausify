@@ -109,7 +109,7 @@ export default function RMCRCCPage() {
                     <AlertDescription>{result.mensagem}</AlertDescription>
                   </Alert>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div className="space-y-1">
                       <p className="text-muted-foreground">Taxa Cobrada</p>
                       <p className="font-medium">{result.taxaCobrada}% a.m.</p>

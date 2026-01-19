@@ -153,9 +153,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#0f1419] flex">
-      <div className="w-full max-w-6xl mx-auto h-full px-4 lg:px-8 flex flex-col lg:flex-row gap-8 lg:gap-12">
-        <div className="w-full lg:w-[45%] h-full flex items-center">
+    <div className="min-h-screen w-full bg-[#0f1419] flex">
+      <div className="w-full max-w-6xl mx-auto px-4 lg:px-8 py-8 flex flex-col lg:flex-row gap-8 lg:gap-12">
+        <div className="w-full lg:w-[45%] flex items-center">
           <div className="w-full max-w-md space-y-8">
             <div className="space-y-3">
               <p className="text-sm font-medium text-emerald-400">Login</p>

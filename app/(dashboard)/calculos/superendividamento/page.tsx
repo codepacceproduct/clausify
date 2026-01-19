@@ -151,7 +151,7 @@ export default function SuperendividamentoPage() {
                         setDividas(newDividas)
                       }}
                     />
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <Input
                         type="number"
                         placeholder="Valor total"

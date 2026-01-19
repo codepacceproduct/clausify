@@ -109,7 +109,7 @@ export default function HorasExtrasPage() {
                 <p className="text-xs text-muted-foreground mt-1">Padrão CLT: 220h</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="horas50">Horas 50%</Label>
                     <Input

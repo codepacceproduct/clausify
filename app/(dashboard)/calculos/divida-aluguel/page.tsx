@@ -107,7 +107,7 @@ export default function DividaAluguelPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="multa">Multa (%)</Label>
                   <Input id="multa" type="number" step="0.1" value={multa} onChange={(e) => setMulta(e.target.value)} />

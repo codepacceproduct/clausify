@@ -158,6 +158,16 @@ export function VersionHistory({ contractId }: VersionHistoryProps) {
                         </div>
                       </div>
                     </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="shrink-0"
+                      onClick={() => setPreviewVersion(version)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Visualizar
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -165,6 +175,24 @@ export function VersionHistory({ contractId }: VersionHistoryProps) {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      <Dialog open={!!previewVersion} onOpenChange={(open) => !open && setPreviewVersion(null)}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Versão {previewVersion?.version_number}</DialogTitle>
+            <DialogDescription>
+              Criado em {previewVersion?.created_at && new Date(previewVersion.created_at).toLocaleString('pt-BR')} por {previewVersion?.created_by || "Sistema"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden border rounded-md mt-4">
+            <ScrollArea className="h-full bg-muted/30 p-6">
+              <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
+                {previewVersion?.content || "Conteúdo não disponível para esta versão."}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

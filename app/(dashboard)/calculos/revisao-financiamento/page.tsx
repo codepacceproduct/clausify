@@ -105,7 +105,7 @@ export default function RevisaoFinanciamentoPage() {
                     </AlertDescription>
                   </Alert>
 
-                  <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm pt-4 border-t">
                     <div className="space-y-1">
                       <p className="text-muted-foreground">Prestação Mensal</p>
                       <p className="font-bold text-lg">R$ {result.prestacaoMensal}</p>

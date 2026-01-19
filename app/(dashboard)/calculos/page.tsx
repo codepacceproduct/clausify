@@ -3,7 +3,8 @@
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import {
   Calculator,
   TrendingUp,
@@ -26,6 +27,8 @@ import {
   ScrollText,
   Clock,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -245,6 +248,12 @@ const calculators = [
 export default function CalculosPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 9
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, searchTerm])
 
   const filteredCalculators = calculators.filter((calc) => {
     const matchesCategory = selectedCategory === "all" || calc.category === selectedCategory
@@ -253,6 +262,12 @@ export default function CalculosPage() {
       calc.description.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesCategory && matchesSearch
   })
+
+  const totalPages = Math.ceil(filteredCalculators.length / itemsPerPage)
+  const currentCalculators = filteredCalculators.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   return (
     <LayoutWrapper>
@@ -292,8 +307,8 @@ export default function CalculosPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCalculators.map((calculator) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {currentCalculators.map((calculator) => (
             <Link key={calculator.id} href={calculator.href}>
               <Card className="p-5 hover:shadow-md transition-all duration-200 hover:border-emerald-500/30 group cursor-pointer h-full">
                 <div className="flex items-start gap-4">
@@ -311,6 +326,47 @@ export default function CalculosPage() {
             </Link>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                  className={cn(
+                    "h-8 w-8 p-0",
+                    currentPage === page ? "bg-emerald-500 hover:bg-emerald-600" : ""
+                  )}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         {filteredCalculators.length === 0 && (
           <div className="text-center py-12">

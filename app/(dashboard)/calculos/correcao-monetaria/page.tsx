@@ -115,7 +115,7 @@ export default function CorrecaoMonetariaPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="dataInicial">Data Inicial</Label>
                   <Input
@@ -158,7 +158,7 @@ export default function CorrecaoMonetariaPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">Correção</p>
                     <p className="text-lg font-semibold">
