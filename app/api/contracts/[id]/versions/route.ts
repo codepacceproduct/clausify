@@ -60,7 +60,7 @@ export async function POST(
     const supabase = await createClient()
     const { id } = params
     const json = await request.json()
-    const { content, version_number, changes_summary, analysis } = json
+    let { content, version_number, changes_summary, analysis } = json
 
     // Verify contract ownership
     const { data: contract, error: contractError } = await supabase
@@ -71,6 +71,24 @@ export async function POST(
     
     if (contractError || !contract) {
         return NextResponse.json({ error: "Contract not found" }, { status: 404 })
+    }
+
+    // Handle auto versioning
+    if (version_number === "auto") {
+        const { data: latestVersion } = await supabase
+            .from("contract_versions")
+            .select("version_number")
+            .eq("contract_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single()
+
+        if (latestVersion && latestVersion.version_number) {
+            const lastVer = parseInt(String(latestVersion.version_number))
+            version_number = isNaN(lastVer) ? 1 : lastVer + 1
+        } else {
+            version_number = 1
+        }
     }
 
     // Create new version
