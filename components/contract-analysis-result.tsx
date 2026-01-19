@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import jsPDF from "jspdf"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +57,7 @@ export function ContractAnalysisResult({
   const score = result?.score || 0
   const [isPlaying, setIsPlaying] = useState(false)
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null)
+  const router = useRouter()
 
   // Sort issues: High risk first
   const sortedIssues = [...issues].sort((a, b) => {
@@ -68,13 +71,85 @@ export function ContractAnalysisResult({
   }
 
   const handleDownloadPDF = () => {
-    // Mock PDF download
-    const link = document.createElement('a')
-    link.href = '#'
-    link.download = `parecer-${filename || 'contrato'}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+    let y = 20
+
+    // Title
+    doc.setFontSize(20)
+    doc.text("Parecer Jurídico - Clausify", pageWidth / 2, y, { align: "center" })
+    y += 15
+
+    // File info
+    doc.setFontSize(12)
+    doc.text(`Arquivo: ${filename || "Contrato"}`, margin, y)
+    y += 10
+    doc.text(`Pontuação de Risco: ${score}/100`, margin, y)
+    y += 20
+
+    // Issues
+    doc.setFontSize(16)
+    doc.text("Pontos de Atenção", margin, y)
+    y += 10
+
+    sortedIssues.forEach((issue, index) => {
+      // Check for page break
+      if (y > 250) {
+        doc.addPage()
+        y = 20
+      }
+
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text(`${index + 1}. ${issue.type} (${issue.severity.toUpperCase()})`, margin, y)
+      y += 7
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      
+      const splitExplanation = doc.splitTextToSize(`Explicação: ${issue.explanation}`, pageWidth - 2 * margin)
+      doc.text(splitExplanation, margin, y)
+      y += splitExplanation.length * 4 + 2
+
+      if (y > 250) { doc.addPage(); y = 20; }
+
+      const splitSuggestion = doc.splitTextToSize(`Sugestão: ${issue.suggestion}`, pageWidth - 2 * margin)
+      doc.text(splitSuggestion, margin, y)
+      y += splitSuggestion.length * 4 + 10
+    })
+
+    // Add Contract Content
+    if (content) {
+      doc.addPage()
+      y = 20
+      doc.setFontSize(16)
+      doc.setFont("helvetica", "bold")
+      doc.text("Conteúdo do Contrato", margin, y)
+      y += 15
+      
+      doc.setFontSize(10)
+      doc.setFont("courier", "normal")
+      
+      const splitContent = doc.splitTextToSize(content, pageWidth - 2 * margin)
+      
+      for (let i = 0; i < splitContent.length; i++) {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        doc.text(splitContent[i], margin, y)
+        y += 5
+      }
+    }
+
+    doc.save(`parecer-${filename || 'contrato'}.pdf`)
+  }
+
+  const handleCompareVersions = () => {
+    if (contractId) {
+      router.push(`/dashboard/versionamento?contractId=${contractId}`)
+    }
   }
 
   const scrollToClause = (issueId: string) => {
@@ -95,7 +170,7 @@ export function ContractAnalysisResult({
             <RotateCcw className="h-4 w-4 mr-2" />
             Nova Análise
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleCompareVersions} disabled={!contractId}>
             <ArrowRightLeft className="h-4 w-4 mr-2" />
             Comparar Versões
           </Button>
