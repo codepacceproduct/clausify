@@ -119,14 +119,14 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Arraste seu contrato aqui</h3>
                 <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                    Suportamos arquivos PDF, DOCX e TXT. O arquivo será processado pela nossa IA Jurídica com total confidencialidade.
+                    Suportamos .DOCX e TXT. O arquivo será processado pela nossa IA Jurídica com total confidencialidade.
                 </p>
                 
                 <input
                     type="file"
                     id="file-upload"
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.txt"
+                    accept=".doc,.docx,.txt"
                     onChange={handleFileChange}
                 />
                 <Button asChild variant="outline" className="cursor-pointer">

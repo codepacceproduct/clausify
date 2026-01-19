@@ -49,7 +49,7 @@ const faqs = [
   },
   {
     question: "Quais formatos de arquivo são aceitos?",
-    answer: "Aceitamos PDF, DOCX e TXT. O tamanho máximo por arquivo é 10MB.",
+    answer: "Aceitamos DOCX e TXT. O tamanho máximo por arquivo é 10MB.",
   },
   {
     question: "Como adicionar novos usuários à minha equipe?",

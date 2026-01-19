@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { GitBranch, Clock, FileText, User, ArrowRight, Loader2 } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { GitBranch, Clock, FileText, User, ArrowRight, Loader2, Eye } from "lucide-react"
 
 interface ContractVersion {
   id: string
@@ -24,6 +26,7 @@ interface VersionHistoryProps {
 export function VersionHistory({ contractId }: VersionHistoryProps) {
   const [versions, setVersions] = useState<ContractVersion[]>([])
   const [loading, setLoading] = useState(true)
+  const [previewVersion, setPreviewVersion] = useState<ContractVersion | null>(null)
 
   useEffect(() => {
     if (contractId) {

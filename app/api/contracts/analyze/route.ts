@@ -32,6 +32,9 @@ export async function POST(request: Request) {
 
     // Update DB with results and create new version
     if (contractId && !contractId.startsWith("mock-")) {
+        // Get user for created_by field
+        const { data: { user } } = await supabase.auth.getUser()
+
         // 1. Get current version number
         const { data: currentContract } = await supabase
             .from("contracts")
@@ -47,7 +50,8 @@ export async function POST(request: Request) {
             version_number: nextVersion,
             content: contractText,
             analysis: analysisResult,
-            status: "analyzed"
+            status: "analyzed",
+            created_by: user?.id
         })
 
         if (versionError) {
