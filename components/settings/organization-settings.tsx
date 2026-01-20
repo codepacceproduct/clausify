@@ -5,13 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { toast } from "sonner"
-import { Loader2, Building2 } from "lucide-react"
+import { Loader2, Building2, AlertCircle } from "lucide-react"
+import { getAuthToken } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 
 export function OrganizationSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [org, setOrg] = useState<any>(null)
+  const [isNewOrg, setIsNewOrg] = useState(false)
   
   // Form states
   const [name, setName] = useState("")
@@ -35,12 +39,31 @@ export function OrganizationSettings() {
 
   async function loadOrganization() {
     try {
-      const res = await fetch("/api/organizations/current")
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
+      const res = await fetch("/api/organizations/current", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      
+      if (res.status === 404) {
+        setOrg(null)
+        setIsNewOrg(true)
+        return
+      }
+      
+      if (res.status === 401) {
+        setOrg(null)
+        return
+      }
+
       if (!res.ok) throw new Error("Failed to load organization")
       const data = await res.json()
       if (data.organization) {
         const o = data.organization
         setOrg(o)
+        setIsNewOrg(false)
         setName(o.name || "")
         setLegalName(o.legal_name || "")
         setTaxId(o.tax_id || "")
@@ -56,7 +79,7 @@ export function OrganizationSettings() {
       }
     } catch (error) {
       console.error(error)
-      toast.error("Erro ao carregar organização")
+      // toast.error("Erro ao carregar organização")
     } finally {
       setLoading(false)
     }
@@ -65,9 +88,17 @@ export function OrganizationSettings() {
   async function handleSave() {
     setSaving(true)
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const method = isNewOrg ? "POST" : "PUT"
       const res = await fetch("/api/organizations/current", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method,
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           organization: {
             name,
@@ -86,11 +117,21 @@ export function OrganizationSettings() {
         }),
       })
 
-      if (!res.ok) throw new Error("Failed to update")
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Failed to update")
+      }
       
-      toast.success("Organização atualizada com sucesso")
-    } catch (error) {
-      toast.error("Erro ao atualizar organização")
+      if (isNewOrg) {
+        toast.success("Organização criada com sucesso")
+        const data = await res.json()
+        setOrg(data.organization)
+        setIsNewOrg(false)
+      } else {
+        toast.success("Organização atualizada com sucesso")
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar organização")
     } finally {
       setSaving(false)
     }
@@ -113,9 +154,19 @@ export function OrganizationSettings() {
         </p>
       </div>
 
+      {isNewOrg && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Nenhuma organização vinculada</AlertTitle>
+          <AlertDescription>
+            Você ainda não possui uma organização vinculada. Preencha os dados abaixo para criar uma nova organização e se tornar o administrador.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Empresa</CardTitle>
+          <CardTitle>{isNewOrg ? "Criar Organização" : "Dados da Empresa"}</CardTitle>
           <CardDescription>
             Informações visíveis para sua equipe e em documentos.
           </CardDescription>

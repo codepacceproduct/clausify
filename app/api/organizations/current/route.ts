@@ -26,6 +26,68 @@ export async function GET(req: Request) {
   return Response.json({ organization, member_count })
 }
 
+export async function POST(req: Request) {
+  const body = await req.json()
+  const email = await getAuthedEmail(req)
+  const { organization } = body
+  
+  if (!email || !organization) return new Response(JSON.stringify({ error: "missing_data" }), { status: 400 })
+  
+  // Verify if user already has an organization
+  const { data: profiles } = await supabaseServer
+    .from("profiles")
+    .select("organization_id")
+    .eq("email", email)
+    .limit(1)
+    
+  if (profiles?.[0]?.organization_id) {
+    return new Response(JSON.stringify({ error: "already_has_organization" }), { status: 409 })
+  }
+
+  // Create organization
+  const { data: newOrg, error: createError } = await supabaseServer
+    .from("organizations")
+    .insert({
+      name: organization.name,
+      legal_name: organization.legal_name,
+      tax_id: organization.tax_id,
+      industry: organization.industry,
+      size: organization.size,
+      website: organization.website,
+      email: organization.email,
+      address_line1: organization.address_line1,
+      city: organization.city,
+      region: organization.region,
+      postal_code: organization.postal_code,
+      country: organization.country,
+      // Default fields
+      timezone: "America/Sao_Paulo",
+      locale: "pt-BR",
+      currency: "BRL"
+    })
+    .select()
+    .single()
+
+  if (createError) return new Response(JSON.stringify({ error: createError.message }), { status: 500 })
+
+  // Link user to organization as admin/owner
+  const { error: linkError } = await supabaseServer
+    .from("profiles")
+    .update({ 
+      organization_id: newOrg.id,
+      role: "admin" // or 'owner' depending on your role system
+    })
+    .eq("email", email)
+
+  if (linkError) {
+    // Rollback organization creation if link fails (optional but recommended)
+    await supabaseServer.from("organizations").delete().eq("id", newOrg.id)
+    return new Response(JSON.stringify({ error: "failed_to_link_profile" }), { status: 500 })
+  }
+
+  return Response.json({ organization: newOrg })
+}
+
 export async function PUT(req: Request) {
   const body = await req.json()
   const email = await getAuthedEmail(req)

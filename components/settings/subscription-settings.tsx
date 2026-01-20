@@ -10,6 +10,8 @@ import { CreditCard, History, Loader2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { getAuthToken } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 
 interface SubscriptionData {
   plan: string
@@ -39,7 +41,27 @@ export function SubscriptionSettings() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/subscription")
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+
+        const res = await fetch("/api/subscription", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        
+        if (res.status === 404 || res.status === 401) {
+          // Sem organização, assumir plano free padrão
+          setSubscription({
+            plan: "free",
+            status: "active",
+            amount: 0,
+            interval: "month",
+            current_period_end: new Date().toISOString(),
+            role: "owner"
+          })
+          return
+        }
+
         if (!res.ok) throw new Error("Falha ao carregar assinatura")
         const data = await res.json()
         setSubscription(data.subscription)
@@ -53,7 +75,7 @@ export function SubscriptionSettings() {
         setBilling(data.billing)
       } catch (error) {
         console.error(error)
-        toast.error("Erro ao carregar informações da assinatura")
+        // toast.error("Erro ao carregar informações da assinatura")
       } finally {
         setLoading(false)
       }

@@ -12,11 +12,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "sonner"
 import { Loader2, Plus, Mail, Trash2, Edit, Link as LinkIcon, Copy, Check } from "lucide-react"
-import { getUserEmail, getAuthToken } from "@/lib/auth"
+import { getAuthToken } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
-type Member = {
+interface Member {
   email: string
   name: string | null
   surname: string | null
@@ -60,13 +61,26 @@ export function TeamManagement() {
 
   async function loadMembers() {
     try {
-      const res = await fetch("/api/organizations/members")
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
+      const res = await fetch("/api/organizations/members", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      
+      if (res.status === 404 || res.status === 401) {
+        // Usuário não tem organização ou não encontrada
+        setMembers([])
+        return
+      }
+      
       if (!res.ok) throw new Error("Failed to load members")
       const data = await res.json()
       setMembers(data.members || [])
     } catch (error) {
       console.error(error)
-      toast.error("Erro ao carregar membros")
+      // toast.error("Erro ao carregar membros") // Silently fail or show milder warning
     } finally {
       setLoading(false)
     }
@@ -76,10 +90,17 @@ export function TeamManagement() {
     if (!inviteEmail) return
     setInviting(true)
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
       // Assuming direct add or invite
       const res = await fetch("/api/organizations/members", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ email: inviteEmail, role: inviteRole, password: "tempPassword123!" }), // Simplification for demo if API requires password
       })
       

@@ -139,13 +139,49 @@ export function getUserName(): string | null {
 
 export function getAuthToken(): string | null {
   if (typeof document === "undefined") return null
+  
+  // 1. Try Cookies
   const cookies = document.cookie.split(";")
   for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split("=")
+    const parts = cookie.trim().split("=")
+    const name = parts[0]
+    const valRaw = parts.slice(1).join("=")
+    
     if (name.includes("-auth-token")) {
-      return decodeURIComponent(value)
+      const val = decodeURIComponent(valRaw)
+      // Supabase cookie might be a JSON array/object
+      if (val.startsWith("[") || val.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(val)
+          // ["access_token", "refresh_token", ...]
+          if (Array.isArray(parsed) && parsed[0]) return parsed[0]
+          // { "access_token": "...", ... }
+          if (parsed.access_token) return parsed.access_token
+        } catch {}
+        // If it looks like JSON but we couldn't extract token, do not return raw JSON
+        return null
+      }
+      return val
     }
   }
+
+  // 2. Try LocalStorage (Supabase defaults)
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+            const val = localStorage.getItem(key)
+            if (val) {
+                try {
+                    const parsed = JSON.parse(val)
+                    if (Array.isArray(parsed) && parsed[0]) return parsed[0]
+                    if (parsed.access_token) return parsed.access_token
+                } catch {}
+            }
+        }
+    }
+  } catch {}
+
   return null
 }
 

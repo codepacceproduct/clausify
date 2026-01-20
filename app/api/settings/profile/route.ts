@@ -1,9 +1,13 @@
 import { supabaseServer } from "@/lib/supabase-server"
-import { getAuthedEmail } from "@/lib/api-auth"
+import { getAuthedEmail, getAuthedUser } from "@/lib/api-auth"
 
 export async function GET(req: Request) {
-  const email = await getAuthedEmail(req)
+  const user = await getAuthedUser(req)
+  let email = user?.email || await getAuthedEmail(req)
+  
   if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+
+  email = email.toLowerCase()
 
   let profile = null as any
   {
@@ -15,10 +19,32 @@ export async function GET(req: Request) {
     profile = profiles?.[0] ?? null
   }
 
-  if (!profile) {
-    // Attempt to just use what we have or return null
-    // We cannot easily query auth.users from here without admin API access correctly configured
-    // So we skip auto-creation fallback for now if profile is missing
+  if (!profile && user) {
+    // Auto-create profile from auth user data if missing
+    const meta = user.user_metadata || {}
+    const fullName = meta.full_name || meta.name || ""
+    const parts = fullName.split(" ")
+    const name = parts[0] || ""
+    const surname = parts.slice(1).join(" ") || ""
+    const avatar_url = meta.avatar_url || meta.picture || ""
+    
+    const payload: any = {
+        id: user.id,
+        email: user.email,
+        phone: user.phone || null,
+        name,
+        surname,
+        avatar_url,
+        role: "member" // default role
+    }
+    
+    const { data: created } = await supabaseServer
+        .from("profiles")
+        .upsert(payload, { onConflict: "id" })
+        .select()
+        .single()
+        
+    if (created) profile = created
   }
 
   let organization = null as any

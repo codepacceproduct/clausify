@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 import { getUserEmail, getAuthToken } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { User, Camera, Loader2, Shield, Smartphone, LogOut } from "lucide-react"
 
 export function ProfileSettings() {
@@ -47,11 +48,17 @@ export function ProfileSettings() {
 
   async function loadProfile() {
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
       const res = await fetch("/api/settings/profile", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
-      if (!res.ok) throw new Error("Failed to load profile")
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 401) return
+        throw new Error("Failed to load profile")
+      }
       const data = await res.json()
       if (data.profile) {
         setProfile(data.profile)
@@ -69,7 +76,10 @@ export function ProfileSettings() {
 
   async function load2FAStatus() {
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
       const res = await fetch("/api/settings/2fa/status", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
@@ -82,7 +92,10 @@ export function ProfileSettings() {
 
   async function loadSessions() {
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
       const res = await fetch("/api/sessions/list", {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
@@ -102,7 +115,10 @@ export function ProfileSettings() {
 
     setUploading(true)
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
       const res = await fetch("/api/settings/avatar", {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -133,7 +149,10 @@ export function ProfileSettings() {
   async function handleSaveProfile() {
     setSaving(true)
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
       const res = await fetch("/api/settings/profile", {
         method: "PUT",
         headers: { 
@@ -180,7 +199,10 @@ export function ProfileSettings() {
     
     setPasswordSaving(true)
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
       const res = await fetch("/api/settings/password", {
         method: "PUT",
         headers: { 
@@ -208,7 +230,10 @@ export function ProfileSettings() {
 
   async function handleEndSession(id: string) {
     try {
-      const token = getAuthToken()
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
       await fetch("/api/sessions/end", {
         method: "POST",
         headers: { 
