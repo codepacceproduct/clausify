@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -21,9 +21,11 @@ import {
   Zap,
   ArrowRightLeft,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { OnlineUsers } from "@/components/online-users"
 
 interface Issue {
   id: string
@@ -56,6 +58,11 @@ export function ContractAnalysisResult({
   const issues: Issue[] = result?.issues || []
   const score = result?.score || 0
   const [isPlaying, setIsPlaying] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioLoading, setAudioLoading] = useState(false)
+  const [audioProgress, setAudioProgress] = useState(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null)
   const router = useRouter()
 
@@ -64,6 +71,82 @@ export function ContractAnalysisResult({
     const severityOrder = { high: 0, medium: 1, low: 2 }
     return severityOrder[a.severity] - severityOrder[b.severity]
   })
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setAudioProgress((audio.currentTime / audio.duration) * 100)
+      }
+    }
+
+    const onEnded = () => {
+      setIsPlaying(false)
+      setAudioProgress(0)
+    }
+
+    audio.addEventListener('timeupdate', updateProgress)
+    audio.addEventListener('ended', onEnded)
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress)
+      audio.removeEventListener('ended', onEnded)
+    }
+  }, [audioUrl])
+
+  const handlePlayAudio = async () => {
+    if (audioLoading) return
+
+    if (isPlaying) {
+      audioRef.current?.pause()
+      setIsPlaying(false)
+      return
+    }
+
+    if (audioUrl) {
+      audioRef.current?.play()
+      setIsPlaying(true)
+      return
+    }
+
+    setAudioLoading(true)
+    try {
+      // Construct summary text for TTS
+      const summaryText = result?.summary || `Resumo executivo do contrato ${filename || ""}. 
+      A pontuação de risco calculada é ${score} de 100. 
+      Identificamos ${issues.filter(i => i.severity === 'high').length} pontos de alto risco e ${issues.filter(i => i.severity === 'medium').length} de risco médio. 
+      ${issues.length > 0 ? "Os principais pontos de atenção são: " + issues.slice(0, 3).map(i => i.type).join(", ") + "." : ""} 
+      Recomendamos a revisão das cláusulas sugeridas.`
+
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: summaryText })
+      })
+
+      if (!res.ok) throw new Error("Failed to generate audio")
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      setAudioUrl(url)
+      
+      // Small delay to ensure ref is updated
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.src = url
+          audioRef.current.play()
+          setIsPlaying(true)
+        }
+      }, 100)
+
+    } catch (error) {
+      console.error("TTS Error:", error)
+    } finally {
+      setAudioLoading(false)
+    }
+  }
 
   const handleWhatsAppShare = (issue: Issue) => {
     const message = `Olá! Analisando o contrato "${filename}", identifiquei um ponto de atenção importante:\n\n*${issue.type}*\n\n${issue.explanation}\n\nSugestão: ${issue.suggestion}`
@@ -129,7 +212,7 @@ export function ContractAnalysisResult({
       y += 15
       
       doc.setFontSize(10)
-      doc.setFont("courier", "normal")
+      doc.setFont("times", "normal")
       
       const splitContent = doc.splitTextToSize(content, pageWidth - 2 * margin)
       
@@ -184,22 +267,26 @@ export function ContractAnalysisResult({
       {/* Audio Player (Top) */}
       <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none shrink-0 shadow-md">
         <CardContent className="p-4 flex items-center gap-4">
+          <audio ref={audioRef} className="hidden" />
           <Button 
             size="icon" 
             className="h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shrink-0 shadow-lg border-2 border-emerald-400/20"
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={handlePlayAudio}
+            disabled={audioLoading}
           >
-            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
+            {audioLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
           </Button>
           <div className="flex-1 space-y-1">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">Resumo Executivo (IA)</span>
-              <span className="text-xs text-slate-400">02:14</span>
+              <span className="text-xs text-slate-400">
+                {audioLoading ? "Gerando áudio..." : isPlaying ? "Reproduzindo..." : "Clique para ouvir"}
+              </span>
             </div>
             <div className="h-1.5 w-full bg-slate-700/50 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
-                style={{ width: isPlaying ? '45%' : '0%' }} 
+                style={{ width: `${audioProgress}%` }} 
               />
             </div>
           </div>
@@ -212,14 +299,17 @@ export function ContractAnalysisResult({
         {/* Left: Document Viewer */}
         <Card className="lg:col-span-2 flex flex-col overflow-hidden border-slate-200 shadow-sm">
           <CardHeader className="pb-3 border-b bg-muted/20">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              Visualização do Contrato
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Visualização do Contrato
+              </CardTitle>
+              {contractId && <OnlineUsers channelId={`contract:${contractId}`} />}
+            </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden relative bg-white dark:bg-slate-950">
              <ScrollArea className="h-full">
-                <div className="p-8 max-w-3xl mx-auto text-sm leading-relaxed font-mono whitespace-pre-wrap text-slate-700 dark:text-slate-300">
+                <div className="p-8 max-w-3xl mx-auto text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300 font-sans">
                   {content || "Conteúdo do contrato não disponível para visualização."}
                 </div>
              </ScrollArea>
@@ -264,13 +354,15 @@ export function ContractAnalysisResult({
                         <Badge 
                             variant="outline" 
                             className={cn(
-                                "text-xs font-semibold border-none px-2 py-0.5 rounded-full",
+                                "text-xs font-semibold border-none px-2 py-0.5 rounded-full flex items-center gap-1",
                                 issue.severity === 'high' ? "bg-destructive/10 text-destructive" :
                                 issue.severity === 'medium' ? "bg-amber-500/10 text-amber-600" :
                                 "bg-emerald-500/10 text-emerald-600"
                             )}
                         >
-                            {issue.severity === 'high' ? "🔴 Risco Alto" : issue.severity === 'medium' ? "🟡 Risco Médio" : "🟢 Informativo"}
+                            {issue.severity === 'high' ? <><XCircle className="h-3 w-3" /> Risco Alto</> : 
+                             issue.severity === 'medium' ? <><AlertTriangle className="h-3 w-3" /> Risco Médio</> : 
+                             <><CheckCircle2 className="h-3 w-3" /> Informativo</>}
                         </Badge>
                         {issue.severity === 'high' && <AlertTriangle className="h-4 w-4 text-destructive" />}
                     </div>

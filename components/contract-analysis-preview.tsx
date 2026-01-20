@@ -17,6 +17,7 @@ import {
   Split
 } from "lucide-react"
 import { toast } from "sonner"
+import { OnlineUsers } from "@/components/online-users"
 
 interface Issue {
   id: string
@@ -159,6 +160,9 @@ export function ContractAnalysisPreview({
               <FileText className="h-5 w-5" />
               Revisão do Contrato
             </h2>
+            <div className="ml-4">
+               <OnlineUsers channelId={`contract:${contractId}`} />
+            </div>
           </div>
           <Button onClick={handleSaveVersion} disabled={saving} className="no-print">
             <Save className="h-4 w-4 mr-2" />

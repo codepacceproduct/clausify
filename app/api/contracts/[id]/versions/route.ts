@@ -81,7 +81,7 @@ export async function POST(
             .eq("contract_id", id)
             .order("created_at", { ascending: false })
             .limit(1)
-            .single()
+            .maybeSingle()
 
         if (latestVersion && latestVersion.version_number) {
             const lastVer = parseInt(String(latestVersion.version_number))
@@ -100,12 +100,16 @@ export async function POST(
         content,
         changes_summary,
         analysis,
-        created_by: contract.user_id // Assuming the creator is the contract owner for now
+        created_by: contract.user_id, // Assuming the creator is the contract owner for now
+        status: "analyzed"
       })
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+        console.error("Error creating version:", error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     // Update contract current version reference
     await supabase

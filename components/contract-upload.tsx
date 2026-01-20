@@ -13,6 +13,7 @@ import { Upload, FileText, X, ArrowRight, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
 
 interface ContractUploadProps {
   onAnalysisStart?: (contractId: string, content: string, filename: string) => void
@@ -62,6 +63,17 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
     setUploading(true)
     
     try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+            toast.error("Sua sessão expirou. Por favor, faça login novamente para enviar contratos.")
+            // Optionally redirect to login here if you have router access
+            // window.location.href = "/login" 
+            setUploading(false)
+            return
+        }
+
         const formData = new FormData()
         formData.append("file", files[0])
         formData.append("type", contractType)
@@ -119,7 +131,7 @@ export function ContractUpload({ onAnalysisStart }: ContractUploadProps) {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Arraste seu contrato aqui</h3>
                 <p className="text-muted-foreground text-center mb-6 max-w-sm">
-                    Suportamos .DOCX e TXT. O arquivo será processado pela nossa IA Jurídica com total confidencialidade.
+                    Suportamos .DOC, .DOCX e TXT. O arquivo será processado pela nossa IA Jurídica com total confidencialidade.
                 </p>
                 
                 <input

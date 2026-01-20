@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import mammoth from "mammoth"
+import WordExtractor from "word-extractor"
 import crypto from 'crypto'
 
 export async function POST(request: Request) {
@@ -31,6 +32,9 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
+
+    // Check for OLE Binary Header (Legacy .doc) which starts with D0 CF 11 E0
+    const isDoc = buffer.length > 4 && buffer[0] === 0xD0 && buffer[1] === 0xCF && buffer[2] === 0x11 && buffer[3] === 0xE0;
 
     // Calculate file hash for deduplication/caching
     const fileHash = crypto.createHash('md5').update(buffer).digest('hex');
@@ -63,7 +67,13 @@ export async function POST(request: Request) {
             const isDOCX = file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || file.name.toLowerCase().endsWith(".docx")
             const isTXT = file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")
 
-            if (isDOCX) {
+            if (isDoc) {
+                console.time("DOC Parsing");
+                const extractor = new WordExtractor();
+                const extracted = await extractor.extract(buffer);
+                content = extracted.getBody();
+                console.timeEnd("DOC Parsing");
+            } else if (isDOCX) {
                 console.time("DOCX Parsing");
                 const result = await mammoth.extractRawText({ buffer: buffer })
                 content = result.value
@@ -80,11 +90,12 @@ export async function POST(request: Request) {
                     content = utf8;
                 }
             } else {
-                // Fallback logic
-                content = buffer.toString("utf-8") 
+                // Reject unknown types explicitly to prevent garbage text
+                 throw new Error("Tipo de arquivo não suportado. Apenas DOC, DOCX e TXT são permitidos.")
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Extraction error:", e)
+            return NextResponse.json({ error: e.message || "Erro ao ler arquivo" }, { status: 400 })
         }
     }
     
@@ -98,6 +109,10 @@ O sistema não conseguiu extrair o texto deste documento. Motivos prováveis:
 2. O formato DOCX possui formatação complexa não suportada.
 3. O arquivo está vazio.`
     }
+
+    // Sanitize content to remove null bytes which Postgres doesn't support
+    // and other potential issues
+    content = content.replace(/\u0000/g, "").replace(/\\u0000/g, "");
 
     // 3. Save Metadata to DB
     const { data: contract, error: dbError } = await supabase
