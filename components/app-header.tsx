@@ -15,6 +15,8 @@ import {
 import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { logout, getUserEmail } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
+import { NotificationsPopover } from "@/components/notifications-popover"
 
 export function AppHeader() {
   const router = useRouter()
@@ -27,9 +29,17 @@ export function AppHeader() {
 
   useEffect(() => {
     const load = async () => {
-      if (!userEmail) return
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) return
+
       try {
-        const res = await fetch(`/api/settings/profile`)
+        const res = await fetch(`/api/settings/profile`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        })
         if (!res.ok) return
         const { profile } = await res.json()
         if (profile?.avatar_url) setAvatarSrc(profile.avatar_url)
@@ -42,7 +52,7 @@ export function AppHeader() {
       } catch {}
     }
     load()
-  }, [userEmail])
+  }, [])
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -120,10 +130,7 @@ export function AppHeader() {
           Nova Análise
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative shrink-0 h-9 w-9 sm:h-10 sm:w-10">
-          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500" />
-        </Button>
+        <NotificationsPopover />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

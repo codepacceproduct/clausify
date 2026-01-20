@@ -1,10 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Info, AlertCircle } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 type AlertType = "low" | "medium" | "high"
 
 async function fetchAlerts() {
+  const supabase = await createClient()
   const { data } = await supabase
     .from("approvals")
     .select("contract_name, priority, submitted_at")

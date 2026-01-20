@@ -28,7 +28,8 @@ import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { logout } from "@/lib/auth"
 import Image from "next/image"
-import { getUserEmail, getAuthToken } from "@/lib/auth"
+import { getUserEmail } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -72,17 +73,20 @@ export function AppSidebar({
 
   useEffect(() => {
     const load = async () => {
-      const email = getUserEmail()
-      if (!email) return
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) return
+      const token = session.access_token
+
       try {
-        const token = getAuthToken()
         const profRes = await fetch(`/api/settings/profile`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: { Authorization: `Bearer ${token}` },
         })
         const { profile } = await profRes.json()
         const role = String(profile?.role || "member").toLowerCase()
         const permRes = await fetch(`/api/permissions/role`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: { Authorization: `Bearer ${token}` },
         })
         const j = await permRes.json()
         const perms = j?.permissions || {}

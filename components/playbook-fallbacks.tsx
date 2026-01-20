@@ -33,9 +33,9 @@ interface FallbackClause {
   tags?: string[]
 }
 
-export function PlaybookFallbacks() {
-  const [fallbacks, setFallbacks] = useState<FallbackClause[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function PlaybookFallbacks({ initialFallbacks = [] }: { initialFallbacks?: FallbackClause[] }) {
+  const [fallbacks, setFallbacks] = useState<FallbackClause[]>(initialFallbacks)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
@@ -56,10 +56,6 @@ export function PlaybookFallbacks() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    fetchFallbacks()
-  }, [])
 
   const logAction = async (action: string, resource: string) => {
     const email = getUserEmail() || ""

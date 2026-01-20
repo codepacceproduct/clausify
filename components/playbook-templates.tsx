@@ -33,9 +33,9 @@ interface Template {
   content?: string
 }
 
-export function PlaybookTemplates() {
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function PlaybookTemplates({ initialTemplates = [] }: { initialTemplates?: Template[] }) {
+  const [templates, setTemplates] = useState<Template[]>(initialTemplates)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
@@ -55,10 +55,6 @@ export function PlaybookTemplates() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
 
   const logAction = async (action: string, resource: string) => {
     const email = getUserEmail() || ""

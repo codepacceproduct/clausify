@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GitCompare, Download, Plus, Minus, Edit3, AlertCircle, FileText, ArrowLeftRight, Loader2 } from "lucide-react"
+import { VersionDiffSkeleton } from "@/components/contracts/skeletons"
 
 interface DiffLine {
   type: "added" | "removed" | "unchanged" | "modified"
@@ -19,25 +20,28 @@ interface VersionDiffProps {
   contracts?: any[] // Keep for compatibility if needed, but we use contractId mainly
 }
 
-export function VersionDiff({ contractId }: VersionDiffProps) {
-  const [versions, setVersions] = useState<any[]>([])
+export function VersionDiff({ contractId, initialVersions = [] }: VersionDiffProps & { initialVersions?: any[] }) {
+  const [versions, setVersions] = useState<any[]>(initialVersions)
   const [version1, setVersion1] = useState<string>("")
   const [version2, setVersion2] = useState<string>("")
   const [showDiff, setShowDiff] = useState(false)
   const [viewMode, setViewMode] = useState<"split" | "unified">("unified")
   const [diffData, setDiffData] = useState<DiffLine[]>([])
-  const [loadingVersions, setLoadingVersions] = useState(false)
+  const [loadingVersions, setLoadingVersions] = useState(initialVersions.length === 0)
   const [comparing, setComparing] = useState(false)
   const [versionNames, setVersionNames] = useState({ v1: "", v2: "" })
 
   useEffect(() => {
-    if (contractId) {
+    if (initialVersions.length > 0 && versions.length === 0) {
+      setVersions(initialVersions)
+      setLoadingVersions(false)
+    } else if (contractId && initialVersions.length === 0) {
       fetchVersions()
       setShowDiff(false)
       setVersion1("")
       setVersion2("")
     }
-  }, [contractId])
+  }, [contractId, initialVersions])
 
   useEffect(() => {
     if (versions.length === 1) {
@@ -58,6 +62,10 @@ export function VersionDiff({ contractId }: VersionDiffProps) {
     } finally {
       setLoadingVersions(false)
     }
+  }
+
+  if (loadingVersions) {
+      return <VersionDiffSkeleton />
   }
 
   const handleCompare = async () => {
@@ -135,10 +143,6 @@ export function VersionDiff({ contractId }: VersionDiffProps) {
     added: diffData.filter((d) => d.type === "added").length,
     removed: diffData.filter((d) => d.type === "removed").length,
     unchanged: diffData.filter((d) => d.type === "unchanged").length,
-  }
-
-  if (loadingVersions) {
-      return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
   }
 
   if (versions.length === 0) {

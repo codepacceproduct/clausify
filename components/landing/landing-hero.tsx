@@ -44,17 +44,16 @@ export function LandingHero() {
 
           {/* Main Headline */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight max-w-5xl mx-auto leading-[1.1]">
-            <span className="text-white">Análise jurídica</span>
+            <span className="text-white">Seu escritório</span>
             <br />
             <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent font-extrabold">
-              inteligente
+              em um só lugar
             </span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Revolucione sua prática jurídica com IA. Analise contratos em minutos, identifique riscos automaticamente e
-            tome decisões estratégicas com confiança.
+            Muito além da análise. Crie contratos, calcule prazos, gerencie versões e organize sua agenda com o poder da IA. Uma plataforma completa para sua rotina jurídica.
           </p>
 
           {/* CTA Buttons */}
@@ -86,11 +85,11 @@ export function LandingHero() {
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-emerald-500" />
-              <span>Análise em minutos</span>
+              <span>Automação Inteligente</span>
             </div>
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-emerald-500" />
-              <span>+5.000 contratos analisados</span>
+              <span>Gestão de ponta a ponta</span>
             </div>
           </div>
         </div>

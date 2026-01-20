@@ -37,9 +37,9 @@ interface Rule {
 
 const categories = ["all", "Financeiro", "Jurídico", "Compliance", "Rescisão", "Operacional"]
 
-export function PlaybookRules() {
-  const [rules, setRules] = useState<Rule[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) {
+  const [rules, setRules] = useState<Rule[]>(initialRules)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -52,10 +52,6 @@ export function PlaybookRules() {
     rationale: "",
     category: "Jurídico"
   })
-
-  useEffect(() => {
-    fetchRules()
-  }, [])
 
   const fetchRules = async () => {
     setIsLoading(true)

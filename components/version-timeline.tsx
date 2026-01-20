@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { GitBranch, Clock, CheckCircle, Edit3, Loader2 } from "lucide-react"
+import { VersionTimelineSkeleton } from "@/components/contracts/skeletons"
 
 interface TimelineEvent {
   id: string
@@ -94,7 +95,7 @@ export function VersionTimeline({ contractId }: VersionTimelineProps) {
   }
 
   if (loading) {
-      return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+      return <VersionTimelineSkeleton />
   }
 
   if (events.length === 0) {

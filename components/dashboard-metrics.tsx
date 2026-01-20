@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCircle2, Clock, Zap } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 async function getMetrics() {
+  const supabase = await createClient()
   const { count: totalContracts } = await supabase
     .from("contract_versions")
     .select("id", { count: "exact", head: true })

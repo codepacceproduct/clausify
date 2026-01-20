@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { GitBranch, Clock, FileText, User, ArrowRight, Loader2, Eye } from "lucide-react"
+import { VersionHistorySkeleton } from "@/components/contracts/skeletons"
 
 interface ContractVersion {
   id: string
@@ -23,16 +24,19 @@ interface VersionHistoryProps {
   contractId: string
 }
 
-export function VersionHistory({ contractId }: VersionHistoryProps) {
-  const [versions, setVersions] = useState<ContractVersion[]>([])
-  const [loading, setLoading] = useState(true)
+export function VersionHistory({ contractId, initialData = [] }: VersionHistoryProps & { initialData?: ContractVersion[] }) {
+  const [versions, setVersions] = useState<ContractVersion[]>(initialData)
+  const [loading, setLoading] = useState(initialData.length === 0)
   const [previewVersion, setPreviewVersion] = useState<ContractVersion | null>(null)
 
   useEffect(() => {
-    if (contractId) {
+    if (initialData.length > 0 && versions.length === 0) {
+       setVersions(initialData)
+       setLoading(false)
+    } else if (contractId && initialData.length === 0) {
       fetchVersions()
     }
-  }, [contractId])
+  }, [contractId, initialData])
 
   async function fetchVersions() {
     setLoading(true)
@@ -47,6 +51,10 @@ export function VersionHistory({ contractId }: VersionHistoryProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return <VersionHistorySkeleton />
   }
 
   const getStatusColor = (status: string) => {
@@ -75,14 +83,6 @@ export function VersionHistory({ contractId }: VersionHistoryProps) {
       case "archived": return "Arquivado"
       default: return status
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
   }
 
   if (versions.length === 0) {

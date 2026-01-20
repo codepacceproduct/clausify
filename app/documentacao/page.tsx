@@ -1,53 +1,78 @@
 import { PageHeader } from "@/components/landing/page-header"
 import { LandingFooter } from "@/components/landing/landing-footer"
 import { Book, Code, Zap, Shield, FileText, Users, Search, ArrowRight } from "lucide-react"
+import Link from "next/link"
 
 const sections = [
   {
     icon: Zap,
     title: "Início Rápido",
     description: "Comece a usar a Clausify em menos de 5 minutos.",
-    links: ["Criar conta", "Primeiro contrato", "Configurar equipe"],
+    links: [
+      { label: "Criar conta", href: "/documentacao/criar-conta" },
+      { label: "Primeiro contrato", href: "/documentacao/primeiro-contrato" },
+      { label: "Configurar equipe", href: "/documentacao/configurar-equipe" }
+    ],
   },
   {
     icon: FileText,
     title: "Análise de Contratos",
     description: "Aprenda a analisar contratos com nossa IA.",
-    links: ["Upload de documentos", "Tipos de análise", "Interpretar resultados"],
+    links: [
+      { label: "Upload de documentos", href: "/documentacao/upload-documentos" },
+      { label: "Tipos de análise", href: "/documentacao/tipos-analise" },
+      { label: "Interpretar resultados", href: "/documentacao/interpretar-resultados" }
+    ],
   },
   {
     icon: Shield,
     title: "Gestão de Riscos",
     description: "Configure e gerencie alertas de risco.",
-    links: ["Classificação de riscos", "Alertas automáticos", "Relatórios"],
+    links: [
+      { label: "Classificação de riscos", href: "/documentacao/classificacao-riscos" },
+      { label: "Alertas automáticos", href: "/documentacao/alertas-automaticos" },
+      { label: "Relatórios", href: "/documentacao/relatorios" }
+    ],
   },
   {
     icon: Users,
     title: "Equipe e Permissões",
     description: "Gerencie usuários e controle de acesso.",
-    links: ["Adicionar usuários", "Roles e permissões", "SSO/SAML"],
+    links: [
+      { label: "Adicionar usuários", href: "/documentacao/adicionar-usuarios" },
+      { label: "Roles e permissões", href: "/documentacao/roles-permissoes" },
+      { label: "SSO/SAML", href: "/documentacao/sso-saml" }
+    ],
   },
   {
     icon: Code,
     title: "API e Integrações",
     description: "Conecte a Clausify com seus sistemas.",
-    links: ["Autenticação", "Endpoints", "Webhooks"],
+    links: [
+      { label: "Autenticação", href: "/documentacao/autenticacao" },
+      { label: "Endpoints", href: "/documentacao/endpoints" },
+      { label: "Webhooks", href: "/documentacao/webhooks" }
+    ],
   },
   {
     icon: Book,
     title: "Guias Avançados",
     description: "Domine todas as funcionalidades.",
-    links: ["Playbook jurídico", "Workflow de aprovação", "Versionamento"],
+    links: [
+      { label: "Playbook jurídico", href: "/documentacao/playbook-juridico" },
+      { label: "Workflow de aprovação", href: "/documentacao/workflow-aprovacao" },
+      { label: "Versionamento", href: "/documentacao/versionamento" }
+    ],
   },
 ]
 
 const popularArticles = [
-  "Como fazer upload do primeiro contrato",
-  "Entendendo a análise de risco",
-  "Configurar workflow de aprovação",
-  "Integrar com Google Calendar",
-  "Gerenciar cláusulas do playbook",
-  "Exportar relatórios em PDF",
+  { title: "Como fazer upload do primeiro contrato", href: "/documentacao/artigos/upload-primeiro-contrato" },
+  { title: "Entendendo a análise de risco", href: "/documentacao/interpretar-resultados" },
+  { title: "Configurar workflow de aprovação", href: "/documentacao/workflow-aprovacao" },
+  { title: "Integrar com Google Calendar", href: "/documentacao/artigos/integrar-google-calendar" },
+  { title: "Gerenciar cláusulas do playbook", href: "/documentacao/artigos/gerenciar-clausulas-playbook" },
+  { title: "Exportar relatórios em PDF", href: "/documentacao/artigos/exportar-relatorios-pdf" },
 ]
 
 export default function DocumentacaoPage() {
@@ -98,10 +123,10 @@ export default function DocumentacaoPage() {
                 <ul className="space-y-2">
                   {section.links.map((link, i) => (
                     <li key={i}>
-                      <a href="#" className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
-                        {link}
+                      <Link href={link.href} className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                        {link.label}
                         <ArrowRight className="w-3 h-3" />
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -113,15 +138,15 @@ export default function DocumentacaoPage() {
           <div className="p-8 bg-white/[0.02] border border-white/5 rounded-2xl">
             <h2 className="text-2xl font-bold mb-6">Artigos Populares</h2>
             <div className="grid md:grid-cols-2 gap-4">
-              {popularArticles.map((article, index) => (
-                <a
-                  key={index}
-                  href="#"
+              {popularArticles.map((article) => (
+                <Link
+                  key={article.href}
+                  href={article.href}
                   className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:border-emerald-500/30 transition-all group"
                 >
-                  <span className="text-gray-300 group-hover:text-white transition-colors">{article}</span>
+                  <span className="text-gray-300 group-hover:text-white transition-colors">{article.title}</span>
                   <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-emerald-400 transition-colors" />
-                </a>
+                </Link>
               ))}
             </div>
           </div>

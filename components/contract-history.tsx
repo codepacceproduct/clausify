@@ -21,27 +21,35 @@ import {
   Clock,
   Trash2,
 } from "lucide-react"
+import { ContractHistorySkeleton } from "@/components/contracts/skeletons"
 
 export function ContractHistoryList({ 
   onSelect, 
   onReanalyze, 
   onDelete, 
   onExportPDF,
-  refreshTrigger = 0
+  refreshTrigger = 0,
+  initialData = []
 }: { 
   onSelect?: (id: string) => void, 
   onReanalyze?: (id: string) => void,
   onDelete?: (id: string) => void,
   onExportPDF?: (id: string) => void,
-  refreshTrigger?: number
+  refreshTrigger?: number,
+  initialData?: any[]
 }) {
-  const [contracts, setContracts] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [contracts, setContracts] = useState<any[]>(initialData)
+  const [isLoading, setIsLoading] = useState(initialData.length === 0)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [riskFilter, setRiskFilter] = useState("all")
 
   useEffect(() => {
+    // If we have initial data and haven't triggered a refresh, don't fetch
+    if (initialData.length > 0 && refreshTrigger === 0) {
+      setIsLoading(false)
+      return
+    }
     fetchContracts()
   }, [refreshTrigger])
 
@@ -58,6 +66,10 @@ export function ContractHistoryList({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isLoading) {
+    return <ContractHistorySkeleton />
   }
 
   const analysisHistory = contracts.map(c => ({

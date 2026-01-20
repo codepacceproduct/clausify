@@ -1,54 +1,52 @@
 "use client"
 
 import { useState } from "react"
-import { FileSearch, ShieldAlert, GitCompare, Calendar, Users, BookOpen, ArrowRight, CheckCircle } from "lucide-react"
+import { FileSearch, ShieldAlert, GitCompare, Calendar, Users, BookOpen, ArrowRight, CheckCircle, Calculator, PenTool } from "lucide-react"
 
 const features = [
   {
-    icon: FileSearch,
-    title: "Análise Inteligente",
-    description:
-      "IA avançada que analisa cada cláusula do seu contrato, identificando termos importantes, obrigações e potenciais problemas.",
-    benefits: ["Extração automática de dados", "Classificação de cláusulas", "Resumo executivo"],
+    icon: PenTool,
+    title: "Criação de Contratos",
+    description: "Crie documentos do zero ou utilize modelos inteligentes. Editor completo com sugestões de cláusulas em tempo real.",
+    benefits: ["Editor rico integrado", "Biblioteca de modelos", "Sugestões via IA"],
     color: "emerald",
   },
   {
-    icon: ShieldAlert,
-    title: "Detecção de Riscos",
+    icon: FileSearch,
+    title: "Análise com IA",
     description:
-      "Identifique cláusulas problemáticas, termos desfavoráveis e riscos jurídicos antes que se tornem problemas reais.",
-    benefits: ["Alertas em tempo real", "Níveis de severidade", "Sugestões de melhoria"],
-    color: "red",
+      "Nossa IA analisa cada cláusula, identificando riscos e termos importantes em segundos. Segurança e precisão na revisão.",
+    benefits: ["Extração de dados", "Classificação de riscos", "Resumo executivo"],
+    color: "blue",
+  },
+  {
+    icon: Calculator,
+    title: "Cálculos Jurídicos",
+    description: "Ferramentas precisas para cálculos trabalhistas, cíveis e previdenciários. Atualização automática de índices.",
+    benefits: ["Correção monetária", "Cálculo de prazos", "Juros compostos"],
+    color: "amber",
   },
   {
     icon: GitCompare,
     title: "Versionamento",
-    description: "Compare diferentes versões de contratos com visualização clara das alterações, adições e remoções.",
+    description: "Controle total sobre as versões dos seus documentos. Compare alterações e restaure históricos com um clique.",
     benefits: ["Diff visual intuitivo", "Histórico completo", "Rastreamento de mudanças"],
-    color: "blue",
-  },
-  {
-    icon: Calendar,
-    title: "Calendário Jurídico",
-    description: "Nunca mais perca um prazo. Gerencie vencimentos, renovações e obrigações contratuais em um só lugar.",
-    benefits: ["Lembretes automáticos", "Integração com calendários", "Visão consolidada"],
-    color: "amber",
-  },
-  {
-    icon: Users,
-    title: "Workflow de Aprovação",
-    description:
-      "Fluxos de aprovação multinível com rastreamento completo. Analistas, gestores e diretores em sintonia.",
-    benefits: ["Aprovações em cadeia", "Comentários e feedback", "Auditoria completa"],
     color: "purple",
   },
   {
-    icon: BookOpen,
-    title: "Playbook",
-    description:
-      "Biblioteca de modelos, cláusulas padrão e fallbacks aprovados pela sua empresa para negociações mais rápidas.",
-    benefits: ["Templates personalizados", "Cláusulas alternativas", "Padrões de mercado"],
+    icon: Calendar,
+    title: "Calendário Inteligente",
+    description: "Gestão automatizada de prazos processuais e contratuais. Nunca mais perca uma data importante.",
+    benefits: ["Integração com Google/Outlook", "Lembretes automáticos", "Visão de equipe"],
     color: "cyan",
+  },
+  {
+    icon: Users,
+    title: "Workflow & Playbook",
+    description:
+      "Padronize processos com playbooks de negociação e fluxos de aprovação multinível para sua equipe.",
+    benefits: ["Aprovações em cadeia", "Cláusulas padrão", "Governança corporativa"],
+    color: "red",
   },
 ]
 

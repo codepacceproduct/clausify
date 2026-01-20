@@ -21,9 +21,9 @@ interface Clause {
   tags?: string[]
 }
 
-export function PlaybookLibrary() {
-  const [clauses, setClauses] = useState<Clause[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function PlaybookLibrary({ initialClauses = [] }: { initialClauses?: Clause[] }) {
+  const [clauses, setClauses] = useState<Clause[]>(initialClauses)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -43,10 +43,6 @@ export function PlaybookLibrary() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    fetchClauses()
-  }, [])
 
   const filteredClauses = clauses.filter((clause) => {
     const matchesSearch =

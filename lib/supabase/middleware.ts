@@ -27,9 +27,16 @@ export async function updateSession(request: NextRequest) {
 
   const isAdminRoute = request.nextUrl.pathname.startsWith("/admin")
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: supabaseUser },
+    } = await supabase.auth.getUser()
+    user = supabaseUser
+  } catch (error) {
+    // Se o token for inválido, apenas ignoramos e tratamos como usuário não logado
+    // Isso evita o erro "AuthApiError: Invalid Refresh Token: Refresh Token Not Found" no terminal
+  }
 
   if (isAdminRoute && !request.nextUrl.pathname.startsWith("/admin/login")) {
     if (!user) {
