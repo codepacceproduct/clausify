@@ -26,7 +26,8 @@ export async function consultCNPJ(cnpj: string) {
     organizationId = profile?.organization_id
 
     if (organizationId) {
-      const { data: subs } = await supabase
+      // Use Service Role client to bypass RLS for subscription fetching
+      const { data: subs } = await supabaseAdmin
         .from("subscriptions")
         .select("plan")
         .eq("organization_id", organizationId)

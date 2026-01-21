@@ -27,7 +27,9 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
     organizationId = profile?.organization_id
 
     if (organizationId) {
-      const { data: subs } = await supabase
+      // Use Service Role client to bypass RLS for subscription fetching
+      // This ensures we get the correct plan even if RLS policies are complex
+      const { data: subs } = await supabaseAdmin
         .from("subscriptions")
         .select("plan")
         .eq("organization_id", organizationId)

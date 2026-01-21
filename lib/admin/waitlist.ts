@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 export type WaitlistLead = {
   id: string
@@ -13,7 +13,10 @@ export type WaitlistLead = {
 }
 
 export async function getWaitlistLeads(): Promise<WaitlistLead[]> {
-  const supabase = await createClient()
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   
   const { data, error } = await supabase
     .from("waitlist")

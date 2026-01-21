@@ -1,10 +1,18 @@
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
 import { getPlanLimits } from "@/lib/permissions"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 
 export async function GET(req: Request) {
   const email = await getAuthedEmail(req)
   if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  
+  // Use admin client for system-level checks
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   const { data: profs } = await supabaseServer
     .from("profiles")
     .select("organization_id, role")
@@ -69,7 +77,8 @@ export async function GET(req: Request) {
   }
 
   // Enforce plan limits
-  const { data: subs } = await supabaseServer
+  // Use Service Role client to bypass RLS for subscription fetching
+  const { data: subs } = await supabaseAdmin
     .from("subscriptions")
     .select("plan")
     .eq("organization_id", orgId)

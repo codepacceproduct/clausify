@@ -8,6 +8,7 @@ import { SubscriptionSettings } from "@/components/settings/subscription-setting
 import { supabaseServer } from "@/lib/supabase-server"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { getPlanLimits } from "@/lib/permissions"
 
 async function getInitialSettings() {
   const supabase = await createClient()
@@ -31,10 +32,20 @@ async function getInitialSettings() {
     redirect("/login")
   }
   
-  // Organization data is fetched client-side in components now, but we check org existence here if needed
-  // For permission check, we need profile
+  // Fetch current subscription plan
+  let plan = "free"
+  if (profile.organization_id) {
+    const { data: sub } = await supabaseServer
+      .from("subscriptions")
+      .select("plan")
+      .eq("organization_id", profile.organization_id)
+      .single()
+    if (sub?.plan) {
+      plan = sub.plan
+    }
+  }
   
-  return { profile }
+  return { profile, plan }
 }
 
 async function getRolePermissionsForProfile(profile: any): Promise<Record<string, boolean>> {
@@ -84,8 +95,9 @@ async function getRolePermissionsForProfile(profile: any): Promise<Record<string
 }
 
 export default async function ConfiguracoesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { profile } = await getInitialSettings()
+  const { profile, plan } = await getInitialSettings()
   const perms = await getRolePermissionsForProfile(profile)
+  const planLimits = await getPlanLimits(plan)
   const params = await searchParams
 
   // Strict permission check for page access
@@ -95,7 +107,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
 
   const currentTab = params.tab || "profile"
   
-  // Build allowed tabs
+  // Build allowed tabs based on Role AND Plan limits
   const allowedTabs = ["profile"]
   
   if (perms["configuracoes.general"] !== false) {
@@ -115,11 +127,15 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     allowedTabs.push("subscription")
   }
   
-  if (perms["configuracoes.teams"] !== false) {
+  // Check 'equipes' permission from Plan AND Role
+  const hasTeamsPlan = planLimits.allowed_modules.includes("equipes")
+  if (hasTeamsPlan && perms["configuracoes.teams"] !== false) {
       allowedTabs.push("team")
   }
   
-  if (perms["configuracoes.security"] !== false) {
+  // Check 'auditoria' permission from Plan AND Role
+  const hasAuditPlan = planLimits.allowed_modules.includes("auditoria")
+  if (hasAuditPlan && perms["configuracoes.security"] !== false) {
       allowedTabs.push("security")
   }
 
@@ -144,8 +160,8 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
                 {currentTab === "profile" && <ProfileSettings />}
                 {currentTab === "organization" && perms["configuracoes.general"] !== false && <OrganizationSettings />}
                 {currentTab === "subscription" && (profile?.role === "admin" || profile?.role === "owner") && <SubscriptionSettings />}
-                {currentTab === "team" && perms["configuracoes.teams"] !== false && <TeamManagement />}
-                {currentTab === "security" && perms["configuracoes.security"] !== false && <SecuritySettings />}
+                {currentTab === "team" && hasTeamsPlan && perms["configuracoes.teams"] !== false && <TeamManagement />}
+                {currentTab === "security" && hasAuditPlan && perms["configuracoes.security"] !== false && <SecuritySettings />}
               </div>
             </div>
           </div>

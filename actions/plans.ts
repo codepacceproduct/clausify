@@ -1,7 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 export type Plan = {
   id: string
@@ -55,6 +55,7 @@ export async function createPlan(data: Partial<Plan>) {
   const { error } = await supabase.from("plans").insert(data)
   if (error) throw error
   revalidatePath("/admin/permissoes")
+  revalidateTag("plans")
 }
 
 export async function updatePlan(id: string, data: Partial<Plan>) {
@@ -62,6 +63,7 @@ export async function updatePlan(id: string, data: Partial<Plan>) {
   const { error } = await supabase.from("plans").update(data).eq("id", id)
   if (error) throw error
   revalidatePath("/admin/permissoes")
+  revalidateTag("plans")
 }
 
 export async function deletePlan(id: string) {
@@ -69,4 +71,5 @@ export async function deletePlan(id: string) {
   const { error } = await supabase.from("plans").delete().eq("id", id)
   if (error) throw error
   revalidatePath("/admin/permissoes")
+  revalidateTag("plans")
 }

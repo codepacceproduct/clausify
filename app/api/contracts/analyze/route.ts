@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { analyzeContractWithRAG } from "@/lib/rag"
 import { getPlanLimits } from "@/lib/permissions"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +14,10 @@ export async function POST(request: Request) {
     
     let contractText = content
     const supabase = await createClient()
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
     const { data: { user } } = await supabase.auth.getUser()
 
     // Check Plan Limits
@@ -27,7 +32,8 @@ export async function POST(request: Request) {
         organizationId = profile?.organization_id
 
         if (organizationId) {
-            const { data: subs } = await supabase
+            // Use Service Role client to bypass RLS for subscription fetching
+            const { data: subs } = await supabaseAdmin
                 .from("subscriptions")
                 .select("plan")
                 .eq("organization_id", organizationId)
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
             if (limits.max_analyses !== Infinity) {
                 // Check DAILY usage
                 const today = new Date().toISOString().split('T')[0]
-                const { data: usage } = await supabase
+                const { data: usage } = await supabaseAdmin
                     .from("usage_logs")
                     .select("count")
                     .eq("organization_id", organizationId)

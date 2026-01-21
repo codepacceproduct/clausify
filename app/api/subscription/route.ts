@@ -1,10 +1,16 @@
 
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 
 export async function GET(req: Request) {
   const email = await getAuthedEmail(req)
   if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { data: profiles } = await supabaseServer
     .from("profiles")
@@ -16,8 +22,8 @@ export async function GET(req: Request) {
   
   if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
 
-  // Fetch subscription
-  const { data: subs } = await supabaseServer
+  // Fetch subscription using admin client to bypass RLS
+  const { data: subs } = await supabaseAdmin
     .from("subscriptions")
     .select("*")
     .eq("organization_id", orgId)
@@ -82,8 +88,13 @@ export async function POST(req: Request) {
         return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
     }
 
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Upsert subscription
-    const { error } = await supabaseServer
+    const { error } = await supabaseAdmin
         .from("subscriptions")
         .upsert({ 
             organization_id: orgId, 
@@ -117,8 +128,13 @@ export async function DELETE(req: Request) {
     if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
     if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
 
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Downgrade to free immediately
-    const { error } = await supabaseServer
+    const { error } = await supabaseAdmin
         .from("subscriptions")
         .update({ 
             plan: "free", 
@@ -128,6 +144,9 @@ export async function DELETE(req: Request) {
             // If we want immediate effect, we might not need to change dates, just the plan.
             // But if we want to reflect "cancelled", maybe status should be canceled?
             // However, "free" plan usually implies active usage of free tier.
+            // We'll keep the end date as is for now, assuming the user might have paid for the month.
+            // But if the goal is to STOP benefits immediately, we should probably reset it.
+            // For now, let's just change the plan.
         })
         .eq("organization_id", orgId)
 

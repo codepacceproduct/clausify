@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
 export async function updateWaitlistStatus(id: string, status: string) {
@@ -36,7 +37,10 @@ export async function deleteWaitlistLead(id: string) {
 }
 
 export async function getWaitlistCount() {
-  const supabase = await createClient()
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   const { count, error } = await supabase.from("waitlist").select("*", { count: "exact", head: true })
   
   if (error) {
@@ -48,7 +52,11 @@ export async function getWaitlistCount() {
 }
 
 export async function getWaitlistStats() {
-  const supabase = await createClient()
+  // Use Service Role client to bypass RLS and avoid recursion issues
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   
   // Fetch all leads to calculate stats
   // For larger datasets, it would be better to use separate count queries
