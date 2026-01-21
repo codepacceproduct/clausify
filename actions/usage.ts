@@ -30,8 +30,15 @@ export async function getUsageQuota(action: "consultation_query" | "chat_message
 
   if (!organizationId) return null
 
-  // Get Plan
-  const { data: subs } = await supabase
+  // Use Service Role client to bypass RLS for reading subscription as well
+  // This prevents issues where RLS might be too restrictive or slow
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Get Plan using Admin client
+  const { data: subs } = await supabaseAdmin
     .from("subscriptions")
     .select("plan")
     .eq("organization_id", organizationId)
@@ -55,10 +62,7 @@ export async function getUsageQuota(action: "consultation_query" | "chat_message
   }
 
   // Use Service Role client to bypass RLS
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  // const supabaseAdmin = createSupabaseClient(...) -> already defined above
 
   let used = 0
 

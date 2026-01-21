@@ -26,6 +26,13 @@ export function UsageLimitIndicator({
   const [countdown, setCountdown] = useState<string>("")
   const isReloadingRef = useRef(false)
 
+  const PLAN_NAMES: Record<string, string> = {
+    free: "FREE",
+    basic: "BÁSICO",
+    professional: "PROFISSIONAL",
+    enterprise: "EMPRESARIAL"
+  }
+
   useEffect(() => {
     loadUsage()
   }, [action, reloadTrigger]) // Reload if action or trigger changes
@@ -109,7 +116,7 @@ export function UsageLimitIndicator({
               <h3 className="font-semibold">{title}</h3>
             </div>
             <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
-              Plano {usage.plan}
+              Plano {PLAN_NAMES[usage.plan] || usage.plan}
             </span>
           </div>
 
