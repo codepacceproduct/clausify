@@ -34,7 +34,7 @@ export function UsageLimitIndicator({
     if (onUsageChange) {
       onUsageChange(usage)
     }
-  }, [usage, onUsageChange])
+  }, [usage]) // Removed onUsageChange from dependency array to prevent loop
 
   useEffect(() => {
     // Only run countdown if resetIn is present
