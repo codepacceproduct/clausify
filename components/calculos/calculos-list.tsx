@@ -6,9 +6,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Search, ChevronRight } from "lucide-react"
+import { Search, ChevronRight, Lock } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { usePermissions } from "@/contexts/permissions-context"
 import {
   Calculator,
   TrendingUp,
@@ -78,6 +79,7 @@ interface CalculosListProps {
 export function CalculosList({ calculators, categories }: CalculosListProps) {
   const [search, setSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const { allowedCalculators } = usePermissions()
 
   const filteredCalculators = calculators.filter((calc) => {
     const matchesSearch = calc.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -130,6 +132,46 @@ export function CalculosList({ calculators, categories }: CalculosListProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCalculators.map((calc) => {
             const Icon = Icons[calc.icon as keyof typeof Icons] || Calculator
+            const isAllowed = allowedCalculators === "all" || allowedCalculators.includes(calc.id)
+
+            if (!isAllowed) {
+              return (
+                <div key={calc.id} className="group relative h-full">
+                  <Card className="h-full border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 opacity-75">
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                          <Icon className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <Lock className="w-5 h-5 text-slate-300" />
+                      </div>
+                      <CardTitle className="text-lg text-slate-500 dark:text-slate-400">
+                        {calc.name}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {calc.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-500">
+                        {categories.find(c => c.id === calc.category)?.name}
+                      </Badge>
+                    </CardContent>
+                    
+                    {/* Upgrade Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl">
+                      <Link href="/configuracoes">
+                        <Button variant="default" className="shadow-lg bg-emerald-600 hover:bg-emerald-700">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Fazer Upgrade
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                </div>
+              )
+            }
+
             return (
               <Link key={calc.id} href={calc.href} className="group">
                 <Card className="h-full hover:shadow-lg transition-all duration-300 border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50">

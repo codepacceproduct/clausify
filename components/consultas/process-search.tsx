@@ -9,9 +9,10 @@ import { Search } from "lucide-react"
 
 interface ProcessSearchProps {
   onSearch: (term: string, type: "process" | "cpf") => void
+  disabled?: boolean
 }
 
-export function ProcessSearch({ onSearch }: ProcessSearchProps) {
+export function ProcessSearch({ onSearch, disabled }: ProcessSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [error, setError] = useState("")
 
@@ -83,11 +84,12 @@ export function ProcessSearch({ onSearch }: ProcessSearchProps) {
           </div>
 
           <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSearch}
+            disabled={disabled}
           >
             <Search className="h-4 w-4 mr-2" />
-            Consultar
+            {disabled ? "Limite Diário Atingido" : "Consultar"}
           </Button>
         </CardContent>
       </Card>

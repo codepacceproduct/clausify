@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import mammoth from "mammoth"
 import WordExtractor from "word-extractor"
 import crypto from 'crypto'
+import { getPlanLimits } from "@/lib/permissions"
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,45 @@ export async function POST(request: Request) {
     
     if (!user) {
         return NextResponse.json({ error: "Unauthorized: Please log in to upload contracts." }, { status: 401 })
+    }
+
+    // Check Plan Limits
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", user.id)
+        .single()
+    
+    if (profile?.organization_id) {
+        const { data: subs } = await supabase
+            .from("subscriptions")
+            .select("plan")
+            .eq("organization_id", profile.organization_id)
+            .single()
+        
+        const plan = subs?.plan || "basic"
+        const limits = getPlanLimits(plan)
+        
+        if (limits.max_contracts !== Infinity) {
+             // Get all users in org
+             const { data: orgUsers } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("organization_id", profile.organization_id)
+             
+             const userIds = orgUsers?.map(u => u.id) || [user.id]
+             
+             const { count } = await supabase
+                .from("contracts")
+                .select("*", { count: 'exact', head: true })
+                .in("user_id", userIds)
+             
+             if ((count || 0) >= limits.max_contracts) {
+                 return NextResponse.json({ 
+                    error: `Limite de contratos atingido para o plano ${plan} (${limits.max_contracts}). Faça upgrade para continuar.` 
+                 }, { status: 403 })
+             }
+        }
     }
 
     const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { analyzeContractWithRAG } from "@/lib/rag"
+import { getPlanLimits } from "@/lib/permissions"
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +13,48 @@ export async function POST(request: Request) {
     
     let contractText = content
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // Check Plan Limits
+    let organizationId: string | undefined
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("organization_id")
+            .eq("id", user.id)
+            .single()
+        
+        organizationId = profile?.organization_id
+
+        if (organizationId) {
+            const { data: subs } = await supabase
+                .from("subscriptions")
+                .select("plan")
+                .eq("organization_id", organizationId)
+                .single()
+            
+            const plan = subs?.plan || "free"
+            const limits = getPlanLimits(plan)
+            
+            if (limits.max_analyses !== Infinity) {
+                // Check DAILY usage
+                const today = new Date().toISOString().split('T')[0]
+                const { data: usage } = await supabase
+                    .from("usage_logs")
+                    .select("count")
+                    .eq("organization_id", organizationId)
+                    .eq("action", "contract_analysis")
+                    .eq("date", today)
+                    .single()
+                
+                if ((usage?.count || 0) >= limits.max_analyses) {
+                     return NextResponse.json({ 
+                        error: `Limite diário de análises atingido para o plano ${plan} (${limits.max_analyses}). Faça upgrade para continuar.` 
+                     }, { status: 403 })
+                }
+            }
+        }
+    }
 
     if (!contractText && contractId) {
         const { data } = await supabase
@@ -69,6 +112,16 @@ export async function POST(request: Request) {
                 current_version: nextVersion
             })
             .eq("id", contractId)
+    }
+
+    // Increment usage
+    if (user && organizationId) {
+        const today = new Date().toISOString().split('T')[0]
+        await supabase.rpc('increment_usage_log', {
+            org_id: organizationId,
+            action_name: 'contract_analysis',
+            log_date: today
+        })
     }
 
     return NextResponse.json(analysisResult)

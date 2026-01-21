@@ -6,7 +6,16 @@ import { SubscriptionPlans } from "@/components/subscription-plans"
 import { BillingInfo, BillingDetails } from "@/components/billing-info"
 import { PaymentHistory, Payment } from "@/components/payment-history"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CreditCard, History, Loader2 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { CreditCard, History, Loader2, AlertTriangle } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -31,11 +40,45 @@ export function SubscriptionSettings() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [invoices, setInvoices] = useState<Payment[]>([])
   const [billing, setBilling] = useState<BillingDetails | undefined>(undefined)
+  
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   const setSubtab = (val: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("subtab", val)
     router.replace(`?${params.toString()}`)
+  }
+
+  const handleCancelSubscription = async () => {
+    setIsCancelling(true)
+    try {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+
+        const res = await fetch("/api/subscription", {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        
+        if (!res.ok) throw new Error("Erro ao cancelar assinatura")
+        
+        toast.success("Assinatura cancelada com sucesso. Você agora está no plano Free.")
+        setShowCancelDialog(false)
+        
+        // Update local state immediately for better UX
+        setSubscription(prev => prev ? { ...prev, plan: "free", status: "active", amount: 0 } : null)
+        
+        // Refresh full data
+        router.refresh()
+        window.location.reload()
+    } catch (error) {
+        console.error(error)
+        toast.error("Não foi possível cancelar a assinatura")
+    } finally {
+        setIsCancelling(false)
+    }
   }
 
   useEffect(() => {
@@ -50,9 +93,9 @@ export function SubscriptionSettings() {
         })
         
         if (res.status === 404 || res.status === 401) {
-          // Sem organização, assumir plano free padrão
+          // Sem organização, assumir plano basic padrão
           setSubscription({
-            plan: "free",
+            plan: "basic",
             status: "active",
             amount: 0,
             interval: "month",
@@ -112,6 +155,8 @@ export function SubscriptionSettings() {
             amount={subscription?.amount ? `R$ ${subscription.amount},00` : "R$ 0,00"} 
             interval={subscription?.interval || "month"}
             nextBillingDate={subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR') : "N/A"}
+            onCancel={() => setShowCancelDialog(true)}
+            onUpgrade={() => setSubtab("plans")}
           />
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
@@ -173,6 +218,35 @@ export function SubscriptionSettings() {
           <BillingInfo billing={billing} />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Cancelar Assinatura
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja cancelar sua assinatura? Você perderá acesso aos recursos premium imediatamente e voltará para o plano Free.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)} disabled={isCancelling}>
+              Manter Assinatura
+            </Button>
+            <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCancelling}>
+              {isCancelling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelando...
+                </>
+              ) : (
+                "Confirmar Cancelamento"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

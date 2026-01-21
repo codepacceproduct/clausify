@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { UsageLimitIndicator } from "@/components/usage/usage-limit-indicator"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { MonitoringList, MonitoredProcess } from "@/components/consultas/monitoring-list"
 import { MonitoringAdd } from "@/components/consultas/monitoring-add"
@@ -21,6 +22,15 @@ export function MonitoramentoContent({ initialProcesses }: MonitoramentoContentP
   const [filter, setFilter] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const [isLoading, setIsLoading] = useState(false)
+  const [isLimitReached, setIsLimitReached] = useState(false)
+
+  const handleUsageChange = (usage: any) => {
+    if (usage) {
+      const isUnlimited = usage.limit === Infinity
+      const reached = !isUnlimited && usage.remaining === 0
+      setIsLimitReached(reached)
+    }
+  }
 
   const loadProcesses = async () => {
     setIsLoading(true)
@@ -82,6 +92,11 @@ export function MonitoramentoContent({ initialProcesses }: MonitoramentoContentP
   return (
     <LayoutWrapper>
       <div className="space-y-6">
+        <UsageLimitIndicator 
+            action="monitoring_process" 
+            title="Limite de Processos Monitorados" 
+            onUsageChange={handleUsageChange} 
+        />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -97,8 +112,8 @@ export function MonitoramentoContent({ initialProcesses }: MonitoramentoContentP
                 <Button variant="outline" size="icon" onClick={loadProcesses} disabled={isLoading}>
                   <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </Button>
-                <Button onClick={() => setViewState("add")} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button onClick={() => setViewState("add")} disabled={isLimitReached} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
                   Novo Monitoramento
                 </Button>
               </>

@@ -84,7 +84,7 @@ export default function AlertasAutomaticosPage() {
                 <div>
                   <h2 className="text-2xl font-semibold mb-3">Gatilhos de Workflow</h2>
                   <p className="text-gray-400 leading-relaxed">
-                    Configure ações automáticas baseadas em alertas. Por exemplo: "Se Risco > 80, solicitar aprovação do Diretor Jurídico" ou "Se valor > R$ 50k, notificar Financeiro".
+                    Configure ações automáticas baseadas em alertas. Por exemplo: "Se Risco &gt; 80, solicitar aprovação do Diretor Jurídico" ou "Se valor &gt; R$ 50k, notificar Financeiro".
                   </p>
                 </div>
               </div>

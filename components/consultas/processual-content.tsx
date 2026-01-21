@@ -1,5 +1,6 @@
 "use client"
 
+import { UsageLimitIndicator } from "@/components/usage/usage-limit-indicator"
 import { useState, useEffect } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
 import { ProcessSearch } from "@/components/consultas/process-search"
@@ -48,9 +49,23 @@ export function ProcessualContent({
   const [previewHistory, setPreviewHistory] = useState<PublicProcessPreviewHistoryItem[]>(initialPreviewHistory)
   const [consultHistory, setConsultHistory] = useState<ProcessConsultHistoryItem[]>(initialConsultHistory)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [isLimitReached, setIsLimitReached] = useState(false)
   
   const searchParams = useSearchParams()
   const queryTerm = searchParams.get("q")
+
+  const handleUsageChange = (usage: any) => {
+    if (usage) {
+      const isUnlimited = usage.limit === Infinity
+      const reached = !isUnlimited && usage.remaining === 0
+      
+      if (isLimitReached && !reached) {
+        toast.success("Limite diário renovado! Você pode fazer novas consultas.")
+      }
+      
+      setIsLimitReached(reached)
+    }
+  }
 
   const handleSearch = async (term: string, type: "process" | "cpf") => {
     setSearchData({ term, type })
@@ -66,9 +81,9 @@ export function ProcessualContent({
         toast.error("Processo não encontrado ou erro na consulta.")
         setViewState("search")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
-      toast.error("Erro ao realizar consulta.")
+      toast.error(error.message || "Erro ao realizar consulta.")
       setViewState("search")
     }
   }
@@ -220,6 +235,8 @@ export function ProcessualContent({
           </p>
         </div>
 
+        <UsageLimitIndicator onUsageChange={handleUsageChange} />
+
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
             <TabsTrigger value="consulta">Nova Consulta</TabsTrigger>
@@ -228,7 +245,7 @@ export function ProcessualContent({
 
           <TabsContent value="consulta" className="space-y-6 mt-6">
             {viewState === "search" && (
-              <ProcessSearch onSearch={handleSearch} />
+              <ProcessSearch onSearch={handleSearch} disabled={isLimitReached} />
             )}
 
             {viewState === "result" && resultData && (
@@ -241,7 +258,7 @@ export function ProcessualContent({
                 </div>
 
                 <ProcessResult 
-                  data={resultData} 
+                  {...resultData}
                   onCreateLink={handleCreatePublicLink}
                   publicLink={publicLink}
                   linkExpiresAt={linkExpiresAt}
@@ -345,16 +362,23 @@ export function ProcessualContent({
                           className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
                         >
                           <div className="space-y-1">
-                            <div className="font-medium">{item.process_number}</div>
-                            <p className="text-sm text-muted-foreground line-clamp-1">{item.title}</p>
+                            <div className="font-medium flex items-center gap-2">
+                              {item.cnj_number || item.term}
+                              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                                {item.type === "process" ? "PROCESSO" : "CPF"}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {item.type === "process" ? "Consulta Processual" : `Consulta por CPF: ${item.term}`}
+                            </p>
                             <p className="text-xs text-muted-foreground">
-                              Consultado em: {new Date(item.consulted_at).toLocaleString()}
+                              Consultado em: {new Date(item.created_at).toLocaleString()}
                             </p>
                           </div>
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => handleSearch(item.process_number, "process")}
+                            onClick={() => handleSearch(item.term, item.type as "process" | "cpf")}
                           >
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Consultar Novamente

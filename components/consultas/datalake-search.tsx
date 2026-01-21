@@ -10,15 +10,16 @@ import { Label } from "@/components/ui/label"
 
 interface DataLakeSearchProps {
   onSearch: (term: string, type: "pf" | "pj") => void
+  disabled?: boolean
 }
 
-export function DataLakeSearch({ onSearch }: DataLakeSearchProps) {
+export function DataLakeSearch({ onSearch, disabled }: DataLakeSearchProps) {
   const [searchType, setSearchType] = useState<"pf" | "pj">("pf")
   const [term, setTerm] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (term) {
+    if (term && !disabled) {
       onSearch(term, searchType)
     }
   }
@@ -71,6 +72,7 @@ export function DataLakeSearch({ onSearch }: DataLakeSearchProps) {
                     className="pl-9 h-12 text-lg border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500"
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
+                    disabled={disabled}
                   />
                 </div>
               </div>
@@ -87,6 +89,7 @@ export function DataLakeSearch({ onSearch }: DataLakeSearchProps) {
                     className="pl-9 h-12 text-lg border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500"
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
+                    disabled={disabled}
                   />
                 </div>
               </div>
@@ -95,9 +98,9 @@ export function DataLakeSearch({ onSearch }: DataLakeSearchProps) {
             <Button 
               type="submit" 
               className="w-full h-12 text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
-              disabled={!term}
+              disabled={!term || disabled}
             >
-              Consultar Base de Dados
+              {disabled ? "Limite Atingido" : "Consultar Base de Dados"}
             </Button>
           </form>
         </Tabs>

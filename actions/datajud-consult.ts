@@ -1,12 +1,60 @@
 "use server"
 
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 import { randomUUID } from "crypto"
 import { DataJudClient, DataJudProcess } from "@/lib/datajud/client"
 import { ProcessService } from "@/lib/datajud/db"
 import { createClient } from "@/lib/supabase/server"
+import { getPlanLimits } from "@/lib/permissions"
 
 export async function consultDataJud(term: string, type: "process" | "cpf") {
   const supabase = await createClient()
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Check Plan Limits
+  let organizationId: string | undefined
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .single()
+
+    organizationId = profile?.organization_id
+
+    if (organizationId) {
+      const { data: subs } = await supabase
+        .from("subscriptions")
+        .select("plan")
+        .eq("organization_id", organizationId)
+        .single()
+
+      const plan = subs?.plan || "free"
+      const limits = getPlanLimits(plan)
+
+      if (limits.max_queries !== Infinity) {
+        // Check DAILY usage
+        const today = new Date().toISOString().split('T')[0]
+        
+        // Use Service Role client to bypass RLS for usage logs
+        const { data: usage } = await supabaseAdmin
+          .from("usage_logs")
+          .select("count")
+          .eq("organization_id", organizationId)
+          .eq("action", "consultation_query")
+          .eq("date", today)
+          .single()
+
+        if ((usage?.count || 0) >= limits.max_queries) {
+          throw new Error(`Limite diário de consultas atingido para o plano ${plan} (${limits.max_queries}). Faça upgrade para continuar.`)
+        }
+      }
+    }
+  }
 
   if (type === "process") {
     try {
@@ -36,6 +84,16 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
           }
         } catch (historyError) {
           console.error("Warning: Failed to save process consult history:", historyError)
+        }
+
+        // Increment usage
+        if (organizationId) {
+          const today = new Date().toISOString().split('T')[0]
+          await supabase.rpc('increment_usage_log', {
+            org_id: organizationId,
+            action_name: 'consultation_query',
+            log_date: today
+          })
         }
 
         return mapDataJudResponse(processData)
@@ -70,6 +128,16 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
           console.error("Warning: Failed to save cpf consult history:", historyError)
         }
         
+        // Increment usage
+        if (organizationId) {
+          const today = new Date().toISOString().split('T')[0]
+          await supabase.rpc('increment_usage_log', {
+            org_id: organizationId,
+            action_name: 'consultation_query',
+            log_date: today
+          })
+        }
+
         if (mapped.length === 1) {
           return mapped[0]
         }
@@ -118,6 +186,15 @@ export interface ProcessConsultHistoryItem {
 
 export async function createPublicProcessPreview(payload: ProcessPreviewPayload, expiresInHours: number) {
   const supabase = await createClient()
+  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
   const token = randomUUID().replace(/-/g, "")
   const now = new Date()
   const expiresAt = new Date(now.getTime() + expiresInHours * 60 * 60 * 1000)
@@ -129,6 +206,7 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
     cnj_number: cleanNumber,
     expiresAt: expiresAt.toISOString(),
     expiresInHours,
+    user_id: user.id
   })
 
   const { data, error } = await supabase
@@ -138,6 +216,7 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
       cnj_number: cleanNumber,
       payload,
       expires_at: expiresAt.toISOString(),
+      user_id: user.id
     })
     .select("token, expires_at")
     .single()
@@ -166,9 +245,18 @@ export async function createPublicProcessPreview(payload: ProcessPreviewPayload,
 export async function getPublicProcessPreviewHistory(): Promise<PublicProcessPreviewHistoryItem[]> {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return []
+  }
+
   const { data, error } = await supabase
     .from("process_public_previews")
-    .select("id, token, cnj_number, expires_at, created_at")
+    .select("id, token, cnj_number, expires_at, created_at, payload")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)
 
@@ -177,7 +265,16 @@ export async function getPublicProcessPreviewHistory(): Promise<PublicProcessPre
     return []
   }
 
-  return data as PublicProcessPreviewHistoryItem[]
+  return data.map((item: any) => ({
+    id: item.id,
+    token: item.token,
+    cnj_number: item.cnj_number,
+    expires_at: item.expires_at,
+    created_at: item.created_at,
+    title: item.payload?.title || "Sem título",
+    process_number: item.cnj_number,
+    active: new Date(item.expires_at) > new Date()
+  }))
 }
 
 export async function deletePublicProcessPreview(token: string): Promise<void> {
@@ -195,6 +292,7 @@ export async function deletePublicProcessPreview(token: string): Promise<void> {
     .from("process_public_previews")
     .delete()
     .eq("token", token)
+    .eq("user_id", user.id)
 
   if (error) {
     console.error("Error deleting public process preview:", error)
@@ -216,6 +314,7 @@ export async function getProcessConsultHistory(): Promise<ProcessConsultHistoryI
   const { data, error } = await supabase
     .from("process_consult_history")
     .select("id, term, type, cnj_number, created_at")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)
 
@@ -248,7 +347,7 @@ function mapDataJudResponse(process: DataJudProcess) {
     // Check if movement name or its complements indicate a document
     const isDocument = documentKeywords.some(keyword => lowerName.includes(keyword)) ||
                       mov.complementosTabelados?.some(c => 
-                        documentKeywords.some(k => c.nome.toLowerCase().includes(k) || c.descricao?.toLowerCase().includes(k))
+                        documentKeywords.some(k => (c.nome || "").toLowerCase().includes(k) || (c.descricao || "").toLowerCase().includes(k))
                       )
 
     if (isDocument) {

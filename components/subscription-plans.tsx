@@ -1,9 +1,26 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, Sparkles } from "lucide-react"
+import { Check, Sparkles, Loader2 } from "lucide-react"
+import { useState } from "react"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 const plans = [
+  {
+    name: "Free",
+    price: "R$ 0,00",
+    description: "Para testar e conhecer",
+    features: [
+      "5 mensagens ClausiChat/dia",
+      "5 consultas processuais/dia",
+      "Acesso limitado a calculadoras",
+      "1 usuário",
+      "Sem suporte",
+    ],
+    popular: false,
+  },
   {
     name: "Básico",
     price: "R$ 99,00",
@@ -47,6 +64,48 @@ export interface SubscriptionPlansProps {
 }
 
 export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
+  const [loading, setLoading] = useState<string | null>(null)
+  const router = useRouter()
+
+  const handleSubscribe = async (planName: string) => {
+    // Normalizar nome do plano para o formato da API
+    // "Básico" -> "basic"
+    // "Professional" -> "professional"
+    // "Enterprise" -> "enterprise"
+    let apiPlan = planName.toLowerCase()
+    if (apiPlan === "básico") apiPlan = "basic"
+
+    try {
+      setLoading(planName)
+      
+      // Get token
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      const res = await fetch("/api/subscription", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ plan: apiPlan }),
+      })
+
+      if (!res.ok) throw new Error("Erro ao atualizar plano")
+      
+      toast.success(`Plano alterado para ${planName}`)
+      router.refresh()
+      // Opcional: recarregar a página completa para garantir atualização de estado global se houver
+      window.location.reload()
+    } catch (error) {
+      console.error(error)
+      toast.error("Não foi possível atualizar o plano")
+    } finally {
+      setLoading(null)
+    }
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -56,7 +115,9 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {plans.map((plan) => {
-          const isCurrent = currentPlan?.toLowerCase() === plan.name.toLowerCase()
+          const isCurrent = (currentPlan?.toLowerCase() === "basic" && plan.name === "Básico") || 
+                            (currentPlan?.toLowerCase() === plan.name.toLowerCase())
+          const isProcessing = loading === plan.name
           
           return (
           <Card key={plan.name} className={plan.popular ? "border-2 border-blue-500 relative shadow-lg" : ""}>
@@ -89,7 +150,13 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
               </ul>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" variant={plan.popular ? "default" : "outline"} disabled={isCurrent}>
+              <Button 
+                className="w-full" 
+                variant={plan.popular ? "default" : "outline"} 
+                disabled={isCurrent || isProcessing}
+                onClick={() => handleSubscribe(plan.name)}
+              >
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isCurrent
                   ? "Plano Atual"
                   : plan.price === "Personalizado"

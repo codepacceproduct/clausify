@@ -6,12 +6,14 @@ import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Menu } from 'lucide-react'
+import { Menu, Loader2 } from 'lucide-react'
+import { usePermissions } from "@/contexts/permissions-context"
 
 export function LayoutWrapper({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { isLoading } = usePermissions()
   const [prefs, setPrefs] = useState<{ language?: string; timezone?: string; dateFormat?: string }>(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem("prefs") : null
@@ -70,6 +72,14 @@ export function LayoutWrapper({ children }: { children: ReactNode }) {
       ;(window as any).__prefs = prefs
     }
   }, [prefs])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-background">

@@ -9,9 +9,11 @@ export interface CurrentPlanProps {
   amount: string
   interval: string
   nextBillingDate: string
+  onCancel?: () => void
+  onUpgrade?: () => void
 }
 
-export function CurrentPlan({ plan, status, amount, interval, nextBillingDate }: CurrentPlanProps) {
+export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, onCancel, onUpgrade }: CurrentPlanProps) {
   const isFree = plan.toLowerCase() === "free"
   
   return (
@@ -76,11 +78,13 @@ export function CurrentPlan({ plan, status, amount, interval, nextBillingDate }:
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" className="flex-1 bg-transparent">
-            Cancelar Assinatura
-          </Button>
-          <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
-            Fazer Upgrade
+          {!isFree && (
+            <Button variant="outline" className="flex-1 bg-transparent border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-900 dark:hover:bg-red-950/50" onClick={onCancel}>
+              Cancelar Assinatura
+            </Button>
+          )}
+          <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={onUpgrade}>
+            {isFree ? "Fazer Upgrade" : "Alterar Plano"}
             <ArrowUpRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

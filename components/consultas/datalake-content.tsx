@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { LayoutWrapper } from "@/components/layout-wrapper"
+import { UsageLimitIndicator } from "@/components/usage/usage-limit-indicator"
 import { DataLakeSearch } from "@/components/consultas/datalake-search"
 import { DataLakeResult } from "@/components/consultas/datalake-result"
 import { consultCNPJ } from "@/actions/consult-cnpj"
@@ -38,6 +39,20 @@ const MOCK_DATA = {
 export function DataLakeContent() {
   const [viewState, setViewState] = useState<"search" | "loading" | "result">("search")
   const [resultData, setResultData] = useState<any>(null)
+  const [isLimitReached, setIsLimitReached] = useState(false)
+
+  const handleUsageChange = (usage: any) => {
+    if (usage) {
+      const isUnlimited = usage.limit === Infinity
+      const reached = !isUnlimited && usage.remaining === 0
+      
+      if (isLimitReached && !reached) {
+        toast.success("Limite diário renovado! Você pode fazer novas consultas.")
+      }
+      
+      setIsLimitReached(reached)
+    }
+  }
 
   const handleSearch = async (term: string, type: "pf" | "pj") => {
     setViewState("loading")
@@ -52,8 +67,8 @@ export function DataLakeContent() {
           toast.error("CNPJ não encontrado ou erro na consulta.")
           setViewState("search")
         }
-      } catch (error) {
-        toast.error("Erro ao realizar consulta.")
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao realizar consulta.")
         setViewState("search")
       }
     } else {
@@ -72,10 +87,15 @@ export function DataLakeContent() {
 
   return (
     <LayoutWrapper>
-      <div className="min-h-[calc(100vh-100px)] flex flex-col justify-center">
+      <div className="min-h-[calc(100vh-100px)] flex flex-col justify-center gap-6">
         {viewState === "search" && (
-          <div className="animate-in fade-in zoom-in-95 duration-500">
-            <DataLakeSearch onSearch={handleSearch} />
+          <div className="animate-in fade-in zoom-in-95 duration-500 w-full max-w-3xl mx-auto space-y-6">
+             <UsageLimitIndicator 
+                action="datalake_query" 
+                title="Limite de Consultas Data Lake" 
+                onUsageChange={handleUsageChange} 
+             />
+            <DataLakeSearch onSearch={handleSearch} disabled={isLimitReached} />
           </div>
         )}
 

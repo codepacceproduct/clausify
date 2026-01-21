@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import Image from "next/image"
+import { UsageLimitIndicator } from "@/components/usage/usage-limit-indicator"
 
 interface Message {
   role: "user" | "assistant" | "system"
@@ -21,8 +22,23 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isLimitReached, setIsLimitReached] = useState(false)
+  const [usageTrigger, setUsageTrigger] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleUsageChange = (usage: any) => {
+    if (usage) {
+      const isUnlimited = usage.limit === Infinity
+      const reached = !isUnlimited && usage.remaining === 0
+      
+      if (isLimitReached && !reached) {
+        toast.success("Limite diário renovado! Você pode fazer novas perguntas.")
+      }
+      
+      setIsLimitReached(reached)
+    }
+  }
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -38,7 +54,7 @@ export function ChatInterface() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading || isLimitReached) return
 
     const userMessage = input.trim()
     setInput("")
@@ -62,6 +78,9 @@ export function ChatInterface() {
       if (!response.ok) {
         throw new Error("Falha ao enviar mensagem")
       }
+
+      // Update usage limit immediately after successful request
+      setUsageTrigger(prev => prev + 1)
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
@@ -105,13 +124,18 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] max-w-4xl mx-auto w-full">
-      {/* Header / Top Bar if needed, currently empty to maximize chat space */}
-      
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6" ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-0 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-forwards" style={{ opacity: 1 }}>
+    <div className="flex flex-col h-full relative">
+      <div className="flex-1 overflow-y-auto p-4 pb-32" ref={scrollRef}>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <UsageLimitIndicator 
+            action="chat_message" 
+            title="Limite de Mensagens no Chat" 
+            onUsageChange={handleUsageChange}
+            reloadTrigger={usageTrigger}
+          />
+          
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6 animate-in fade-in zoom-in duration-500">
             <div className="relative w-24 h-24 rounded-full overflow-hidden bg-emerald-100 dark:bg-emerald-900/30 ring-4 ring-emerald-50 dark:ring-emerald-900/10 p-2">
               <Image 
                 src="/images/02.jpg" 
@@ -210,6 +234,7 @@ export function ChatInterface() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Input Area */}
       <div className="p-4 bg-white dark:bg-slate-950/80 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800 sticky bottom-0">
@@ -219,15 +244,15 @@ export function ChatInterface() {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Envie uma mensagem para o ClausiChat..."
+              placeholder={isLimitReached ? "Limite diário atingido. Faça upgrade para continuar." : "Envie uma mensagem para o ClausiChat..."}
               className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent py-3 max-h-32 min-h-[50px] resize-none"
-              disabled={isLoading}
+              disabled={isLoading || isLimitReached}
               autoComplete="off"
             />
             <Button 
               type="submit" 
               size="icon"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || isLimitReached}
               className={cn(
                 "mb-1 h-9 w-9 rounded-lg transition-all",
                 input.trim() 

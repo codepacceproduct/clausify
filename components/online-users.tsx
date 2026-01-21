@@ -43,10 +43,10 @@ export function OnlineUsers({ channelId }: OnlineUsersProps) {
           const newState = channel.presenceState<UserPresence>()
           const users = Object.values(newState).flat()
           // Remove duplicates based on user_id
-          const uniqueUsers = Array.from(new Map(users.map(u => [u.user_id, u])).values())
+          const uniqueUsers: UserPresence[] = Array.from(new Map(users.map(u => [u.user_id, u])).values())
           setOnlineUsers(uniqueUsers)
         })
-        .subscribe(async (status) => {
+        .subscribe(async (status: any) => {
           if (status === 'SUBSCRIBED') {
             await channel.track(userPresence)
           }

@@ -1,6 +1,7 @@
 import { AuthGuard } from "@/components/auth-guard"
 import { LawyerChatbot } from "@/components/lawyer-chatbot"
 import { DatabaseStatusCheck } from "@/components/database-status-check"
+import { PermissionsProvider } from "@/contexts/permissions-context"
 import type React from "react"
 
 export default function DashboardLayout({
@@ -10,9 +11,11 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
-      {children}
-      <LawyerChatbot />
-      <DatabaseStatusCheck />
+      <PermissionsProvider>
+        {children}
+        <LawyerChatbot />
+        <DatabaseStatusCheck />
+      </PermissionsProvider>
     </AuthGuard>
   )
 }

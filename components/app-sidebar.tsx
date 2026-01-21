@@ -20,6 +20,7 @@ import {
   Search,
   Bot,
   MessageSquare,
+  Info,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -28,8 +29,7 @@ import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { logout } from "@/lib/auth"
 import Image from "next/image"
-import { getUserEmail } from "@/lib/auth"
-import { createClient } from "@/lib/supabase/client"
+import { usePermissions } from "@/contexts/permissions-context"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -40,6 +40,7 @@ const navigation = [
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },
   { name: "Cálculos", href: "/calculos", icon: Calculator }, // Added Cálculos navigation item
+  { name: "Sobre", href: "/sobre", icon: Info },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 
@@ -54,7 +55,7 @@ export function AppSidebar({
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const [allowedModules, setAllowedModules] = useState<Record<string, boolean>>({})
+  const { allowedModules, plan } = usePermissions()
 
   useEffect(() => {
     const handleResize = () => {
@@ -71,32 +72,6 @@ export function AppSidebar({
     return () => window.removeEventListener("resize", handleResize)
   }, [])
 
-  useEffect(() => {
-    const load = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) return
-      const token = session.access_token
-
-      try {
-        const profRes = await fetch(`/api/settings/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const { profile } = await profRes.json()
-        const role = String(profile?.role || "member").toLowerCase()
-        const permRes = await fetch(`/api/permissions/role`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const j = await permRes.json()
-        const perms = j?.permissions || {}
-        const modules = perms[role] || {}
-        setAllowedModules(modules)
-      } catch {}
-    }
-    load()
-  }, [])
-
   const moduleKeyForHref = (href: string): string => {
     if (href.startsWith("/dashboard")) return "dashboard"
     if (href.startsWith("/contratos")) return "contratos"
@@ -106,6 +81,7 @@ export function AppSidebar({
     if (href.startsWith("/versionamento")) return "versionamento"
     if (href.startsWith("/playbook")) return "playbook"
     if (href.startsWith("/calculos")) return "calculos" // Added Cálculos module key
+    if (href.startsWith("/sobre")) return "sobre"
     if (href.startsWith("/configuracoes")) return "configuracoes"
     if (href.startsWith("/auditoria")) return "auditoria"
     if (href.startsWith("/equipes")) return "equipes"
@@ -179,6 +155,8 @@ export function AppSidebar({
           {navigation
             .filter((item) => {
               const key = moduleKeyForHref(item.href)
+              // Hide settings from sidebar for free plan (only accessible via "Sobre" page upgrade button)
+              if (plan === 'free' && key === 'configuracoes') return false
               return allowedModules[key] !== false
             })
             .map((item) => {

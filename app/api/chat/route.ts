@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { getOpenAIClient } from "@/lib/openai"
+import { createClient } from "@/lib/supabase/server"
+import { getPlanLimits } from "@/lib/permissions"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +18,62 @@ export async function POST(req: Request) {
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 })
+    }
+
+    // Check Plan Limits
+    const supabase = await createClient()
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    let organizationId: string | undefined
+
+    if (user) {
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("organization_id")
+            .eq("id", user.id)
+            .single()
+        
+        organizationId = profile?.organization_id
+
+        if (organizationId) {
+            const { data: subs } = await supabase
+                .from("subscriptions")
+                .select("plan")
+                .eq("organization_id", organizationId)
+                .single()
+            
+            const plan = subs?.plan || "free"
+            const limits = getPlanLimits(plan)
+            
+            if (limits.max_chat_messages !== Infinity) {
+                // Check DAILY usage
+                const today = new Date().toISOString().split('T')[0]
+                const { data: usage } = await supabaseAdmin
+                    .from("usage_logs")
+                    .select("count")
+                    .eq("organization_id", organizationId)
+                    .eq("action", "chat_message")
+                    .eq("date", today)
+                    .single()
+                
+                if ((usage?.count || 0) >= limits.max_chat_messages) {
+                     return NextResponse.json({ 
+                        error: `Limite diário de mensagens no ClausiChat atingido para o plano ${plan} (${limits.max_chat_messages}). Faça upgrade para continuar.` 
+                     }, { status: 403 })
+                }
+            }
+
+            // Increment usage
+            const today = new Date().toISOString().split('T')[0]
+            await supabase.rpc('increment_usage_log', {
+                org_id: organizationId,
+                action_name: 'chat_message',
+                log_date: today
+            })
+        }
     }
 
     // System prompt to set the persona

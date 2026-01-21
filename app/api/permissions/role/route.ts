@@ -1,5 +1,6 @@
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
+import { getPlanLimits } from "@/lib/permissions"
 
 export async function GET(req: Request) {
   const email = await getAuthedEmail(req)
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
   const roles = ["admin", "moderator", "member"] as const
   const modules = [
     "dashboard",
+    "sobre",
     "contratos",
     "portfolio",
     "aprovacoes",
@@ -62,7 +64,40 @@ export async function GET(req: Request) {
       byRole[rr][mm] = aa
     }
   }
-  return Response.json({ organization_id: orgId, permissions: byRole, modules })
+
+  // Enforce plan limits
+  const { data: subs } = await supabaseServer
+    .from("subscriptions")
+    .select("plan")
+    .eq("organization_id", orgId)
+    .limit(1)
+  
+  const currentPlan = subs?.[0]?.plan || "free"
+  const planLimits = getPlanLimits(currentPlan)
+  const allowedPlanModules = planLimits.allowed_modules || []
+  const allowedCalculators = planLimits.allowed_calculators
+  
+  for (const r of roles) {
+    for (const m of modules) {
+        let isPlanAllowed = allowedPlanModules.includes(m)
+        if (!isPlanAllowed && m.includes(".")) {
+           const parent = m.split(".")[0]
+           isPlanAllowed = allowedPlanModules.includes(parent)
+        }
+        
+        if (!isPlanAllowed) {
+            byRole[r][m] = false
+        }
+    }
+  }
+
+  return Response.json({ 
+    organization_id: orgId, 
+    permissions: byRole, 
+    modules,
+    plan: currentPlan,
+    allowed_calculators: allowedCalculators
+  })
 }
 
 export async function PUT(req: Request) {

@@ -3,8 +3,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, Calendar, FileText, Download, Info, ExternalLink } from "lucide-react"
+import { ChevronLeft, Calendar, FileText, Download, Info, ExternalLink, Share2, Copy, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useState } from "react"
 
 interface ProcessEvent {
   id: string
@@ -30,11 +49,21 @@ interface ProcessResultProps {
   documents?: ProcessDocument[]
   onBack?: () => void
   showBackButton?: boolean
+  
+  // Sharing props
+  onCreateLink?: () => void
+  publicLink?: string | null
+  linkExpiresAt?: string | null
+  onCopyLink?: (link: string) => void
+  linkLoading?: boolean
+  linkDuration?: "1h" | "24h" | "7d"
+  setLinkDuration?: (duration: "1h" | "24h" | "7d") => void
 }
 
-function getTribunalPortal(processNumber: string) {
+function getTribunalPortal(processNumber: string | undefined | null) {
+  if (!processNumber || typeof processNumber !== 'string') return { name: "Portal do Tribunal", url: "https://www.cnj.jus.br" }
   const clean = processNumber.replace(/\D/g, "")
-  if (clean.length !== 20) return "https://www.cnj.jus.br" // Fallback
+  if (clean.length !== 20) return { name: "Portal do Tribunal", url: "https://www.cnj.jus.br" }
 
   const j = clean.substring(13, 14)
   const tr = clean.substring(14, 16)
@@ -56,24 +85,126 @@ function getTribunalPortal(processNumber: string) {
   return portals[key] || { name: "Portal do Tribunal", url: "https://www.cnj.jus.br" }
 }
 
-export function ProcessResult({ processNumber, title, status, events, documents, onBack, showBackButton = true }: ProcessResultProps) {
+export function ProcessResult({ 
+  processNumber, 
+  title, 
+  status, 
+  events, 
+  documents, 
+  onBack, 
+  showBackButton = true,
+  onCreateLink,
+  publicLink,
+  linkExpiresAt,
+  onCopyLink,
+  linkLoading,
+  linkDuration,
+  setLinkDuration
+}: ProcessResultProps) {
   const handleBack = onBack ?? (() => {})
   const safeEvents = Array.isArray(events) ? events : []
   const latestEvent = safeEvents[0]
   const portal = getTribunalPortal(processNumber)
+  const [isShareOpen, setIsShareOpen] = useState(false)
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {showBackButton && (
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="text-muted-foreground hover:text-foreground pl-0"
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Voltar para busca
-        </Button>
-      )}
+      <div className="flex items-center justify-between">
+        {showBackButton && (
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground pl-0"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Voltar para busca
+          </Button>
+        )}
+
+        {onCreateLink && (
+            <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                <Share2 className="h-4 w-4" />
+                Compartilhar
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                <DialogTitle>Compartilhar Processo</DialogTitle>
+                <DialogDescription>
+                    Gere um link público temporário para compartilhar o andamento deste processo.
+                </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                {publicLink ? (
+                    <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                        <div className="grid flex-1 gap-2">
+                        <Label htmlFor="link" className="sr-only">Link</Label>
+                        <Input
+                            id="link"
+                            defaultValue={publicLink}
+                            readOnly
+                            className="h-9"
+                        />
+                        </div>
+                        <Button type="button" size="sm" className="px-3" onClick={() => onCopyLink?.(publicLink)}>
+                        <span className="sr-only">Copiar</span>
+                        <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        Este link expira em: <span className="font-medium text-foreground">{linkExpiresAt ? new Date(linkExpiresAt).toLocaleString() : 'N/A'}</span>
+                    </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="duration" className="text-right">
+                        Duração
+                        </Label>
+                        <Select 
+                        value={linkDuration} 
+                        onValueChange={(v: any) => setLinkDuration?.(v)}
+                        >
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecione a duração" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1h">1 hora</SelectItem>
+                            <SelectItem value="24h">24 horas</SelectItem>
+                            <SelectItem value="7d">7 dias</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    </div>
+                )}
+                </div>
+                
+                <DialogFooter className="sm:justify-end">
+                {publicLink ? (
+                    <Button type="button" variant="secondary" onClick={() => setIsShareOpen(false)}>
+                    Fechar
+                    </Button>
+                ) : (
+                    <Button type="button" onClick={onCreateLink} disabled={linkLoading}>
+                    {linkLoading ? (
+                        <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando Link...
+                        </>
+                    ) : (
+                        "Gerar Link Público"
+                    )}
+                    </Button>
+                )}
+                </DialogFooter>
+            </DialogContent>
+            </Dialog>
+        )}
+      </div>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

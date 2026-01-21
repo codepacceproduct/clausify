@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { DataJudClient } from "@/lib/datajud/client"
 import { ProcessService } from "@/lib/datajud/db"
 import { revalidatePath } from "next/cache"
+import { getUsageQuota } from "@/actions/usage"
 
 export type MonitoringFrequency = "daily" | "6h" | "1h"
 
@@ -17,6 +18,12 @@ export async function addMonitoredProcess(
   
   if (!user) {
     return { success: false, error: "Usuário não autenticado" }
+  }
+
+  // Check Limit
+  const usage = await getUsageQuota("monitoring_process")
+  if (usage && usage.remaining <= 0 && usage.limit !== Infinity) {
+    return { success: false, error: `Limite de processos monitorados atingido (${usage.limit}). Faça upgrade para continuar.` }
   }
 
   try {

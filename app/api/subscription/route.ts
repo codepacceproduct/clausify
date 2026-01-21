@@ -1,6 +1,7 @@
 
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
+import { getPlanLimits } from "@/lib/permissions"
 
 export async function GET(req: Request) {
   const email = await getAuthedEmail(req)
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
     .eq("id", orgId)
     .limit(1)
   
-  const organization = orgs?.[0] || {}
+  const organization: any = orgs?.[0] || {}
 
   return Response.json({ 
     subscription: {
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
     if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
 
     const { plan } = body
-    if (!["free", "pro", "enterprise"].includes(plan)) {
+    if (!["basic", "professional", "enterprise"].includes(plan)) {
         return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
     }
 
@@ -92,6 +93,40 @@ export async function POST(req: Request) {
             // Set end date to 1 month from now
             current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         }, { onConflict: "organization_id" })
+
+    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    
+    return Response.json({ ok: true })
+}
+
+export async function DELETE(req: Request) {
+    const email = await getAuthedEmail(req)
+    if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+  
+    const { data: profiles } = await supabaseServer
+      .from("profiles")
+      .select("organization_id, role")
+      .eq("email", email)
+      .limit(1)
+    const orgId = profiles?.[0]?.organization_id
+    const role = profiles?.[0]?.role
+    
+    if (!orgId) return new Response(JSON.stringify({ error: "no_organization" }), { status: 404 })
+    if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
+
+    // Downgrade to free immediately
+    const { error } = await supabaseServer
+        .from("subscriptions")
+        .update({ 
+            plan: "free", 
+            status: "active",
+            // Keep current_period_end as is or reset it? 
+            // Usually we keep it until end of cycle, but user asked to "transfer directly to Free plan".
+            // If we want immediate effect, we might not need to change dates, just the plan.
+            // But if we want to reflect "cancelled", maybe status should be canceled?
+            // However, "free" plan usually implies active usage of free tier.
+        })
+        .eq("organization_id", orgId)
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
     

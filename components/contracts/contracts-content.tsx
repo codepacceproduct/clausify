@@ -26,7 +26,7 @@ interface ContractsContentProps {
 
 export function ContractsContent({ initialContracts }: ContractsContentProps) {
   const [activeTab, setActiveTab] = useState("upload")
-  const [viewState, setViewState] = useState<"idle" | "processing" | "result">("idle")
+  const [viewState, setViewState] = useState<"idle" | "processing" | "result" | "preview">("idle")
   const [processingStep, setProcessingStep] = useState(0)
   const [currentContract, setCurrentContract] = useState<{ id: string, content: string, filename: string } | null>(null)
   const [analysisResult, setAnalysisResult] = useState<any>(null)

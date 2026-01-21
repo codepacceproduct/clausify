@@ -1,8 +1,69 @@
 "use server"
 
+import { createClient } from "@/lib/supabase/server"
+import { getPlanLimits } from "@/lib/permissions"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
+
 export async function consultCNPJ(cnpj: string) {
   const cleanCNPJ = cnpj.replace(/\D/g, "")
+  const supabase = await createClient()
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Check Plan Limits
+  let organizationId: string | undefined
+  const { data: { user } } = await supabase.auth.getUser()
   
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .single()
+
+    organizationId = profile?.organization_id
+
+    if (organizationId) {
+      const { data: subs } = await supabase
+        .from("subscriptions")
+        .select("plan")
+        .eq("organization_id", organizationId)
+        .single()
+
+      const plan = subs?.plan || "free"
+      const limits = getPlanLimits(plan)
+
+      if (limits.max_datalake_queries !== Infinity) {
+        // Check DAILY usage
+        const today = new Date().toISOString().split('T')[0]
+        const { data: usage } = await supabaseAdmin
+          .from("usage_logs")
+          .select("count")
+          .eq("organization_id", organizationId)
+          .eq("action", "datalake_query")
+          .eq("date", today)
+          .single()
+
+        if ((usage?.count || 0) >= limits.max_datalake_queries) {
+          throw new Error(`Limite diário de consultas atingido para o plano ${plan} (${limits.max_datalake_queries}). Faça upgrade para continuar.`)
+        }
+      }
+    }
+  }
+
+  const incrementUsage = async () => {
+    if (organizationId) {
+      const today = new Date().toISOString().split('T')[0]
+      await supabase.rpc('increment_usage_log', {
+        org_id: organizationId,
+        action_name: 'datalake_query',
+        log_date: today
+      })
+    }
+  }
+
   try {
     // Tentativa 1: BrasilAPI
     console.log(`Consultando BrasilAPI para CNPJ: ${cleanCNPJ}`)
@@ -12,6 +73,7 @@ export async function consultCNPJ(cnpj: string) {
     
     if (response.ok) {
       const data = await response.json()
+      await incrementUsage()
       return mapBrasilApiData(data)
     } else {
       console.warn(`BrasilAPI falhou com status: ${response.status}`)
@@ -32,6 +94,7 @@ export async function consultCNPJ(cnpj: string) {
       if (data.status === "ERROR") {
         throw new Error(data.message || "Erro na API ReceitaWS")
       }
+      await incrementUsage()
       return mapReceitaWsData(data)
     }
   } catch (error) {
