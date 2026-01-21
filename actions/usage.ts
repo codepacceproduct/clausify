@@ -38,7 +38,7 @@ export async function getUsageQuota(action: "consultation_query" | "chat_message
     .single()
 
   const plan = (subs?.plan || "free") as Plan
-  const limits = getPlanLimits(plan)
+  const limits = await getPlanLimits(plan)
   
   let limit = 0
   let isDaily = true

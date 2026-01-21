@@ -34,7 +34,7 @@ export async function consultDataJud(term: string, type: "process" | "cpf") {
         .single()
 
       const plan = subs?.plan || "free"
-      const limits = getPlanLimits(plan)
+      const limits = await getPlanLimits(plan)
 
       if (limits.max_queries !== Infinity) {
         // Check DAILY usage

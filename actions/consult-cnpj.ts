@@ -33,7 +33,7 @@ export async function consultCNPJ(cnpj: string) {
         .single()
 
       const plan = subs?.plan || "free"
-      const limits = getPlanLimits(plan)
+      const limits = await getPlanLimits(plan)
 
       if (limits.max_datalake_queries !== Infinity) {
         // Check DAILY usage

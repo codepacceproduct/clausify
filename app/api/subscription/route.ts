@@ -1,7 +1,6 @@
 
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail } from "@/lib/api-auth"
-import { getPlanLimits } from "@/lib/permissions"
 
 export async function GET(req: Request) {
   const email = await getAuthedEmail(req)
@@ -78,7 +77,8 @@ export async function POST(req: Request) {
     if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
 
     const { plan } = body
-    if (!["basic", "professional", "enterprise"].includes(plan)) {
+    if (!["free", "basic", "professional", "enterprise"].includes(plan)) {
+        console.error("Invalid plan requested:", plan)
         return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
     }
 
@@ -94,7 +94,10 @@ export async function POST(req: Request) {
             current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
         }, { onConflict: "organization_id" })
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) {
+        console.error("Subscription update error:", error)
+        return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    }
     
     return Response.json({ ok: true })
 }

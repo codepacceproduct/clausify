@@ -46,7 +46,7 @@ export async function POST(req: Request) {
                 .single()
             
             const plan = subs?.plan || "free"
-            const limits = getPlanLimits(plan)
+            const limits = await getPlanLimits(plan)
             
             if (limits.max_chat_messages !== Infinity) {
                 // Check DAILY usage

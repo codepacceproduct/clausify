@@ -89,7 +89,7 @@ export function UsageLimitIndicator({
 
   if (loading || !usage) return null
 
-  const isUnlimited = usage.limit === Infinity
+  const isUnlimited = usage.limit === Infinity || usage.limit === null
   const isLow = !isUnlimited && usage.remaining <= 2
   const isEmpty = !isUnlimited && usage.remaining === 0
 

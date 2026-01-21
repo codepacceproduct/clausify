@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, Users, LogOut, ChevronRight, Moon, Sun } from "lucide-react"
+import { LayoutDashboard, Users, LogOut, ChevronRight, Moon, Sun, Shield } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Lista de Espera", href: "/admin/listadeespera", icon: Users },
+  { name: "Permissões", href: "/admin/permissoes", icon: Shield },
 ]
 
 interface AdminSidebarProps {

@@ -21,6 +21,9 @@ export async function GET(req: Request) {
     "dashboard",
     "sobre",
     "contratos",
+    "consultas",
+    "clausichat",
+    "calculos",
     "portfolio",
     "aprovacoes",
     "calendario",
@@ -73,7 +76,7 @@ export async function GET(req: Request) {
     .limit(1)
   
   const currentPlan = subs?.[0]?.plan || "free"
-  const planLimits = getPlanLimits(currentPlan)
+  const planLimits = await getPlanLimits(currentPlan)
   const allowedPlanModules = planLimits.allowed_modules || []
   const allowedCalculators = planLimits.allowed_calculators
   

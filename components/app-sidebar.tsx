@@ -155,8 +155,6 @@ export function AppSidebar({
           {navigation
             .filter((item) => {
               const key = moduleKeyForHref(item.href)
-              // Hide settings from sidebar for free plan (only accessible via "Sobre" page upgrade button)
-              if (plan === 'free' && key === 'configuracoes') return false
               return allowedModules[key] !== false
             })
             .map((item) => {

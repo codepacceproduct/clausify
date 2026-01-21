@@ -39,7 +39,7 @@ export async function POST(request: Request) {
             .single()
         
         const plan = subs?.plan || "basic"
-        const limits = getPlanLimits(plan)
+        const limits = await getPlanLimits(plan)
         
         if (limits.max_contracts !== Infinity) {
              // Get all users in org

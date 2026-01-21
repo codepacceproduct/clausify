@@ -34,7 +34,7 @@ export async function POST(request: Request) {
                 .single()
             
             const plan = subs?.plan || "free"
-            const limits = getPlanLimits(plan)
+            const limits = await getPlanLimits(plan)
             
             if (limits.max_analyses !== Infinity) {
                 // Check DAILY usage
