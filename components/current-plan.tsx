@@ -16,6 +16,88 @@ export interface CurrentPlanProps {
 export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, onCancel, onUpgrade }: CurrentPlanProps) {
   const isFree = plan.toLowerCase() === "free"
   
+  // Mapeamento de nomes de exibição
+  const displayMap: Record<string, string> = {
+    free: "Free",
+    basic: "Starter",
+    starter: "Starter",
+    básico: "Starter",
+    pro: "Pro",
+    professional: "Pro",
+    enterprise: "Office",
+    office: "Office"
+  }
+  
+  const displayPlan = displayMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
+
+  // Definição das permissões por plano
+  const planFeatures: Record<string, string[]> = {
+    free: [
+      "5 mensagens ClausiChat/dia",
+      "5 consultas processuais/dia",
+      "Acesso limitado a calculadoras",
+      "1 usuário",
+      "Sem suporte"
+    ],
+    basic: [
+      "50 análises/mês",
+      "1 usuário", 
+      "Suporte por email",
+      "10GB armazenamento",
+      "Relatórios básicos"
+    ],
+    básico: [ // Alias para basic (nome de exibição)
+      "50 análises/mês",
+      "1 usuário", 
+      "Suporte por email",
+      "10GB armazenamento",
+      "Relatórios básicos"
+    ],
+    starter: [ // Alias para basic se necessário
+      "50 análises/mês",
+      "1 usuário", 
+      "Suporte por email",
+      "10GB armazenamento",
+      "Relatórios básicos"
+    ],
+    professional: [
+      "Análises ilimitadas",
+      "5 usuários inclusos",
+      "Suporte prioritário",
+      "500GB armazenamento",
+      "API de integração",
+      "Relatórios avançados"
+    ],
+    pro: [ // Alias para professional
+      "Análises ilimitadas",
+      "5 usuários inclusos",
+      "Suporte prioritário",
+      "500GB armazenamento",
+      "API de integração",
+      "Relatórios avançados"
+    ],
+    office: [
+      "Análises ilimitadas",
+      "Usuários ilimitados",
+      "Suporte 24/7 dedicado",
+      "Armazenamento ilimitado",
+      "API completa",
+      "Personalização completa",
+      "Treinamento incluso"
+    ],
+    enterprise: [ // Alias antigo mantido por compatibilidade
+      "Análises ilimitadas",
+      "Usuários ilimitados",
+      "Suporte 24/7 dedicado",
+      "Armazenamento ilimitado",
+      "API completa",
+      "Personalização completa",
+      "Treinamento incluso"
+    ]
+  };
+
+  const currentFeatures = planFeatures[plan.toLowerCase()] || planFeatures['free'];
+
   return (
     <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800">
       <CardHeader>
@@ -23,7 +105,7 @@ export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, o
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="h-5 w-5 text-yellow-600" />
-              <CardTitle className="text-xl sm:text-2xl">Plano {plan}</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl">Plano {displayPlan}</CardTitle>
               <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100">
                 {status === 'active' ? 'Ativo' : status}
               </Badge>
@@ -40,42 +122,14 @@ export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, o
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
+          {currentFeatures.map((feature, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
+              </div>
+              <span className="text-sm">{feature}</span>
             </div>
-            <span className="text-sm">Análises ilimitadas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-            </div>
-            <span className="text-sm">5 usuários inclusos</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-            </div>
-            <span className="text-sm">Suporte prioritário</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-            </div>
-            <span className="text-sm">API de integração</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-            </div>
-            <span className="text-sm">Armazenamento 500GB</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-            </div>
-            <span className="text-sm">Relatórios avançados</span>
-          </div>
+          ))}
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           {!isFree && (

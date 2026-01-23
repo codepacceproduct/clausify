@@ -83,6 +83,16 @@ export async function POST(req: Request) {
     if (role !== "admin" && role !== "owner") return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
 
     const { plan } = body
+    
+    // Bloquear upgrades diretos via API sem pagamento
+    // Apenas permitir downgrade para free (embora DELETE seja preferível)
+    if (plan !== "free") {
+        return new Response(JSON.stringify({ 
+            error: "payment_required", 
+            message: "Upgrades de plano devem ser feitos através do fluxo de checkout (/api/checkout)." 
+        }), { status: 402 })
+    }
+
     if (!["free", "basic", "professional", "enterprise"].includes(plan)) {
         console.error("Invalid plan requested:", plan)
         return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })

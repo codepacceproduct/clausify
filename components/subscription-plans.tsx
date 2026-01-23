@@ -1,61 +1,68 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, Sparkles, Loader2 } from "lucide-react"
+import { Check, X, Sparkles, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
+import { CheckoutModal } from "@/components/checkout-modal"
+
 const plans = [
   {
-    name: "Free",
-    price: "R$ 0,00",
-    description: "Para testar e conhecer",
+    name: "Starter",
+    price: "R$ 99,00",
+    period: "/mês",
+    description: "Para você",
+    credits: "50 análises",
     features: [
-      "5 mensagens ClausiChat/dia",
-      "5 consultas processuais/dia",
-      "Acesso limitado a calculadoras",
-      "1 usuário",
-      "Sem suporte",
+      { text: "50 análises/mês", included: true },
+      { text: "1 usuário", included: true },
+      { text: "Suporte por email", included: true },
+      { text: "10GB armazenamento", included: true },
+      { text: "Relatórios básicos", included: true },
+      { text: "API de integração", included: false },
+      { text: "Personalização", included: false },
     ],
     popular: false,
+    buttonText: "Contratar plano",
   },
   {
-    name: "Básico",
-    price: "R$ 99,00",
-    description: "Ideal para pequenos escritórios",
-    features: ["50 análises/mês", "1 usuário", "Suporte por email", "10GB armazenamento", "Relatórios básicos"],
-    popular: false,
-  },
-  {
-    name: "Professional",
+    name: "Pro",
     price: "R$ 299,00",
-    description: "Perfeito para equipes médias",
+    period: "/mês",
+    description: "Para sua empresa ou advogados",
+    credits: "Análises ilimitadas",
     features: [
-      "Análises ilimitadas",
-      "5 usuários inclusos",
-      "Suporte prioritário",
-      "500GB armazenamento",
-      "API de integração",
-      "Relatórios avançados",
+      { text: "Análises ilimitadas", included: true },
+      { text: "5 usuários inclusos", included: true },
+      { text: "Suporte prioritário", included: true },
+      { text: "500GB armazenamento", included: true },
+      { text: "API de integração", included: true },
+      { text: "Relatórios avançados", included: true },
+      { text: "Personalização", included: false },
     ],
     popular: true,
+    buttonText: "Contratar plano",
   },
   {
-    name: "Enterprise",
-    price: "Personalizado",
-    description: "Soluções para grandes empresas",
+    name: "Office",
+    price: "Pay as you go",
+    period: "/mês",
+    description: "Para quem vai usar a Clausify no seu workflow",
+    credits: "Volume personalizado",
     features: [
-      "Análises ilimitadas",
-      "Usuários ilimitados",
-      "Suporte 24/7 dedicado",
-      "Armazenamento ilimitado",
-      "API completa",
-      "Personalização completa",
-      "Treinamento incluso",
+      { text: "Análises ilimitadas", included: true },
+      { text: "Usuários ilimitados", included: true },
+      { text: "Suporte 24/7 dedicado", included: true },
+      { text: "Armazenamento ilimitado", included: true },
+      { text: "API completa", included: true },
+      { text: "Personalização completa", included: true },
+      { text: "Treinamento incluso", included: true },
     ],
     popular: false,
+    buttonText: "Falar com a gente",
   },
 ]
 
@@ -65,25 +72,38 @@ export interface SubscriptionPlansProps {
 
 export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
   const [loading, setLoading] = useState<string | null>(null)
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expiresAt: string } | null>(null)
+  const [paymentId, setPaymentId] = useState<string>("")
+  const [amount, setAmount] = useState<number>(0)
+  const [selectedPlanName, setSelectedPlanName] = useState<string>("")
+  
   const router = useRouter()
 
   const handleSubscribe = async (planName: string) => {
     // Normalizar nome do plano para o formato da API
-    // "Básico" -> "basic"
-    // "Professional" -> "professional"
-    // "Enterprise" -> "enterprise"
     let apiPlan = planName.toLowerCase()
-    if (apiPlan === "básico") apiPlan = "basic"
+    
+    // Mapeamento dos novos nomes visuais para os IDs da API
+    if (apiPlan === "starter") apiPlan = "basic"
+    if (apiPlan === "pro") apiPlan = "pro" // ou "professional" dependendo do backend, mas "pro" é comum
+    if (apiPlan === "office") apiPlan = "enterprise"
+
+    if (planName === "Office") {
+        window.location.href = "mailto:vendas@clausify.com.br"
+        return
+    }
 
     try {
       setLoading(planName)
+      setSelectedPlanName(planName)
       
       // Get token
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 
-      const res = await fetch("/api/subscription", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -92,81 +112,148 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
         body: JSON.stringify({ plan: apiPlan }),
       })
 
-      if (!res.ok) throw new Error("Erro ao atualizar plano")
+      if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error || "Erro ao iniciar checkout")
+      }
       
-      toast.success(`Plano alterado para ${planName}`)
-      router.refresh()
-      // Opcional: recarregar a página completa para garantir atualização de estado global se houver
-      window.location.reload()
-    } catch (error) {
+      const data = await res.json()
+
+      if (data.mode === 'redirect' && data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+      }
+      
+      setPixData({
+          qrCode: data.qrCode,
+          copyPaste: data.copyPaste,
+          expiresAt: data.expiresAt
+      })
+      setPaymentId(data.paymentId)
+      setAmount(data.amount)
+      setIsCheckoutOpen(true)
+      
+    } catch (error: any) {
       console.error(error)
-      toast.error("Não foi possível atualizar o plano")
+      toast.error(error.message || "Não foi possível iniciar o checkout")
     } finally {
       setLoading(null)
     }
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-foreground mb-2">Escolha o Plano Ideal</h2>
-        <p className="text-muted-foreground text-sm">Todos os planos incluem 14 dias de garantia</p>
+    <div className="w-full max-w-7xl mx-auto px-4 py-8">
+      <CheckoutModal 
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        pixData={pixData}
+        amount={amount}
+        paymentId={paymentId}
+        planName={selectedPlanName}
+      />
+      
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Escolha seu plano</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-lg">
+          Selecione o plano que melhor atende às suas necessidades.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {plans.map((plan) => {
-          const isCurrent = (currentPlan?.toLowerCase() === "basic" && plan.name === "Básico") || 
-                            (currentPlan?.toLowerCase() === plan.name.toLowerCase())
+          // Lógica de verificação do plano atual
+          const isCurrent = 
+            (currentPlan?.toLowerCase() === "basic" && plan.name === "Starter") ||
+            (currentPlan?.toLowerCase() === "pro" && plan.name === "Pro") ||
+            (currentPlan?.toLowerCase() === "enterprise" && plan.name === "Office") ||
+            (currentPlan?.toLowerCase() === plan.name.toLowerCase())
+
           const isProcessing = loading === plan.name
-          
+          const isPopular = plan.popular
+
           return (
-          <Card key={plan.name} className={plan.popular ? "border-2 border-blue-500 relative shadow-lg" : ""}>
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-blue-500 text-white gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Mais Popular
-                </Badge>
+            <div 
+              key={plan.name} 
+              className={`relative flex flex-col p-6 bg-white dark:bg-zinc-900 rounded-2xl transition-all duration-200 ${
+                isPopular 
+                  ? "border-2 border-emerald-500 shadow-xl scale-105 z-10" 
+                  : "border border-gray-200 dark:border-zinc-800 shadow-sm hover:shadow-md"
+              }`}
+            >
+              {isPopular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                    <Sparkles className="w-3 h-3" />
+                    Mais popular
+                  </span>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{plan.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 min-h-[40px]">{plan.description}</p>
               </div>
-            )}
-            <CardHeader>
-              <CardTitle className="text-xl sm:text-2xl">{plan.name}</CardTitle>
-              <CardDescription className="text-sm">{plan.description}</CardDescription>
-              <div className="mt-4">
-                <span className="text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
-                {plan.price !== "Personalizado" && <span className="text-muted-foreground text-sm">/mês</span>}
+
+              <div className="mb-6">
+                <div className="flex items-baseline gap-1">
+                  <span className={`font-bold text-gray-900 dark:text-white ${plan.price.length > 10 ? "text-3xl" : "text-4xl"}`}>
+                    {plan.price}
+                  </span>
+                  {plan.price !== "Pay as you go" && (
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">{plan.period}</span>
+                  )}
+                </div>
+                {plan.credits && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 font-medium">
+                    {plan.credits}
+                  </p>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2">
-                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mt-0.5">
-                      <Check className="h-3 w-3 text-green-700 dark:text-green-100" />
-                    </div>
-                    <span className="text-sm text-foreground">{feature}</span>
+
+              <ul className="space-y-4 mb-8 flex-1">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    {feature.included ? (
+                      <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <X className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    )}
+                    <span className={`text-sm ${feature.included ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-600"}`}>
+                      {feature.text}
+                    </span>
                   </li>
                 ))}
               </ul>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                variant={plan.popular ? "default" : "outline"} 
-                disabled={isCurrent || isProcessing}
+
+              <Button
                 onClick={() => handleSubscribe(plan.name)}
+                disabled={isCurrent || isProcessing}
+                className={`w-full h-11 rounded-lg font-semibold transition-all ${
+                  isPopular
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg"
+                    : "bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-zinc-700 text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                }`}
               >
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCurrent
-                  ? "Plano Atual"
-                  : plan.price === "Personalizado"
-                    ? "Falar com Vendas"
-                    : "Selecionar Plano"}
+                {isProcessing ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : isCurrent ? (
+                  "Plano Atual"
+                ) : (
+                  plan.buttonText
+                )}
               </Button>
-            </CardFooter>
-          </Card>
-        )})}
+            </div>
+          )
+        })}
       </div>
+
+      {currentPlan === "Free" && (
+        <div className="mt-12 text-center">
+          <Button variant="outline" className="border-gray-200 text-gray-500 hover:text-gray-900">
+            Manter plano atual (Free)
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

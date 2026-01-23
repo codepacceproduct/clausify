@@ -158,56 +158,8 @@ export function SubscriptionSettings() {
             onCancel={() => setShowCancelDialog(true)}
             onUpgrade={() => setSubtab("plans")}
           />
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Método de Pagamento
-                </CardTitle>
-                <CardDescription>
-                  Cartão principal para cobrança
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-16 bg-muted rounded flex items-center justify-center text-xs font-semibold">
-                    VISA
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">**** **** **** 4242</p>
-                    <p className="text-xs text-muted-foreground">Expira em 12/28</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  Última Fatura
-                </CardTitle>
-                <CardDescription>
-                  {latestInvoice ? `Emitida em ${new Date(latestInvoice.date).toLocaleDateString('pt-BR')}` : "Nenhuma fatura encontrada"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {latestInvoice ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">{latestInvoice.amount}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${latestInvoice.status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {latestInvoice.status === 'paid' ? 'Paga' : latestInvoice.status}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">Sem histórico recente</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
           
-          <PaymentHistory payments={invoices} />
+          {/* Removido histórico de pagamento e detalhes de faturamento conforme solicitado */}
         </TabsContent>
 
         <TabsContent value="plans" className="space-y-6 mt-6">
