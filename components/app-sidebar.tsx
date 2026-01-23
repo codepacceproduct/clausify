@@ -21,15 +21,28 @@ import {
   Bot,
   MessageSquare,
   Info,
+  User,
+  Sparkles,
+  MoreHorizontal,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
-import { logout } from "@/lib/auth"
+import { logout, getUserEmail } from "@/lib/auth"
 import Image from "next/image"
 import { usePermissions } from "@/contexts/permissions-context"
+import { createClient } from "@/lib/supabase/client"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -56,6 +69,75 @@ export function AppSidebar({
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const { allowedModules, plan } = usePermissions()
+
+  // User Profile State
+  const [userEmail] = useState<string | null>(() => getUserEmail())
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [avatarFit, setAvatarFit] = useState<'cover' | 'contain' | 'fill'>('cover')
+  const [avatarPosition, setAvatarPosition] = useState<'center' | 'top' | 'bottom' | 'left' | 'right'>('top')
+  const [avatarZoom, setAvatarZoom] = useState<number>(1)
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) return
+
+      try {
+        const res = await fetch(`/api/settings/profile`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        })
+        if (!res.ok) return
+        const { profile } = await res.json()
+        if (profile?.avatar_url) setAvatarSrc(profile.avatar_url)
+        if (profile?.first_name) setUserName(`${profile.first_name} ${profile.last_name || ''}`.trim())
+        
+        if (profile?.role) setUserRole(profile.role)
+
+        const prefs = profile?.regional_preferences?.avatar
+        if (prefs) {
+          if (prefs.fit) setAvatarFit(prefs.fit)
+          if (prefs.position) setAvatarPosition(prefs.position)
+          if (prefs.zoom) setAvatarZoom(Number(prefs.zoom))
+        }
+      } catch {}
+    }
+    load()
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const d = e?.detail || {}
+      if (d.url) setAvatarSrc(d.url)
+      const p = d.prefs || {}
+      if (p.fit) setAvatarFit(p.fit)
+      if (p.position) setAvatarPosition(p.position)
+      if (p.zoom) setAvatarZoom(Number(p.zoom))
+    }
+    window.addEventListener('profile:avatar-updated', handler as EventListener)
+    return () => {
+      window.removeEventListener('profile:avatar-updated', handler as EventListener)
+    }
+  }, [])
+
+  const getUserInitials = () => {
+    if (userName) {
+        const parts = userName.split(" ")
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+        return userName.substring(0, 2).toUpperCase()
+    }
+    if (!userEmail) return "U"
+    const parts = userEmail.split("@")[0].split(".")
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return userEmail.substring(0, 2).toUpperCase()
+  }
 
   useEffect(() => {
     const handleResize = () => {
@@ -108,6 +190,18 @@ export function AppSidebar({
       setIsMobileOpen(false)
     }
   }
+
+  const planDisplayMap: Record<string, string> = {
+    free: "Free",
+    basic: "Starter",
+    starter: "Starter",
+    pro: "Pro",
+    professional: "Pro",
+    enterprise: "Office",
+    office: "Office"
+  }
+  
+  const displayPlan = plan ? (planDisplayMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1)) : ""
 
   return (
     <>
@@ -180,47 +274,100 @@ export function AppSidebar({
             })}
         </nav>
 
-        <div className="border-t border-sidebar-border/50 p-4 sm:p-3 space-y-2">
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "flex w-full items-center gap-4 sm:gap-3 rounded-lg px-4 py-4 sm:px-3 sm:py-2.5 text-base sm:text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all active:scale-95",
-              isCollapsed && "md:justify-center",
-            )}
-            title={isCollapsed ? "Logout" : undefined}
-          >
-            <LogOut className="h-6 w-6 sm:h-5 sm:w-5 shrink-0" />
-            <span className={cn(isCollapsed && "md:hidden")}>Logout</span>
-          </button>
+        <div className="border-t border-sidebar-border/50 p-2 sm:p-2 space-y-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg p-2 transition-all hover:bg-sidebar-accent group text-left outline-none",
+                  isCollapsed ? "justify-center" : ""
+                )}
+              >
+                <div className="relative">
+                  <Avatar className="h-9 w-9 shrink-0 border border-sidebar-border/50">
+                    {avatarSrc ? (
+                      <AvatarImage
+                        src={avatarSrc}
+                        alt="User"
+                        fit={avatarFit}
+                        position={avatarPosition}
+                        zoom={avatarZoom}
+                      />
+                    ) : null}
+                    <AvatarFallback className="bg-emerald-600 text-white font-semibold text-xs">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-sidebar"></span>
+                </div>
+                
+                {!isCollapsed && (
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <span className="truncate text-sm font-medium text-sidebar-foreground">
+                      {userName || "Usuário"}
+                    </span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">
+                      {userEmail}
+                    </span>
+                  </div>
+                )}
 
-          <div
-            className={cn(
-              "flex items-center gap-4 sm:gap-3 rounded-lg bg-sidebar-accent/30 px-4 py-4 sm:px-3 sm:py-2.5",
-              isCollapsed && "md:justify-center md:px-2",
-            )}
-          >
-            {isCollapsed ? (
-              <button onClick={toggleTheme} className="hidden md:flex items-center justify-center" title="Toggle theme">
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-sidebar-foreground" />
-                ) : (
-                  <Moon className="h-5 w-5 text-sidebar-foreground" />
+                {!isCollapsed && (
+                  <MoreHorizontal className="h-4 w-4 text-sidebar-foreground/50 group-hover:text-sidebar-foreground" />
                 )}
               </button>
-            ) : null}
-
-            <div className={cn("flex items-center gap-4 sm:gap-3 w-full", isCollapsed && "md:hidden")}>
-              {isDarkMode ? (
-                <Sun className="h-5 w-5 sm:h-4 sm:w-4 text-sidebar-foreground/60" />
-              ) : (
-                <Moon className="h-5 w-5 sm:h-4 sm:w-4 text-sidebar-foreground/60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              className="w-56" 
+              align="start" 
+              side="right" 
+              sideOffset={8}
+            >
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{userName || "Minha Conta"}</p>
+                  <p className="text-xs leading-none text-muted-foreground truncate">{userEmail}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center justify-between">
+                <span>Plano {displayPlan}</span>
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </div>
+              <DropdownMenuSeparator />
+              {(userRole === 'admin' || userRole === 'owner') && (
+                <DropdownMenuItem onClick={() => router.push("/configuracoes?tab=subscription&subtab=plans")}>
+                  <Sparkles className="mr-2 h-4 w-4 text-emerald-500" />
+                  <span>Gerenciar plano</span>
+                </DropdownMenuItem>
               )}
-              <span className="text-base sm:text-sm text-sidebar-foreground/70 flex-1">
-                {isDarkMode ? "Light mode" : "Dark mode"}
-              </span>
-              <Switch checked={isDarkMode} onCheckedChange={toggleTheme} className="scale-110 sm:scale-100" />
-            </div>
-          </div>
+              <DropdownMenuItem onClick={() => router.push("/configuracoes")}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configurações</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="flex items-center justify-between px-2 py-1.5 select-none">
+                <div className="flex items-center text-sm">
+                  {isDarkMode ? (
+                    <Moon className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Sun className="mr-2 h-4 w-4" />
+                  )}
+                  <span>Tema</span>
+                </div>
+                <Switch 
+                  checked={isDarkMode} 
+                  onCheckedChange={toggleTheme} 
+                  className="scale-75 data-[state=checked]:bg-emerald-500"
+                />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
     </>
