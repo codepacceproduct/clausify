@@ -1,6 +1,8 @@
 import { supabaseServer } from "@/lib/supabase-server"
 import { getAuthedEmail, getAuthedUser } from "@/lib/api-auth"
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const user = await getAuthedUser(req)
   let email = user?.email || await getAuthedEmail(req)
@@ -13,7 +15,7 @@ export async function GET(req: Request) {
   {
     const { data: profiles } = await supabaseServer
       .from("profiles")
-      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url, role")
+      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url, role, cpf, cnpj")
       .eq("email", email)
       .limit(1)
     profile = profiles?.[0] ?? null
@@ -60,11 +62,15 @@ export async function GET(req: Request) {
   return Response.json({ profile, organization })
 }
 
+export async function PUT(req: Request) {
+  return POST(req)
+}
+
 export async function POST(req: Request) {
   const body = await req.json()
   const authed = await getAuthedEmail(req)
   if (!authed) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
-  const { name, surname, phone, regional_preferences, organization, avatar_url } = body
+  const { name, surname, phone, regional_preferences, organization, avatar_url, cpf, cnpj } = body
   const email = authed
 
   let userId: string | undefined
@@ -82,6 +88,8 @@ export async function POST(req: Request) {
     upsertPayload.regional_preferences = regional_preferences
   }
   if (avatar_url) upsertPayload.avatar_url = avatar_url
+  if (cpf) upsertPayload.cpf = cpf
+  if (cnpj) upsertPayload.cnpj = cnpj
   if (userId) upsertPayload.id = userId
 
   const { error: upErr } = await supabaseServer
@@ -153,35 +161,6 @@ export async function POST(req: Request) {
           }
         }
     }
-  }
-
-  return Response.json({ ok: true })
-}
-
-export async function PUT(req: Request) {
-  const body = await req.json()
-  const authed = await getAuthedEmail(req)
-  if (!authed) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
-  const { name, surname, phone, regional_preferences, organization, avatar_url } = body
-  const email = authed
-
-  const updatePayload: any = { name, surname, phone }
-  if (regional_preferences) updatePayload.regional_preferences = regional_preferences
-  if (avatar_url) updatePayload.avatar_url = avatar_url
-
-  const { error: updErr } = await supabaseServer
-    .from("profiles")
-    .update(updatePayload)
-    .eq("email", email)
-  if (updErr) return new Response(JSON.stringify({ error: updErr.message }), { status: 500 })
-
-  if (organization && organization.id) {
-    const { id, name: orgName, industry, size, timezone, locale } = organization
-    const { error: orgUpdateErr } = await supabaseServer
-      .from("organizations")
-      .update({ name: orgName, industry, size, timezone, locale })
-      .eq("id", id)
-    if (orgUpdateErr) return new Response(JSON.stringify({ error: orgUpdateErr.message }), { status: 500 })
   }
 
   return Response.json({ ok: true })

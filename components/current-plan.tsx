@@ -9,12 +9,14 @@ export interface CurrentPlanProps {
   amount: string
   interval: string
   nextBillingDate: string
+  pendingPlan?: string
   onCancel?: () => void
   onUpgrade?: () => void
 }
 
-export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, onCancel, onUpgrade }: CurrentPlanProps) {
+export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, pendingPlan, onCancel, onUpgrade }: CurrentPlanProps) {
   const isFree = plan.toLowerCase() === "free"
+  const isPending = !!pendingPlan
   
   // Mapeamento de nomes de exibição
   const displayMap: Record<string, string> = {
@@ -28,7 +30,11 @@ export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, o
     office: "Office"
   }
   
-  const displayPlan = displayMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
+  const displayPlan = isPending 
+    ? "Aguardando confirmação" 
+    : (displayMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase());
+
+  const displayStatus = isPending ? "PENDING" : status;
 
   // Definição das permissões por plano
   const planFeatures: Record<string, string[]> = {
@@ -104,14 +110,14 @@ export function CurrentPlan({ plan, status, amount, interval, nextBillingDate, o
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Crown className="h-5 w-5 text-yellow-600" />
+              <Crown className={`h-5 w-5 ${isPending ? "text-yellow-600" : "text-yellow-600"}`} />
               <CardTitle className="text-xl sm:text-2xl">Plano {displayPlan}</CardTitle>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100">
-                {status === 'active' ? 'Ativo' : status}
+              <Badge variant="secondary" className={isPending ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-100" : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100"}>
+                {displayStatus === 'active' ? 'Ativo' : displayStatus}
               </Badge>
             </div>
             <CardDescription className="text-sm sm:text-base">
-              {isFree ? "Plano gratuito sem cobrança" : `Próxima cobrança em ${nextBillingDate}`}
+              {isPending ? "Seu pagamento está sendo processado." : (isFree ? "Plano gratuito sem cobrança" : `Próxima cobrança em ${nextBillingDate}`)}
             </CardDescription>
           </div>
           <div className="text-left sm:text-right">

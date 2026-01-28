@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, CheckCircle2, XCircle, Clock } from "lucide-react"
+import { Download, CheckCircle2, XCircle, Clock, ExternalLink, AlertTriangle, CreditCard } from "lucide-react"
 
 export interface Payment {
   id: string
@@ -9,13 +9,15 @@ export interface Payment {
   amount: string
   status: string
   method?: string
+  invoiceUrl?: string
+  metadata?: any
 }
 
 interface PaymentHistoryProps {
   payments: Payment[]
 }
 
-const statusConfig = {
+const statusConfig: any = {
   paid: {
     label: "Pago",
     icon: CheckCircle2,
@@ -31,25 +33,62 @@ const statusConfig = {
     icon: XCircle,
     className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100",
   },
+  past_due: {
+    label: "Vencido",
+    icon: AlertTriangle,
+    className: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-100",
+  },
+  refunded: {
+    label: "Estornado",
+    icon: CheckCircle2,
+    className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  },
+  canceled: {
+      label: "Cancelado",
+      icon: XCircle,
+      className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  }
 }
 
 export function PaymentHistory({ payments }: PaymentHistoryProps) {
+  const handleOpenInvoice = (paymentId: string) => {
+    // Abre a rota dinâmica que redireciona para a fatura atualizada
+    window.open(`/api/billing/invoice/${paymentId}`, '_blank');
+  }
+
+  const getMethodLabel = (method?: string) => {
+    if (!method || method === "UNDEFINED") return "À escolha";
+    if (method === "CREDIT_CARD") return "Cartão de Crédito";
+    if (method === "BOLETO") return "Boleto";
+    return method;
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    // Adiciona T12:00:00 para garantir que a data seja interpretada no meio do dia
+    // evitando problemas de fuso horário onde meia-noite UTC vira dia anterior no Brasil (UTC-3)
+    return new Date(`${dateString}T12:00:00`).toLocaleDateString('pt-BR');
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Histórico de Pagamentos</CardTitle>
-        <CardDescription>Veja todas as suas transações e baixe notas fiscais</CardDescription>
+        <CardTitle>Histórico de Cobranças</CardTitle>
+        <CardDescription>Veja todas as suas cobranças, acesse faturas e verifique status.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {payments.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
-              Nenhum pagamento encontrado.
+              Nenhuma cobrança encontrada.
             </div>
           ) : (
             payments.map((payment) => {
-              const status = statusConfig[payment.status as keyof typeof statusConfig] || statusConfig.pending
+              const status = statusConfig[payment.status.toLowerCase()] || statusConfig.pending
               const StatusIcon = status.icon
+              const invoiceUrl = payment.invoiceUrl || payment.metadata?.invoiceUrl || payment.metadata?.bankSlipUrl;
+              const hasInvoice = !!payment.id; // Agora baseamos a disponibilidade apenas no ID
+              const isPending = status.label === 'Pendente' || status.label === 'Vencido';
 
               return (
                 <div
@@ -62,37 +101,47 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                        <span className="font-medium text-foreground">{payment.id}</span>
+                        <span className="font-medium text-foreground">
+                             {formatDate(payment.date)}
+                        </span>
                         <Badge variant="secondary" className={status.className}>
                           {status.label}
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground space-y-0.5">
-                        <div>{new Date(payment.date).toLocaleDateString('pt-BR')}</div>
-                        <div className="block sm:hidden">{payment.method || "Cartão de Crédito"}</div>
+                        <div className="font-mono text-xs">{payment.id}</div>
+                        <div className="block sm:hidden">{getMethodLabel(payment.method)}</div>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                    <div className="hidden sm:block text-sm text-muted-foreground min-w-[140px]">{payment.method || "Cartão de Crédito"}</div>
+                    <div className="hidden sm:block text-sm text-muted-foreground min-w-[100px] text-right">
+                        {getMethodLabel(payment.method)}
+                    </div>
                     <div className="font-semibold text-foreground min-w-[100px] text-left sm:text-right">
                       {payment.amount}
                     </div>
-                    <Button variant="ghost" size="sm" className="shrink-0">
-                      <Download className="h-4 w-4" />
-                      <span className="ml-2 hidden sm:inline">NF-e</span>
-                    </Button>
+                    
+                    {hasInvoice ? (
+                        <Button 
+                            variant={isPending ? "default" : "outline"}
+                            size="sm" 
+                            className="shrink-0 gap-2"
+                            onClick={() => handleOpenInvoice(payment.id)}
+                        >
+                            {isPending ? <CreditCard className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
+                            <span className="hidden sm:inline">{isPending ? "Pagar Agora" : "Fatura"}</span>
+                            <span className="sm:hidden">{isPending ? "Pagar" : "Ver"}</span>
+                        </Button>
+                    ) : isPending && (
+                        <span className="text-xs text-destructive font-medium">Link indisponível</span>
+                    )}
                   </div>
                 </div>
               )
             })
           )}
         </div>
-        {payments.length > 5 && (
-          <div className="mt-6 flex justify-center">
-            <Button variant="outline">Carregar Mais</Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

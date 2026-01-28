@@ -23,7 +23,22 @@ export function ProfileSettings() {
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
+  const [cpf, setCpf] = useState("")
   const [avatarUrl, setAvatarUrl] = useState("")
+
+  // CPF Mask
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '') // Remove tudo o que não é dígito
+      .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o terceiro e o quarto dígitos
+      .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o terceiro e o quarto dígitos de novo (para o segundo bloco de números)
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2') // Coloca um hífen entre o terceiro e o quarto dígitos
+      .replace(/(-\d{2})\d+?$/, '$1') // Captura apenas os dois últimos dígitos
+  }
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCpf(formatCPF(e.target.value))
+  }
 
   // Password State
   const [currentPassword, setCurrentPassword] = useState("")
@@ -66,6 +81,7 @@ export function ProfileSettings() {
         setLastName(data.profile.surname || "")
         setEmail(data.profile.email || "")
         setPhone(data.profile.phone || "")
+        setCpf(data.profile.cpf || "")
         setAvatarUrl(data.profile.avatar_url || "")
       }
     } catch (error) {
@@ -163,6 +179,7 @@ export function ProfileSettings() {
           name: firstName,
           surname: lastName,
           phone,
+          cpf,
           avatar_url: avatarUrl,
         }),
       })
@@ -344,6 +361,16 @@ export function ProfileSettings() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+55 (11) 99999-9999"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF</Label>
+              <Input
+                id="cpf"
+                value={cpf}
+                onChange={handleCpfChange}
+                placeholder="000.000.000-00"
+                maxLength={14}
               />
             </div>
           </div>

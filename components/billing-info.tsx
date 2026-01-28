@@ -24,41 +24,6 @@ export function BillingInfo({ billing }: BillingInfoProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Forma de Pagamento</CardTitle>
-          </div>
-          <CardDescription>Gerencie seus métodos de pagamento</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                <CreditCard className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <div className="font-medium">•••• •••• •••• 4532</div>
-                <div className="text-sm text-muted-foreground">Expira em 12/2026</div>
-              </div>
-            </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" size="sm" className="flex-1 sm:flex-none bg-transparent">
-                Editar
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 sm:flex-none bg-transparent">
-                Remover
-              </Button>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full sm:w-auto bg-transparent">
-            <CreditCard className="mr-2 h-4 w-4" />
-            Adicionar Novo Cartão
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-muted-foreground" />
             <CardTitle>Informações de Faturamento</CardTitle>
           </div>

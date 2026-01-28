@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 import { CheckoutModal } from "@/components/checkout-modal"
+import { CouponModal } from "@/components/coupon-modal"
 
 const plans = [
   {
@@ -73,14 +74,30 @@ export interface SubscriptionPlansProps {
 export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
   const [loading, setLoading] = useState<string | null>(null)
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false)
+  const [pendingPlan, setPendingPlan] = useState<string | null>(null)
   const [pixData, setPixData] = useState<{ qrCode: string; copyPaste: string; expiresAt: string } | null>(null)
   const [paymentId, setPaymentId] = useState<string>("")
   const [amount, setAmount] = useState<number>(0)
+  const [invoiceUrl, setInvoiceUrl] = useState<string>("")
   const [selectedPlanName, setSelectedPlanName] = useState<string>("")
   
   const router = useRouter()
 
-  const handleSubscribe = async (planName: string) => {
+  const handleSubscribeClick = (planName: string) => {
+    if (planName === "Office") {
+        window.location.href = "mailto:vendas@clausify.com.br"
+        return
+    }
+    setPendingPlan(planName)
+    setIsCouponModalOpen(true)
+  }
+
+  const handleSubscribe = async (hasCoupon: boolean) => {
+    if (!pendingPlan) return
+    const planName = pendingPlan
+    setIsCouponModalOpen(false)
+
     // Normalizar nome do plano para o formato da API
     let apiPlan = planName.toLowerCase()
     
@@ -88,11 +105,6 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
     if (apiPlan === "starter") apiPlan = "basic"
     if (apiPlan === "pro") apiPlan = "pro" // ou "professional" dependendo do backend, mas "pro" é comum
     if (apiPlan === "office") apiPlan = "enterprise"
-
-    if (planName === "Office") {
-        window.location.href = "mailto:vendas@clausify.com.br"
-        return
-    }
 
     try {
       setLoading(planName)
@@ -109,7 +121,10 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ plan: apiPlan }),
+        body: JSON.stringify({ 
+            plan: apiPlan,
+            hasCoupon: hasCoupon
+        }),
       })
 
       if (!res.ok) {
@@ -125,12 +140,13 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
       }
       
       setPixData({
-          qrCode: data.qrCode,
-          copyPaste: data.copyPaste,
+          qrCode: data.pixQrCode,
+          copyPaste: data.pixCopyPaste,
           expiresAt: data.expiresAt
       })
       setPaymentId(data.paymentId)
       setAmount(data.amount)
+      setInvoiceUrl(data.invoiceUrl)
       setIsCheckoutOpen(true)
       
     } catch (error: any) {
@@ -138,6 +154,7 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
       toast.error(error.message || "Não foi possível iniciar o checkout")
     } finally {
       setLoading(null)
+      setPendingPlan(null)
     }
   }
 
@@ -150,8 +167,16 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
         amount={amount}
         paymentId={paymentId}
         planName={selectedPlanName}
+        invoiceUrl={invoiceUrl}
       />
       
+      <CouponModal 
+        isOpen={isCouponModalOpen}
+        onClose={() => setIsCouponModalOpen(false)}
+        onSelect={handleSubscribe}
+        planName={pendingPlan || ""}
+      />
+
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Escolha seu plano</h2>
         <p className="text-gray-500 dark:text-gray-400 text-lg">
@@ -226,7 +251,7 @@ export function SubscriptionPlans({ currentPlan }: SubscriptionPlansProps) {
               </ul>
 
               <Button
-                onClick={() => handleSubscribe(plan.name)}
+                onClick={() => handleSubscribeClick(plan.name)}
                 disabled={isCurrent || isProcessing}
                 className={`w-full h-11 rounded-lg font-semibold transition-all ${
                   isPopular

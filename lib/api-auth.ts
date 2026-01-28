@@ -41,13 +41,15 @@ function getTokenFromReq(req: Request): string | null {
   return null
 }
 
+import { ENV } from "@/lib/env"
+
 export async function getAuthedUser(req: Request): Promise<any | null> {
   const token = getTokenFromReq(req)
   if (!token) return null
   
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+    const supabaseUrl = ENV.NEXT_PUBLIC_SUPABASE_URL as string
+    const supabaseAnonKey = ENV.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
     const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
         Authorization: `Bearer ${token}`,

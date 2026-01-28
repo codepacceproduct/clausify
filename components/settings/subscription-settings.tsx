@@ -29,6 +29,7 @@ interface SubscriptionData {
   interval: string
   current_period_end: string
   role: string
+  pending_plan?: string
 }
 
 export function SubscriptionSettings() {
@@ -90,6 +91,7 @@ export function SubscriptionSettings() {
 
         const res = await fetch("/api/subscription", {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          cache: "no-store",
         })
         
         if (res.status === 404 || res.status === 401) {
@@ -155,6 +157,7 @@ export function SubscriptionSettings() {
             amount={subscription?.amount ? `R$ ${subscription.amount},00` : "R$ 0,00"} 
             interval={subscription?.interval || "month"}
             nextBillingDate={subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR') : "N/A"}
+            pendingPlan={subscription?.pending_plan}
             onCancel={() => setShowCancelDialog(true)}
             onUpgrade={() => setSubtab("plans")}
           />
@@ -167,7 +170,24 @@ export function SubscriptionSettings() {
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gerenciamento da Assinatura</CardTitle>
+              <CardDescription>Opções avançadas para sua assinatura ativa.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-between items-center">
+               <div>
+                  <p className="font-medium">Cancelar Assinatura</p>
+                  <p className="text-sm text-muted-foreground">Ao cancelar, você perderá acesso aos recursos premium ao fim do ciclo atual.</p>
+               </div>
+               <Button variant="destructive" onClick={() => setShowCancelDialog(true)}>
+                  Cancelar Assinatura
+               </Button>
+            </CardContent>
+          </Card>
+
           <BillingInfo billing={billing} />
+          <PaymentHistory payments={invoices} />
         </TabsContent>
       </Tabs>
 
