@@ -12,6 +12,7 @@ const navigation = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Lista de Espera", href: "/admin/listadeespera", icon: Users },
   { name: "Permissões", href: "/admin/permissoes", icon: Shield },
+  { name: "Usuários", href: "/admin/usuarios", icon: Users },
 ]
 
 interface AdminSidebarProps {
