@@ -97,7 +97,7 @@ export function LayoutWrapper({ children }: { children: ReactNode }) {
       
       <div
         className={cn(
-          "flex-1 transition-all duration-300 w-full min-h-screen",
+          "flex-1 transition-all duration-300 min-h-screen min-w-0",
           isMobile ? "ml-0" : isCollapsed ? "ml-20" : "ml-72"
         )}
       >

@@ -7,10 +7,10 @@ export const runtime = "nodejs";
 
 // Configuração de preços (Idealmente viria do banco ou de uma config global)
 const PLAN_PRICES: Record<string, number> = {
-    'starter': 29.90,
-    'basic': 29.90, // Alias para starter
-    'professional': 89.90,
-    'pro': 89.90, // Alias para professional
+    'starter': 99.00,
+    'basic': 99.00, // Alias para starter
+    'professional': 299.00,
+    'pro': 299.00, // Alias para professional
     'office': 199.90,
     'enterprise': 199.90 // Alias para office
 };

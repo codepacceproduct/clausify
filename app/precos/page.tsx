@@ -11,8 +11,8 @@ const plans = [
   {
     name: "Starter",
     description: "Ideal para advogados autônomos e pequenos escritórios",
-    priceMonthly: 197,
-    priceYearly: 167,
+    priceMonthly: 99,
+    priceYearly: 84,
     features: [
       "Até 50 análises/mês",
       "1 usuário",
@@ -25,8 +25,8 @@ const plans = [
   {
     name: "Professional",
     description: "Para escritórios e departamentos jurídicos em crescimento",
-    priceMonthly: 497,
-    priceYearly: 397,
+    priceMonthly: 299,
+    priceYearly: 254,
     features: [
       "Até 200 análises/mês",
       "5 usuários",

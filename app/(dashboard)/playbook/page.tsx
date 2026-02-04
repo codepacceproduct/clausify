@@ -10,15 +10,21 @@ export default async function PlaybookPage() {
     redirect("/login")
   }
 
-  const [rulesRes, clausesRes, templatesRes, fallbacksRes] = await Promise.all([
+  const [rulesRes, clausesRes] = await Promise.all([
     supabase.from("playbook_rules").select("*").eq("active", true).order("id"),
-    supabase.from("playbook_clauses").select("*").order("id"),
-    supabase.from("playbook_templates").select("*").order("id"),
-    supabase.from("playbook_fallbacks").select("*").order("id")
+    supabase.from("playbook_clauses").select("*").order("id")
   ])
 
   const initialRules = (rulesRes.data || []).map(item => ({
-    ...item,
+    id: item.id,
+    trigger: item.trigger || "Sempre que identificar...",
+    condition: item.rule, // Mapping old 'rule' to 'condition'
+    action: item.action || "Sinalizar risco",
+    behavior: item.behavior || "Alerta no relatório",
+    observation: item.observation || item.rationale || "",
+    severity: item.severity,
+    category: item.category,
+    active: item.active,
     lastUpdated: item.last_updated
   }))
 
@@ -28,26 +34,13 @@ export default async function PlaybookPage() {
     lastUpdated: item.last_updated
   }))
 
-  const initialTemplates = (templatesRes.data || []).map(item => ({
-    ...item,
-    clauses: item.clauses_count,
-    lastUpdated: item.last_updated
-  }))
-
-  const initialFallbacks = (fallbacksRes.data || []).map(item => ({
-    ...item,
-    originalClause: item.original_clause,
-    fallbackClause: item.fallback_clause,
-    usageCount: item.usage_count,
-    lastUsed: item.last_used
-  }))
+  const initialTemplates: any[] = []
   
   return (
     <PlaybookContent 
       initialRules={initialRules}
       initialClauses={initialClauses}
       initialTemplates={initialTemplates}
-      initialFallbacks={initialFallbacks}
     />
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -22,14 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, Loader2, AlertTriangle, ShieldAlert, CheckCircle, Info, Edit, Trash2, RefreshCcw } from "lucide-react"
+import { Search, Plus, Loader2, Edit, Trash2, RefreshCcw, ArrowRight, AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 interface Rule {
   id: number
-  rule: string
+  trigger: string
+  condition: string
+  action: string
+  behavior: string
+  observation: string
   severity: "low" | "medium" | "high"
-  rationale: string
   category: string
   active: boolean
   lastUpdated: string
@@ -47,9 +51,12 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
 
   // New Rule Form State
   const [newRule, setNewRule] = useState({
-    rule: "",
+    trigger: "",
+    condition: "",
+    action: "",
+    behavior: "",
+    observation: "",
     severity: "medium",
-    rationale: "",
     category: "Jurídico"
   })
 
@@ -71,7 +78,7 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
 
   const handleAddRule = async () => {
     // Basic validation
-    if (!newRule.rule || !newRule.rationale) return
+    if (!newRule.condition || !newRule.action) return
 
     // Optimistic update or API call
     const tempRule: Rule = {
@@ -84,34 +91,37 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
     
     setRules([tempRule, ...rules])
     setIsDialogOpen(false)
-    setNewRule({ rule: "", severity: "medium", rationale: "", category: "Jurídico" }) // Reset
+    setNewRule({ 
+        trigger: "", 
+        condition: "", 
+        action: "", 
+        behavior: "", 
+        observation: "", 
+        severity: "medium", 
+        category: "Jurídico" 
+    }) 
 
     // In a real app, you would POST to API here
-    /*
-    try {
-      await fetch("/api/playbook/rules", { method: "POST", body: JSON.stringify(newRule) })
-      fetchRules()
-    } catch (e) { ... }
-    */
   }
 
-  const getSeverityBadge = (severity: string) => {
+  const toggleRuleActive = (id: number) => {
+    setRules(rules.map(r => r.id === id ? { ...r, active: !r.active } : r))
+  }
+
+  const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case "high":
-        return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20">Alto Risco</Badge>
-      case "medium":
-        return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">Médio Risco</Badge>
-      case "low":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20">Baixo Risco</Badge>
-      default:
-        return <Badge variant="secondary">N/A</Badge>
+      case "high": return <ShieldAlert className="h-4 w-4 text-destructive" />
+      case "medium": return <AlertTriangle className="h-4 w-4 text-amber-500" />
+      case "low": return <ShieldCheck className="h-4 w-4 text-emerald-500" />
+      default: return null
     }
   }
 
   const filteredRules = rules.filter((rule) => {
     const matchesSearch = 
-      rule.rule.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      rule.rationale.toLowerCase().includes(searchTerm.toLowerCase())
+      rule.condition.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      rule.trigger.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rule.action.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "all" || rule.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -139,20 +149,9 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
 
   return (
     <div className="space-y-6">
-      <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex gap-3">
-        <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <h4 className="font-medium text-blue-900">Regras de Ouro</h4>
-          <p className="text-sm text-blue-700">
-            Estas regras alimentam diretamente a Inteligência Artificial. 
-            Defina o que é inaceitável para sua empresa e a IA aplicará estes critérios em todas as análises de contrato.
-          </p>
-        </div>
-      </div>
-
       {/* Filters & Actions */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="border-none shadow-none bg-transparent">
+        <CardContent className="p-0">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -160,12 +159,12 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
                 placeholder="Buscar regras..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-card"
               />
             </div>
             <div className="flex gap-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] bg-card">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -182,29 +181,21 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
               
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 whitespace-nowrap">
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 whitespace-nowrap shadow-sm">
                     <Plus className="h-4 w-4 mr-2" />
                     Nova Regra
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Nova Regra de Análise</DialogTitle>
                     <DialogDescription>
-                      Defina uma regra para a IA aplicar automaticamente nas análises.
+                      Crie um fluxo lógico claro para a IA seguir.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Regra (O que a IA deve verificar?)</Label>
-                      <Input 
-                        placeholder="Ex: Não aceitar reajuste pelo IGPM" 
-                        value={newRule.rule}
-                        onChange={(e) => setNewRule({...newRule, rule: e.target.value})}
-                      />
-                    </div>
+                  <div className="grid gap-6 py-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                         <div className="space-y-2">
                             <Label>Categoria</Label>
                             <Select 
                                 value={newRule.category} 
@@ -221,7 +212,7 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Severidade</Label>
+                            <Label>Severidade (Risco)</Label>
                             <Select 
                                 value={newRule.severity} 
                                 onValueChange={(val) => setNewRule({...newRule, severity: val})}
@@ -230,22 +221,70 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="low">Baixo Risco</SelectItem>
-                                    <SelectItem value="medium">Médio Risco</SelectItem>
-                                    <SelectItem value="high">Alto Risco</SelectItem>
+                                    <SelectItem value="low">Baixo</SelectItem>
+                                    <SelectItem value="medium">Médio</SelectItem>
+                                    <SelectItem value="high">Alto</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
+
+                    <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+                        <div className="space-y-2">
+                            <Label className="text-emerald-600 font-semibold flex items-center gap-2">
+                                1. QUANDO (Gatilho)
+                            </Label>
+                            <Input 
+                                placeholder="Ex: Contrato contém cláusula de multa rescisória" 
+                                value={newRule.trigger}
+                                onChange={(e) => setNewRule({...newRule, trigger: e.target.value})}
+                            />
+                        </div>
+                        <div className="flex justify-center">
+                            <ArrowRight className="h-4 w-4 text-muted-foreground/50 rotate-90 md:rotate-0" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-blue-600 font-semibold flex items-center gap-2">
+                                2. SE (Condição)
+                            </Label>
+                            <Input 
+                                placeholder="Ex: Percentual for superior a 10%" 
+                                value={newRule.condition}
+                                onChange={(e) => setNewRule({...newRule, condition: e.target.value})}
+                            />
+                        </div>
+                        <div className="flex justify-center">
+                            <ArrowRight className="h-4 w-4 text-muted-foreground/50 rotate-90 md:rotate-0" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-amber-600 font-semibold flex items-center gap-2">
+                                3. ENTÃO (Ação)
+                            </Label>
+                            <Input 
+                                placeholder="Ex: Sinalizar risco abusivo" 
+                                value={newRule.action}
+                                onChange={(e) => setNewRule({...newRule, action: e.target.value})}
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label>Motivo / Racional (Por que isso é proibido?)</Label>
+                        <Label>Como (Comportamento esperado)</Label>
+                        <Input 
+                            placeholder="Ex: Sugerir redução para teto de 2% conforme CDC" 
+                            value={newRule.behavior}
+                            onChange={(e) => setNewRule({...newRule, behavior: e.target.value})}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Observações (Opcional)</Label>
                       <Textarea 
-                        placeholder="Ex: O IGPM possui alta volatilidade e impacta o fluxo de caixa..." 
-                        rows={3}
-                        value={newRule.rationale}
-                        onChange={(e) => setNewRule({...newRule, rationale: e.target.value})}
+                        placeholder="Contexto adicional para a equipe..." 
+                        rows={2}
+                        value={newRule.observation}
+                        onChange={(e) => setNewRule({...newRule, observation: e.target.value})}
                       />
-                      <p className="text-xs text-muted-foreground">Essa explicação ajuda a IA a justificar o apontamento no relatório.</p>
                     </div>
                   </div>
                   <DialogFooter>
@@ -259,45 +298,73 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
         </CardContent>
       </Card>
 
-      {/* Rules List */}
-      <div className="space-y-4">
+      {/* Rules Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredRules.map((rule) => (
-          <Card key={rule.id} className="overflow-hidden transition-all hover:shadow-md border-l-4" style={{
-            borderLeftColor: rule.severity === 'high' ? '#ef4444' : rule.severity === 'medium' ? '#f59e0b' : '#10b981'
+          <Card key={rule.id} className={`transition-all hover:shadow-md border-t-4 ${!rule.active ? 'opacity-60 grayscale' : ''}`} style={{
+            borderTopColor: rule.severity === 'high' ? '#ef4444' : rule.severity === 'medium' ? '#f59e0b' : '#10b981'
           }}>
-            <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row">
-                    <div className="p-6 flex-1 space-y-3">
-                        <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-lg">{rule.rule}</h3>
-                                    {getSeverityBadge(rule.severity)}
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Badge variant="outline" className="font-normal">{rule.category}</Badge>
-                                    <span>•</span>
-                                    <span>Atualizado em {new Date(rule.lastUpdated).toLocaleDateString('pt-BR')}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="bg-muted/30 rounded-lg p-3 text-sm">
-                            <span className="font-medium text-foreground">Por que: </span>
-                            <span className="text-muted-foreground">{rule.rationale}</span>
+            <CardContent className="p-5 space-y-4">
+                <div className="flex justify-between items-start">
+                    <Badge variant="outline" className="font-normal text-xs uppercase tracking-wider text-muted-foreground">
+                        {rule.category}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                        {getSeverityIcon(rule.severity)}
+                        <Switch 
+                            checked={rule.active}
+                            onCheckedChange={() => toggleRuleActive(rule.id)}
+                            className="scale-75 data-[state=checked]:bg-emerald-600"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-3 relative">
+                    {/* Flow Line */}
+                    <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-border/50 -z-10" />
+
+                    {/* Trigger */}
+                    <div className="flex gap-3 items-start">
+                        <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 text-xs font-bold">Q</div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium uppercase">Quando</p>
+                            <p className="text-sm font-medium text-foreground leading-tight">{rule.trigger}</p>
                         </div>
                     </div>
-                    
-                    <div className="border-t md:border-t-0 md:border-l bg-muted/10 p-4 flex md:flex-col justify-center items-center gap-2 min-w-[100px]">
-                        <Button variant="ghost" size="sm" className="w-full justify-start md:justify-center">
-                            <Edit className="h-4 w-4 mr-2 md:mr-0" />
-                            <span className="md:hidden">Editar</span>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="w-full justify-start md:justify-center text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2 md:mr-0" />
-                            <span className="md:hidden">Excluir</span>
-                        </Button>
+
+                    {/* Condition */}
+                    <div className="flex gap-3 items-start">
+                        <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 text-xs font-bold">S</div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium uppercase">Se</p>
+                            <p className="text-sm font-medium text-foreground leading-tight">{rule.condition}</p>
+                        </div>
                     </div>
+
+                    {/* Action */}
+                    <div className="flex gap-3 items-start">
+                        <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 text-xs font-bold">E</div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium uppercase">Então</p>
+                            <p className="text-sm font-medium text-foreground leading-tight">{rule.action}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {rule.behavior && (
+                    <div className="bg-muted/30 rounded-md p-3 text-xs border border-border/50">
+                        <span className="font-semibold text-foreground/80">Como: </span>
+                        <span className="text-muted-foreground">{rule.behavior}</span>
+                    </div>
+                )}
+
+                <div className="pt-2 flex justify-end gap-2 border-t border-border/40">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+                        <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                 </div>
             </CardContent>
           </Card>
@@ -305,8 +372,9 @@ export function PlaybookRules({ initialRules = [] }: { initialRules?: Rule[] }) 
       </div>
 
       {filteredRules.length === 0 && (
-         <div className="text-center py-12">
-          <p className="text-muted-foreground">Nenhuma regra encontrada.</p>
+         <div className="text-center py-12 border-2 border-dashed rounded-xl">
+          <p className="text-muted-foreground">Nenhuma regra ativa. O Playbook está vazio.</p>
+          <Button variant="link" onClick={() => setIsDialogOpen(true)}>Criar primeira regra</Button>
         </div>
       )}
     </div>

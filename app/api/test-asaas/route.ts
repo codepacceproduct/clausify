@@ -55,7 +55,7 @@ export async function GET() {
     const subscription = await asaas.createSubscription({
         customer: customerId,
         billingType: 'PIX', // Testando com PIX
-        value: 29.90,
+        value: 99.00,
         nextDueDate: nextDueDate.toISOString().split('T')[0],
         cycle: 'MONTHLY',
         description: `Teste Assinatura Mensal - ${envName}`

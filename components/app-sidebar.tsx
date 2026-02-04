@@ -35,6 +35,7 @@ import Image from "next/image"
 import { usePermissions } from "@/contexts/permissions-context"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useTheme } from "next-themes"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +54,6 @@ const navigation = [
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },
   { name: "Cálculos", href: "/calculos", icon: Calculator }, // Added Cálculos navigation item
-  { name: "Sobre", href: "/sobre", icon: Info },
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 
@@ -67,7 +67,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const { theme, setTheme } = useTheme()
   const { allowedModules, plan } = usePermissions()
 
   // User Profile State
@@ -163,7 +163,6 @@ export function AppSidebar({
     if (href.startsWith("/versionamento")) return "versionamento"
     if (href.startsWith("/playbook")) return "playbook"
     if (href.startsWith("/calculos")) return "calculos" // Added Cálculos module key
-    if (href.startsWith("/sobre")) return "sobre"
     if (href.startsWith("/configuracoes")) return "configuracoes"
     if (href.startsWith("/auditoria")) return "auditoria"
     if (href.startsWith("/equipes")) return "equipes"
@@ -173,11 +172,6 @@ export function AppSidebar({
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
-  }
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
-    document.documentElement.classList.toggle("dark")
   }
 
   const handleLogout = () => {
@@ -318,53 +312,80 @@ export function AppSidebar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
-              className="w-56" 
+              className="w-64 p-2" 
               align="start" 
               side="right" 
               sideOffset={8}
             >
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{userName || "Minha Conta"}</p>
-                  <p className="text-xs leading-none text-muted-foreground truncate">{userEmail}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center justify-between">
-                <span>Plano {displayPlan}</span>
-                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <div className="px-2 py-1.5 mb-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Minha Conta</p>
+                <p className="text-sm font-medium text-foreground truncate">{userEmail}</p>
               </div>
-              <DropdownMenuSeparator />
-              {(userRole === 'admin' || userRole === 'owner') && (
-                <DropdownMenuItem onClick={() => router.push("/configuracoes?tab=subscription&subtab=plans")}>
-                  <Sparkles className="mr-2 h-4 w-4 text-emerald-500" />
-                  <span>Gerenciar plano</span>
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => router.push("/configuracoes")}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
+
+              <DropdownMenuSeparator className="my-1" />
+              
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-md px-3 py-2 mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Plano {displayPlan || "Free"}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-500">Ativo</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+              </div>
+
+              <DropdownMenuSeparator className="my-1" />
+              
+              <DropdownMenuItem 
+                onClick={() => router.push("/configuracoes?tab=subscription&subtab=plans")}
+                className="group cursor-pointer py-2 focus:bg-emerald-50 dark:focus:bg-emerald-900/10 focus:text-emerald-900 dark:focus:text-emerald-50"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-100/50 dark:bg-emerald-900/20 mr-3 text-emerald-600 dark:text-emerald-400 group-focus:text-emerald-700 dark:group-focus:text-emerald-300">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-sm font-medium">Gerenciar plano</span>
+                  <span className="text-xs text-muted-foreground">Faturas e limites</span>
+                </div>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="flex items-center justify-between px-2 py-1.5 select-none">
-                <div className="flex items-center text-sm">
-                  {isDarkMode ? (
-                    <Moon className="mr-2 h-4 w-4" />
-                  ) : (
-                    <Sun className="mr-2 h-4 w-4" />
-                  )}
-                  <span>Tema</span>
+
+              <DropdownMenuItem 
+                onClick={() => router.push("/configuracoes")}
+                className="group cursor-pointer py-2 focus:bg-emerald-50 dark:focus:bg-emerald-900/10 focus:text-emerald-900 dark:focus:text-emerald-50"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted mr-3 text-muted-foreground group-focus:text-emerald-600 dark:group-focus:text-emerald-400 group-focus:bg-emerald-100/50 dark:group-focus:bg-emerald-900/20 transition-colors">
+                  <Settings className="h-4 w-4" />
+                </div>
+                <div className="flex flex-col space-y-0.5">
+                  <span className="text-sm font-medium">Configurações</span>
+                  <span className="text-xs text-muted-foreground">Preferências da conta</span>
+                </div>
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator className="my-1" />
+              
+              <div className="flex items-center justify-between px-2 py-2 select-none">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  </div>
+                  <span className="text-sm font-medium">Tema {theme === "dark" ? "Escuro" : "Claro"}</span>
                 </div>
                 <Switch 
-                  checked={isDarkMode} 
-                  onCheckedChange={toggleTheme} 
-                  className="scale-75 data-[state=checked]:bg-emerald-500"
+                  checked={theme === "dark"} 
+                  onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} 
+                  className="data-[state=checked]:bg-primary"
                 />
               </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sair</span>
+              
+              <DropdownMenuSeparator className="my-1" />
+              
+              <DropdownMenuItem 
+                onClick={handleLogout} 
+                className="cursor-pointer py-2 text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-red-100 dark:bg-red-900/20 mr-3">
+                  <LogOut className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-medium">Sair da conta</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

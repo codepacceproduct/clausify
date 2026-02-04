@@ -1,20 +1,24 @@
-
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+
+export type EventStatus = 'pending' | 'completed' | 'cancelled';
 
 export type Event = {
   id: string
   title: string
   description?: string
   date: string
-  time?: string
+  start_time?: string
   end_time?: string
   type: string
   priority: string
   location?: string
   user_id: string
+  status: EventStatus
+  created_at?: string
+  updated_at?: string
 }
 
 export async function getEvents(start: string, end: string) {
@@ -40,7 +44,7 @@ export async function getEvents(start: string, end: string) {
   return data as Event[]
 }
 
-export async function createEvent(formData: any) {
+export async function createEvent(formData: Partial<Event>) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -50,7 +54,8 @@ export async function createEvent(formData: any) {
     .from('events')
     .insert({
       ...formData,
-      user_id: user.id
+      user_id: user.id,
+      status: formData.status || 'pending'
     })
     .select()
     .single()
@@ -61,7 +66,33 @@ export async function createEvent(formData: any) {
   }
 
   revalidatePath('/calendario')
-  return data
+  return data as Event
+}
+
+export async function updateEvent(id: string, formData: Partial<Event>) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("Unauthorized")
+
+  const { data, error } = await supabase
+    .from('events')
+    .update({
+      ...formData,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating event:', error)
+    throw new Error(error.message)
+  }
+
+  revalidatePath('/calendario')
+  return data as Event
 }
 
 export async function deleteEvent(id: string) {

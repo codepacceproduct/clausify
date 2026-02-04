@@ -237,3 +237,12 @@ body {
   overflow-x: hidden;
   position: relative; /* Ensure it's a positioning context if needed */
 }
+
+/* Scrollbar Hide Utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

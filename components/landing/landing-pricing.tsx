@@ -9,8 +9,8 @@ const plans = [
   {
     name: "Starter",
     description: "Perfeito para advogados autônomos",
-    priceMonthly: 197,
-    priceYearly: 167,
+    priceMonthly: 99,
+    priceYearly: 84,
     features: [
       "50 análises por mês",
       "Detecção de riscos básica",
@@ -24,8 +24,8 @@ const plans = [
   {
     name: "Professional",
     description: "Para escritórios em crescimento",
-    priceMonthly: 497,
-    priceYearly: 417,
+    priceMonthly: 299,
+    priceYearly: 254,
     features: [
       "200 análises por mês",
       "Detecção de riscos avançada",
