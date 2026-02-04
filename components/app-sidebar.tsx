@@ -67,7 +67,7 @@ export function AppSidebar({
   const pathname = usePathname()
   const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const { allowedModules, plan } = usePermissions()
 
   // User Profile State
@@ -362,17 +362,24 @@ export function AppSidebar({
               
               <DropdownMenuSeparator className="my-1" />
               
-              <div className="flex items-center justify-between px-2 py-2 select-none">
+              <div 
+                className="flex items-center justify-between px-2 py-2 select-none cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-sm group transition-colors"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setTheme(resolvedTheme === "dark" ? "light" : "dark")
+                }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                    {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-100/50 dark:group-hover:bg-emerald-900/20 transition-colors">
+                    {resolvedTheme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                   </div>
-                  <span className="text-sm font-medium">Tema {theme === "dark" ? "Escuro" : "Claro"}</span>
+                  <span className="text-sm font-medium group-hover:text-emerald-900 dark:group-hover:text-emerald-50 transition-colors">Tema {resolvedTheme === "dark" ? "Escuro" : "Claro"}</span>
                 </div>
                 <Switch 
-                  checked={theme === "dark"} 
+                  checked={resolvedTheme === "dark"} 
                   onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} 
-                  className="data-[state=checked]:bg-primary"
+                  className="data-[state=checked]:bg-emerald-500"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
               
