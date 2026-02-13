@@ -16,6 +16,39 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // 1.5. Bloqueio de rotas /admin via middleware (Segurança adicional)
+  if (request.nextUrl.pathname.startsWith('/admin') && !request.nextUrl.pathname.startsWith('/admin/login')) {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // Usa Service Role se disponível para garantir leitura do role
+        {
+            cookies: {
+                getAll() { return request.cookies.getAll() },
+                setAll() {}
+            }
+        }
+      )
+
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+          return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+
+      // Consulta usando service role (se configurada) evita bloqueios de RLS no middleware
+      const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+      
+      // Bloqueia se não for super_admin (nem admin legado)
+      if (profile?.role !== 'super_admin' && profile?.role !== 'admin') {
+          // Redireciona para home ou página de não autorizado
+          return NextResponse.redirect(new URL('/', request.url))
+      }
+  }
+
   // 2. Lógica de Proteção de API (Inadimplência)
   const path = request.nextUrl.pathname
 

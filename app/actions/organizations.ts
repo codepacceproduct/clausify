@@ -38,7 +38,7 @@ async function requireAdmin() {
     return null
   }
 
-  if (profile?.role !== "admin") {
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
     console.warn("requireAdmin: user is not admin")
     return null
   }

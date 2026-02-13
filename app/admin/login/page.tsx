@@ -46,9 +46,15 @@ export default function AdminLoginPage() {
         .eq("id", data.user.id)
         .single()
 
-      if (profileError || profile?.role !== "admin") {
+      if (profileError) {
+        console.error("Erro ao buscar perfil:", profileError)
         await supabase.auth.signOut()
-        throw new Error("Acesso não autorizado. Apenas administradores podem acessar esta área.")
+        throw new Error(`Erro ao verificar permissões: ${profileError.message}`)
+      }
+
+      if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+        await supabase.auth.signOut()
+        throw new Error(`Acesso negado. Seu cargo (${profile?.role || "nenhum"}) não tem permissão de administrador.`)
       }
 
       router.push("/admin")

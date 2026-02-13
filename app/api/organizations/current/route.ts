@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     .from("profiles")
     .update({ 
       organization_id: newOrg.id,
-      role: "admin" // or 'owner' depending on your role system
+      role: "owner" // Explicitly owner
     })
     .eq("email", email)
 

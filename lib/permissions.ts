@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js"
 import { unstable_cache } from "next/cache"
 
-export type AppRole = "admin" | "moderator" | "member"
+export type AppRole = "super_admin" | "owner" | "org_admin" | "member" | "moderator"
 export type Plan = "free" | "basic" | "professional" | "enterprise"
 
 export type Capability =
+  | "manage_platform"
+  | "manage_organization"
   | "manage_members"
   | "change_roles"
   | "edit_organization"
@@ -87,11 +89,33 @@ const DEFAULT_PLAN_LIMITS: Record<Plan, PlanLimits> = {
 export const planLimits = DEFAULT_PLAN_LIMITS
 
 const roleCapabilities: Record<AppRole, Capability[]> = {
-  admin: [
+  super_admin: [
+    "manage_platform",
+    "manage_organization",
     "manage_members",
     "change_roles",
     "edit_organization",
     "delete_organization",
+    "view_analytics",
+    "view_audit_logs",
+    "generate_invites",
+    "configure_approvals",
+  ],
+  owner: [
+    "manage_organization",
+    "manage_members",
+    "change_roles",
+    "edit_organization",
+    "delete_organization",
+    "view_analytics",
+    "view_audit_logs",
+    "generate_invites",
+    "configure_approvals",
+  ],
+  org_admin: [
+    "manage_members",
+    "change_roles",
+    "edit_organization",
     "view_analytics",
     "view_audit_logs",
     "generate_invites",
@@ -114,7 +138,10 @@ export function hasPermission(role: string | null | undefined, capability: Capab
 
 export function normalizeRole(r?: string | null): AppRole {
   const v = String(r || "").toLowerCase()
-  if (v === "owner" || v === "admin") return "admin"
+  if (v === "admin") return "super_admin" // Legacy support or explicit super admin
+  if (v === "super_admin") return "super_admin"
+  if (v === "owner") return "owner"
+  if (v === "org_admin") return "org_admin"
   if (v === "moderator") return "moderator"
   return "member"
 }

@@ -36,7 +36,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           .eq("id", user.id)
           .single()
 
-        if (profile?.role !== "admin") {
+        // Strict check for super_admin
+        // Note: legacy "admin" role in database might need to be treated as super_admin IF it wasn't migrated.
+        // But per our plan, we migrated organization admins to "org_admin".
+        // So "admin" or "super_admin" is the Platform Admin.
+        const role = profile?.role
+        if (role !== "super_admin" && role !== "admin") {
           if (pathname !== "/admin/login") {
             router.push("/admin/login")
           }
