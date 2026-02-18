@@ -1,0 +1,17 @@
+services:
+  harvey-service:
+    build: .
+    container_name: harvey-service
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - HARVEY_SHARED_SECRET=${HARVEY_SHARED_SECRET}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - harvey-logs:/app/logs
+
+volumes:
+  harvey-logs:
+

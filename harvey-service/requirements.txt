@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+openai
+langgraph
+langchain
+pydantic
+redis
+psycopg2-binary
+sqlalchemy
+python-dotenv
+chromadb
+loguru
+httpx
+python-multipart
+aiofiles
+pydub
