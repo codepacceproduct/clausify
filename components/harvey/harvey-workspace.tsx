@@ -131,7 +131,9 @@ export function HarveyWorkspace() {
 
             const data = await response.json()
             const transcription = data.transcription as string | undefined
-            const responseText = data.response_text as unknown
+            const responseText = data.response_text as string | undefined
+            const toolNameFromApi = data.tool as string | undefined
+            const toolDataFromApi = data.tool_data as unknown
             const audioUrl = data.audio_url as string | undefined
 
             if (transcription) {
@@ -144,17 +146,15 @@ export function HarveyWorkspace() {
               setOrchestrationLog(prev => [...prev, { question: transcription }])
             }
 
-            if (responseText) {
+            if (responseText || toolNameFromApi) {
               let displayText = ""
-              let toolName: string | undefined
+              const toolName = toolNameFromApi
+              const toolData = toolDataFromApi
 
-              if (typeof responseText === "string") {
+              if (toolName) {
+                displayText = formatHarveyToolResponse(toolName, toolData)
+              } else if (responseText) {
                 displayText = responseText
-              } else if (responseText && typeof responseText === "object") {
-                const anyResponse = responseText as any
-                toolName = typeof anyResponse.tool === "string" ? anyResponse.tool : undefined
-                const dataPayload = anyResponse.data ?? anyResponse
-                displayText = formatHarveyToolResponse(toolName, dataPayload)
               }
 
               if (displayText) {
@@ -165,12 +165,12 @@ export function HarveyWorkspace() {
                 setMessages(prev => [...prev, assistantMessage])
               }
 
-              if (toolName) {
+              if (toolNameFromApi) {
                 setOrchestrationLog(prev => {
                   if (!prev.length) return prev
                   const next = [...prev]
                   const last = next[next.length - 1]
-                  next[next.length - 1] = { ...last, tool: toolName }
+                  next[next.length - 1] = { ...last, tool: toolNameFromApi }
                   return next
                 })
               }
@@ -434,6 +434,23 @@ function formatHarveyToolResponse(toolName: string | undefined, data: any): stri
     return `Evento criado para ${date ?? "data não informada"} com descrição "${description}".`
   }
 
+  if (toolName === "consultar_agenda") {
+    if (typeof data === "string") return data
+    if (data && typeof data === "object" && Array.isArray((data as any).events)) {
+      const events = (data as any).events as any[]
+      if (!events.length) {
+        return "Você não tem compromissos neste período."
+      }
+      const parts = events.slice(0, 5).map(e => {
+        const title = e.title || "Compromisso"
+        const date = e.date || e.starts_at || ""
+        return `${title} em ${date}`
+      })
+      return `Seus compromissos: ${parts.join("; ")}.`
+    }
+    return "Consulta de agenda executada."
+  }
+
   if (toolName === "analisar_contrato") {
     const name = data.name || "Contrato"
     const risk = data.risk_level || "desconhecido"
@@ -508,6 +525,13 @@ function getToolVisual(toolName: string | undefined): { icon: JSX.Element | null
     return {
       icon: <BookOpen className="h-3 w-3 text-emerald-300" />,
       label: "Playbook consultado",
+    }
+  }
+
+  if (toolName === "consultar_agenda") {
+    return {
+      icon: <CalendarCheck className="h-3 w-3 text-emerald-300" />,
+      label: "Agenda consultada",
     }
   }
 

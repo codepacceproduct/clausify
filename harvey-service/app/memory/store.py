@@ -1,99 +1,79 @@
-import json
 import os
-from datetime import datetime
 from typing import Any, Dict, List
 
-import psycopg2
+import httpx
 
 
-def _get_connection():
-  database_url = os.getenv("DATABASE_URL")
-  if not database_url:
+def _supabase_base_url() -> str | None:
+  url = os.getenv("SUPABASE_URL")
+  return url.rstrip("/") if url else None
+
+
+def _supabase_headers() -> Dict[str, str] | None:
+  srk = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+  if not srk:
     return None
-
-  return psycopg2.connect(database_url)
-
-
-def _ensure_table():
-  try:
-    conn = _get_connection()
-  except Exception:
-    return
-  if conn is None:
-    return
-  try:
-    with conn:
-      with conn.cursor() as cur:
-        cur.execute(
-          """
-          CREATE TABLE IF NOT EXISTS harvey_memory (
-            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-            user_id UUID NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            tool_name TEXT,
-            created_at TIMESTAMPTZ DEFAULT NOW()
-          );
-          """,
-        )
-  finally:
-    conn.close()
+  return {
+    "apikey": srk,
+    "Authorization": f"Bearer {srk}",
+    "Content-Type": "application/json",
+  }
 
 
-_ensure_table()
+def _post(table: str, json: Dict[str, Any]) -> Dict[str, Any] | None:
+  base = _supabase_base_url()
+  headers = _supabase_headers()
+  if not base or not headers:
+    return None
+  with httpx.Client(timeout=15) as client:
+    resp = client.post(f"{base}/rest/v1/{table}", headers={**headers, "Prefer": "return=representation"}, json=json)
+    if resp.status_code >= 400:
+      return None
+    data = resp.json()
+    return data[0] if isinstance(data, list) and data else data
+
+
+def _get(table: str, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+  base = _supabase_base_url()
+  headers = _supabase_headers()
+  if not base or not headers:
+    return []
+  with httpx.Client(timeout=15) as client:
+    resp = client.get(f"{base}/rest/v1/{table}", headers=headers, params=params)
+    if resp.status_code >= 400:
+      return []
+    return resp.json()
 
 
 def add_memory(user_id: str, role: str, content: str, tool_name: str | None = None) -> None:
   try:
-    conn = _get_connection()
+    _post(
+      "harvey_memory",
+      {"user_id": user_id, "role": role, "content": content, "tool_name": tool_name},
+    )
   except Exception:
     return
-  if conn is None:
-    return
-  try:
-    with conn:
-      with conn.cursor() as cur:
-        cur.execute(
-          """
-          INSERT INTO harvey_memory (user_id, role, content, tool_name)
-          VALUES (%s, %s, %s, %s);
-          """,
-          (user_id, role, content, tool_name),
-        )
-  finally:
-    conn.close()
 
 
 def get_recent_memory(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
   try:
-    conn = _get_connection()
-  except Exception:
-    return []
-  if conn is None:
-    return []
-  try:
-    with conn:
-      with conn.cursor() as cur:
-        cur.execute(
-          """
-          SELECT role, content, tool_name, created_at
-          FROM harvey_memory
-          WHERE user_id = %s
-          ORDER BY created_at DESC
-          LIMIT %s;
-          """,
-          (user_id, limit),
-        )
-        rows = cur.fetchall()
-
+    rows = _get(
+      "harvey_memory",
+      {
+        "select": "role,content,tool_name,created_at",
+        "user_id": f"eq.{user_id}",
+        "order": "created_at.desc",
+        "limit": str(limit),
+      },
+    )
     return [
       {
-        "role": row[0],
-        "content": row[1],
-        "tool_name": row[2],
-        "created_at": row[3].isoformat() if row[3] else None,
+        "role": r.get("role"),
+        "content": r.get("content"),
+        "tool_name": r.get("tool_name"),
+        "created_at": r.get("created_at"),
       }
-      for row in rows
+      for r in rows
     ]
-  finally:
-    conn.close()
+  except Exception:
+    return []

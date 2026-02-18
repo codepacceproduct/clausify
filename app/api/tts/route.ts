@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server"
-import { getOpenAIClient } from "@/lib/openai"
+import { openai } from "@/lib/openai"
 
 export async function POST(request: Request) {
   try {
     const { text } = await request.json()
-    const openai = getOpenAIClient()
-
-    if (!openai) {
-      return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
-    }
 
     if (!text) {
       return NextResponse.json({ error: "No text provided" }, { status: 400 })
@@ -18,7 +13,7 @@ export async function POST(request: Request) {
     const truncatedText = text.slice(0, 4096)
 
     const mp3 = await openai.audio.speech.create({
-      model: "tts-1",
+      model: "gpt-4o-mini-tts",
       voice: "alloy",
       input: truncatedText,
     })
