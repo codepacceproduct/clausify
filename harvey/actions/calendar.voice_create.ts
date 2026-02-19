@@ -1,7 +1,8 @@
-import { supabase } from "../integrations/supabase.client"
+import { getSupabaseClient } from "../integrations/supabase.client"
 import type { ScheduleMeetingPayload } from "../types/intents"
 
 export async function createEvent(user_id: string, payload: ScheduleMeetingPayload) {
+  const supabase = getSupabaseClient()
   const title = payload.title ?? "Reunião"
 
   const starts_at = new Date(`${payload.date}T${payload.time}:00`)
@@ -24,4 +25,3 @@ export async function createEvent(user_id: string, payload: ScheduleMeetingPaylo
   if (error) throw error
   return data
 }
-
