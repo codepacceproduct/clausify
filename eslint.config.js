@@ -1,17 +1,19 @@
-import next from "eslint-config-next"
-import reactHooks from "eslint-plugin-react-hooks"
+import tsParser from "@typescript-eslint/parser"
 
 const config = [
-  ...next,
   {
-    plugins: {
-      "react-hooks": reactHooks,
+    files: ["**/*.{js,jsx,ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: { jsx: true },
+      },
     },
-    rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
-    },
+    rules: {},
+  },
+  {
     ignores: ["node_modules", "dist", ".next", "build"],
   },
 ]
