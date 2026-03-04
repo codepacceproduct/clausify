@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Menu, X, ArrowRight } from "lucide-react"
 
 export function LandingHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -27,14 +27,16 @@ export function LandingHeader() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5" : "bg-transparent"
-      }`}
+      className={`fixed top-4 left-0 right-0 z-50 transition-all duration-300 flex justify-center px-4`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div 
+        className={`w-full max-w-5xl rounded-full border border-white/10 bg-black/50 backdrop-blur-md transition-all duration-300 px-6 py-3 ${
+          isScrolled ? "bg-black/80 shadow-lg shadow-black/20" : "bg-black/50"
+        }`}
+      >
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="relative w-36 h-10">
+          <Link href="/" className="relative w-32 h-8 flex-shrink-0">
             <Image
               src="/images/clausify-logo.png"
               alt="Clausify"
@@ -45,12 +47,12 @@ export function LandingHeader() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm text-gray-400 hover:text-white transition-colors duration-200"
+                className="text-sm font-medium text-gray-300 hover:text-white transition-colors duration-200"
               >
                 {link.label}
               </Link>
@@ -58,15 +60,14 @@ export function LandingHeader() {
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/5">
-                Entrar
-              </Button>
+          <div className="hidden md:flex items-center gap-4 flex-shrink-0">
+            <Link href="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+              Entrar
             </Link>
             <Link href="/login">
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-6">
+              <Button className="bg-white hover:bg-gray-200 text-black rounded-full px-6 h-10 font-medium group">
                 Começar Grátis
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
           </div>
@@ -79,33 +80,36 @@ export function LandingHeader() {
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/5 p-6 space-y-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="block text-gray-400 hover:text-white py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="pt-4 space-y-3">
-              <Link href="/login" className="block">
-                <Button variant="outline" className="w-full border-white/10 text-white hover:bg-white/5 bg-transparent">
-                  Entrar
-                </Button>
-              </Link>
-              <Link href="/login" className="block">
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white">Começar Grátis</Button>
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-20 left-4 right-4 bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="block text-gray-400 hover:text-white py-2 text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <div className="pt-4 space-y-3 flex flex-col items-center">
+            <Link href="/login" className="block w-full">
+              <Button variant="ghost" className="w-full text-gray-300 hover:text-white">
+                Entrar
+              </Button>
+            </Link>
+            <Link href="/login" className="block w-full">
+              <Button className="w-full bg-white hover:bg-gray-200 text-black rounded-full">
+                Começar Grátis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

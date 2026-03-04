@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -8,23 +8,31 @@ import { ArrowRight, Play, Shield, Zap, FileCheck, Sparkles } from "lucide-react
 
 export function LandingHero() {
   const [isVisible] = useState(true)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.75 // Slow down slightly for better effect
+    }
+  }, [])
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[150px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-emerald-400/10 rounded-full blur-[120px] animate-pulse delay-1000" />
-
-        {/* Grid Pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: "100px 100px",
-          }}
-        />
+    <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-black">
+      {/* Video Background */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover opacity-60"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+        >
+          <source src="/hero-video.mp4" type="video/mp4" />
+        </video>
+        {/* Overlay for transparency/readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -90,48 +98,6 @@ export function LandingHero() {
             <div className="flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-emerald-500" />
               <span>Gestão de ponta a ponta</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Preview */}
-        <div
-          className={`mt-20 relative transition-all duration-1000 delay-300 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20"
-          }`}
-        >
-          <div className="relative flex items-center justify-center">
-            <Image
-              src="/images/dashboard-preview.png"
-              alt="Clausify Dashboard"
-              width={1200}
-              height={700}
-              className="w-full max-w-5xl h-auto object-contain rounded-2xl shadow-2xl shadow-emerald-500/10"
-            />
-          </div>
-
-          {/* Floating Cards - using Tailwind animate-bounce as alternative */}
-          <div className="absolute left-0 lg:left-10 top-1/2 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float-card">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Análise de Risco</p>
-                <p className="text-sm font-semibold text-white">3 cláusulas críticas</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute right-0 lg:right-10 top-2/3 bg-[#1a2329] border border-white/10 rounded-xl p-4 shadow-2xl hidden lg:block animate-float-card-delayed">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Tempo de Análise</p>
-                <p className="text-sm font-semibold text-white">2 min 34 seg</p>
-              </div>
             </div>
           </div>
         </div>
