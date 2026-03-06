@@ -251,15 +251,18 @@ export function AppSidebar({
                   href={item.href}
                   onClick={closeMobileMenu}
                   className={cn(
-                    "flex items-center gap-4 rounded-lg px-4 py-4 sm:gap-3 sm:px-3 sm:py-2.5 text-base sm:text-sm font-medium transition-all active:scale-95",
+                    "flex items-center gap-4 rounded-lg px-4 py-4 sm:gap-3 sm:px-3 sm:py-2.5 text-base sm:text-sm font-medium transition-all duration-200 group relative overflow-hidden",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                      ? "bg-gradient-to-r from-emerald-500/10 to-transparent text-emerald-500 dark:text-emerald-400"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     isCollapsed && "md:justify-center",
                   )}
                   title={isCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="h-6 w-6 sm:h-5 sm:w-5 shrink-0" />
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-emerald-500" />
+                  )}
+                  <item.icon className={cn("h-6 w-6 sm:h-5 sm:w-5 shrink-0 transition-colors", isActive ? "text-emerald-500 dark:text-emerald-400" : "group-hover:text-foreground")} />
                   <span className={cn(isCollapsed && "md:hidden")}>{item.name}</span>
                 </Link>
               )

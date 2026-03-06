@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCircle2, Clock, Zap } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { TrendingUp, TrendingDown, FileText, AlertTriangle, CheckCircle2, Zap } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 
 async function getMetrics() {
@@ -104,92 +103,118 @@ async function getMetrics() {
 
 export async function DashboardMetrics() {
   const metrics = await getMetrics()
-  const getDeltaColor = (n: number) => (n < 0 ? "text-destructive" : n === 0 ? "text-amber-600" : "text-success")
+  const getDeltaColor = (n: number) => (n < 0 ? "text-rose-500" : n === 0 ? "text-amber-500" : "text-emerald-500")
+  
   return (
     <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Contratos Analisados</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{metrics.totalContracts}</div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.analisadosDelta < 0 ? (
-              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.analisadosDelta)}`} />
-            ) : (
-              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.analisadosDelta)}`} />
-            )}
-            <span className={getDeltaColor(metrics.analisadosDelta)}>
-              {metrics.analisadosDelta > 0 ? "+" : ""}{metrics.analisadosDelta}%
-            </span>
-            vs mês anterior
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Risco Médio</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="mt-2 mb-2">
-            <div className="h-3 w-full bg-secondary/50 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  metrics.riskLevel === 'low' ? 'bg-emerald-500 w-1/3' :
-                  metrics.riskLevel === 'medium' ? 'bg-amber-500 w-2/3' :
-                  'bg-red-500 w-full'
-                }`}
-              />
+      {/* Contratos Analisados */}
+      <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Contratos Analisados</p>
+              <h3 className="text-3xl font-bold mt-2">{metrics.totalContracts}</h3>
+            </div>
+            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <FileText className="h-6 w-6 text-blue-500" />
             </div>
           </div>
-          <div className="flex justify-between items-center">
-             <span className="text-2xl font-bold">{metrics.riskLabel}</span>
-             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                {metrics.riskDelta < 0 ? (
-                  <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
-                ) : (
-                  <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.riskDelta)}`} />
-                )}
-                <span className={getDeltaColor(metrics.riskDelta)}>
-                  {metrics.riskDelta > 0 ? "+" : ""}{metrics.riskDelta}%
-                </span>
-            </p>
+          <div className="mt-4 flex items-center text-xs">
+            {metrics.analisadosDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.analisadosDelta)}`} />
+            ) : (
+              <TrendingUp className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.analisadosDelta)}`} />
+            )}
+            <span className={`font-medium ${getDeltaColor(metrics.analisadosDelta)}`}>
+              {metrics.analisadosDelta > 0 ? "+" : ""}{metrics.analisadosDelta}%
+            </span>
+            <span className="text-muted-foreground ml-1">vs mês anterior</span>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Conformidade</CardTitle>
-          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{metrics.conformidade}%</div>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-            {metrics.conformidadeDelta < 0 ? (
-              <TrendingDown className={`h-3 w-3 ${getDeltaColor(metrics.conformidadeDelta)}`} />
+      {/* Risco Médio */}
+      <Card className={`border-l-4 shadow-sm hover:shadow-md transition-shadow ${
+        metrics.riskLevel === 'low' ? 'border-l-emerald-500' :
+        metrics.riskLevel === 'medium' ? 'border-l-amber-500' :
+        'border-l-rose-500'
+      }`}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Risco Médio</p>
+              <h3 className="text-3xl font-bold mt-2">{metrics.riskLabel}</h3>
+            </div>
+            <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+              metrics.riskLevel === 'low' ? 'bg-emerald-500/10 text-emerald-500' :
+              metrics.riskLevel === 'medium' ? 'bg-amber-500/10 text-amber-500' :
+              'bg-rose-500/10 text-rose-500'
+            }`}>
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-xs">
+            {metrics.riskDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.riskDelta)}`} />
             ) : (
-              <TrendingUp className={`h-3 w-3 ${getDeltaColor(metrics.conformidadeDelta)}`} />
+              <TrendingUp className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.riskDelta)}`} />
             )}
-            <span className={getDeltaColor(metrics.conformidadeDelta)}>
-              {metrics.conformidadeDelta > 0 ? "+" : ""}{metrics.conformidadeDelta}%
+            <span className={`font-medium ${getDeltaColor(metrics.riskDelta)}`}>
+              {metrics.riskDelta > 0 ? "+" : ""}{metrics.riskDelta}%
             </span>
-            este trimestre
-          </p>
+            <span className="text-muted-foreground ml-1">vs mês anterior</span>
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Tempo Economizado</CardTitle>
-          <Zap className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{metrics.savedHours} horas</div>
-          <p className="text-xs text-muted-foreground mt-1">em processos manuais</p>
+      {/* Conformidade */}
+      <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Conformidade</p>
+              <h3 className="text-3xl font-bold mt-2">{metrics.conformidade}%</h3>
+            </div>
+            <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            </div>
+          </div>
+          <div className="mt-4 w-full bg-secondary/50 rounded-full h-1.5 mb-2">
+            <div 
+              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" 
+              style={{ width: `${metrics.conformidade}%` }}
+            />
+          </div>
+          <div className="flex items-center text-xs">
+            {metrics.conformidadeDelta < 0 ? (
+              <TrendingDown className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.conformidadeDelta)}`} />
+            ) : (
+              <TrendingUp className={`h-3 w-3 mr-1 ${getDeltaColor(metrics.conformidadeDelta)}`} />
+            )}
+            <span className={`font-medium ${getDeltaColor(metrics.conformidadeDelta)}`}>
+              {metrics.conformidadeDelta > 0 ? "+" : ""}{metrics.conformidadeDelta}%
+            </span>
+            <span className="text-muted-foreground ml-1">este trimestre</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tempo Economizado */}
+      <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Tempo Economizado</p>
+              <h3 className="text-3xl font-bold mt-2">{metrics.savedHours}h</h3>
+            </div>
+            <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Zap className="h-6 w-6 text-amber-500" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-xs text-muted-foreground">
+            <span className="font-medium text-foreground mr-1">~2 horas</span>
+            por contrato analisado automaticamente
+          </div>
         </CardContent>
       </Card>
     </div>

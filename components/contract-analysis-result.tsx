@@ -244,20 +244,26 @@ export function ContractAnalysisResult({
     <div className="space-y-6 animate-in fade-in duration-500 h-[calc(100vh-100px)] flex flex-col">
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Resultado da Análise</h2>
-          <p className="text-sm text-muted-foreground">{filename}</p>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <FileText className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            Resultado da Análise
+          </h2>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            {filename}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" onClick={onReset}>
-            <RotateCcw className="h-4 w-4 mr-2" />
+           <Button variant="outline" onClick={onReset} className="h-9">
+            <RotateCcw className="h-4 w-4 mr-2 text-muted-foreground" />
             Nova Análise
           </Button>
-          <Button variant="outline" onClick={handleCompareVersions} disabled={!contractId}>
-            <ArrowRightLeft className="h-4 w-4 mr-2" />
+          <Button variant="outline" onClick={handleCompareVersions} disabled={!contractId} className="h-9">
+            <ArrowRightLeft className="h-4 w-4 mr-2 text-muted-foreground" />
             Comparar Versões
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={handleDownloadPDF}>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-2" />
             Baixar Parecer PDF
           </Button>
@@ -265,27 +271,33 @@ export function ContractAnalysisResult({
       </div>
 
       {/* Audio Player (Top) */}
-      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-none shrink-0 shadow-md">
-        <CardContent className="p-4 flex items-center gap-4">
+      <Card className="bg-card text-card-foreground border-border shrink-0 shadow-lg overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-3 opacity-5">
+            <Zap className="h-24 w-24 text-emerald-500" />
+        </div>
+        <CardContent className="p-4 flex items-center gap-6 relative z-10">
           <audio ref={audioRef} className="hidden" />
           <Button 
             size="icon" 
-            className="h-12 w-12 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shrink-0 shadow-lg border-2 border-emerald-400/20"
+            className="h-14 w-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shrink-0 shadow-xl ring-4 ring-emerald-500/10 transition-all hover:scale-105"
             onClick={handlePlayAudio}
             disabled={audioLoading}
           >
-            {audioLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
+            {audioLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : isPlaying ? <Pause className="h-6 w-6 fill-current" /> : <Play className="h-6 w-6 ml-1 fill-current" />}
           </Button>
-          <div className="flex-1 space-y-1">
+          <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm">Resumo Executivo (IA)</span>
-              <span className="text-xs text-slate-400">
-                {audioLoading ? "Gerando áudio..." : isPlaying ? "Reproduzindo..." : "Clique para ouvir"}
-              </span>
+              <div className="flex flex-col">
+                <span className="font-semibold text-base text-foreground">Resumo Executivo (IA)</span>
+                <span className="text-xs text-muted-foreground">Ouvir análise completa do contrato</span>
+              </div>
+              <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                {audioLoading ? "Gerando áudio..." : isPlaying ? "Reproduzindo..." : "Clique no Play"}
+              </Badge>
             </div>
-            <div className="h-1.5 w-full bg-slate-700/50 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-300" 
+                className="h-full bg-emerald-500 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
                 style={{ width: `${audioProgress}%` }} 
               />
             </div>
@@ -294,28 +306,32 @@ export function ContractAnalysisResult({
       </Card>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6 flex-1 min-h-0">
+      <div className="grid lg:grid-cols-12 gap-6 flex-1 min-h-0">
         
         {/* Left: Document Viewer */}
-        <Card className="lg:col-span-2 flex flex-col overflow-hidden border-slate-200 shadow-sm">
-          <CardHeader className="pb-3 border-b bg-muted/20">
+        <Card className="lg:col-span-8 flex flex-col overflow-hidden border-border shadow-sm bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-3 border-b bg-muted/30 px-6 py-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base flex items-center gap-2 font-medium">
+                <FileText className="h-4 w-4 text-emerald-500" />
                 Visualização do Contrato
               </CardTitle>
               {contractId && <OnlineUsers channelId={`contract:${contractId}`} />}
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden relative bg-white dark:bg-slate-950">
+          <CardContent className="p-0 flex-1 overflow-hidden relative bg-muted/10">
              <ScrollArea className="h-full">
-                <div className="p-8 max-w-3xl mx-auto text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300 font-sans">
-                  {content || "Conteúdo do contrato não disponível para visualização."}
+                <div className="p-8 lg:p-12 max-w-4xl mx-auto">
+                    <div className="bg-background shadow-sm border border-border min-h-[800px] p-8 lg:p-12 rounded-sm">
+                        <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground font-serif">
+                            {content || "Conteúdo do contrato não disponível para visualização."}
+                        </div>
+                    </div>
                 </div>
              </ScrollArea>
              {/* Overlay for "Analysis Mode" visual effect */}
-             <div className="absolute top-4 right-4 pointer-events-none">
-                <Badge variant="outline" className="bg-white/80 backdrop-blur text-xs">
+             <div className="absolute top-4 right-6 pointer-events-none">
+                <Badge variant="outline" className="bg-background/80 backdrop-blur text-xs border-emerald-200 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 shadow-sm">
                     Modo Leitura
                 </Badge>
              </div>
@@ -323,30 +339,30 @@ export function ContractAnalysisResult({
         </Card>
 
         {/* Right: Traffic Light Sidebar (Semáforo) */}
-        <Card className="flex flex-col overflow-hidden border-slate-200 shadow-sm bg-slate-50/50 dark:bg-slate-900/50">
-          <CardHeader className="pb-3 border-b bg-white dark:bg-slate-950">
-            <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Pontos de Atenção</CardTitle>
-                <Badge variant={score >= 70 ? "default" : "destructive"} className={score >= 70 ? "bg-emerald-500" : ""}>
+        <Card className="lg:col-span-4 flex flex-col overflow-hidden border-border shadow-sm bg-background">
+          <CardHeader className="pb-3 border-b bg-muted/10 px-4 py-4">
+            <div className="flex items-center justify-between mb-1">
+                <CardTitle className="text-base font-medium">Pontos de Atenção</CardTitle>
+                <Badge variant={score >= 70 ? "default" : "destructive"} className={cn("text-xs font-bold", score >= 70 ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600")}>
                     Score: {score}
                 </Badge>
             </div>
-            <CardDescription>
-                {sortedIssues.length} itens encontrados
+            <CardDescription className="text-xs">
+                {sortedIssues.length} itens encontrados na análise
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
+          <CardContent className="p-0 flex-1 overflow-hidden bg-muted/5">
             <ScrollArea className="h-full p-4">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {sortedIssues.map((issue) => (
                   <div 
                     key={issue.id} 
                     className={cn(
-                        "rounded-lg border bg-white dark:bg-slate-950 p-4 shadow-sm transition-all hover:shadow-md cursor-pointer",
-                        activeIssueId === issue.id ? "ring-2 ring-primary" : "",
-                        issue.severity === 'high' ? "border-l-4 border-l-destructive" :
-                        issue.severity === 'medium' ? "border-l-4 border-l-amber-500" :
-                        "border-l-4 border-l-emerald-500"
+                        "group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md cursor-pointer relative overflow-hidden",
+                        activeIssueId === issue.id ? "ring-1 ring-emerald-500 border-emerald-500" : "border-border hover:border-emerald-500/30",
+                        issue.severity === 'high' ? "border-l-[3px] border-l-rose-500" :
+                        issue.severity === 'medium' ? "border-l-[3px] border-l-amber-500" :
+                        "border-l-[3px] border-l-emerald-500"
                     )}
                     onClick={() => scrollToClause(issue.id)}
                   >
@@ -354,44 +370,47 @@ export function ContractAnalysisResult({
                         <Badge 
                             variant="outline" 
                             className={cn(
-                                "text-xs font-semibold border-none px-2 py-0.5 rounded-full flex items-center gap-1",
-                                issue.severity === 'high' ? "bg-destructive/10 text-destructive" :
-                                issue.severity === 'medium' ? "bg-amber-500/10 text-amber-600" :
-                                "bg-emerald-500/10 text-emerald-600"
+                                "text-[10px] font-bold border-none px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider",
+                                issue.severity === 'high' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400" :
+                                issue.severity === 'medium' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                                "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                             )}
                         >
-                            {issue.severity === 'high' ? <><XCircle className="h-3 w-3" /> Risco Alto</> : 
-                             issue.severity === 'medium' ? <><AlertTriangle className="h-3 w-3" /> Risco Médio</> : 
-                             <><CheckCircle2 className="h-3 w-3" /> Informativo</>}
+                            {issue.severity === 'high' ? <><XCircle className="h-3 w-3" /> Crítico</> : 
+                             issue.severity === 'medium' ? <><AlertTriangle className="h-3 w-3" /> Atenção</> : 
+                             <><CheckCircle2 className="h-3 w-3" /> Info</>}
                         </Badge>
-                        {issue.severity === 'high' && <AlertTriangle className="h-4 w-4 text-destructive" />}
                     </div>
                     
-                    <h4 className="font-semibold text-sm mb-1">{issue.type}</h4>
-                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+                    <h4 className="font-semibold text-sm mb-1.5 text-foreground leading-snug">{issue.type}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3 leading-relaxed">
                         {issue.explanation}
                     </p>
 
                     <Button 
                         size="sm" 
                         variant="secondary" 
-                        className="w-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-sm"
+                        className="w-full h-8 text-xs bg-muted/50 hover:bg-emerald-500/10 hover:text-emerald-600 border border-transparent hover:border-emerald-500/20 transition-colors"
                         onClick={(e) => {
                             e.stopPropagation()
                             handleWhatsAppShare(issue)
                         }}
                     >
-                        <MessageCircle className="h-3.5 w-3.5 mr-2" />
-                        Explicar pro Cliente
+                        <MessageCircle className="h-3 w-3 mr-1.5" />
+                        Explicar ao Cliente
                     </Button>
                   </div>
                 ))}
 
                 {sortedIssues.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-emerald-500/50" />
-                        <p>Nenhum risco detectado.</p>
-                        <p className="text-xs">O contrato parece seguro.</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground space-y-4">
+                        <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-medium text-foreground">Nenhum risco detectado</p>
+                            <p className="text-xs max-w-[200px] mx-auto">O contrato foi analisado e parece estar em conformidade.</p>
+                        </div>
                     </div>
                 )}
               </div>

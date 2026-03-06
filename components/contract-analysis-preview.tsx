@@ -147,94 +147,140 @@ export function ContractAnalysisPreview({
   }
 
   return (
-    <div className="flex h-[calc(100vh-140px)] gap-6">
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onBack} className="no-print">
+    <div className="flex flex-col h-[calc(100vh-100px)] gap-6 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onBack} className="no-print hover:bg-muted/50 -ml-2">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Revisão do Contrato
+            <div className="h-6 w-px bg-border mx-2" />
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-500" />
+              Revisão e Correção
             </h2>
             <div className="ml-4">
                <OnlineUsers channelId={`contract:${contractId}`} />
             </div>
-          </div>
-          <Button onClick={handleSaveVersion} disabled={saving} className="no-print">
+        </div>
+        <Button onClick={handleSaveVersion} disabled={saving} className="no-print bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Salvando..." : "Salvar Nova Versão"}
-          </Button>
-        </div>
-
-        <Card className="flex-1 overflow-hidden border-2">
-          <ScrollArea className="h-full bg-muted/30">
-             {renderContent()}
-          </ScrollArea>
-        </Card>
+        </Button>
       </div>
 
-      {/* Sidebar - Issues */}
-      <div className="w-[400px] flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Split className="h-5 w-5" />
-            Sugestões ({analysis?.issues?.filter((i:any) => !i.resolved).length || 0})
-          </h3>
-        </div>
-
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
-            {analysis?.issues?.map((issue: Issue) => (
-              <Card 
-                key={issue.id} 
-                className={`cursor-pointer transition-all ${
-                    issue.resolved ? 'opacity-50 bg-muted' : 
-                    selectedIssue?.id === issue.id ? 'border-primary ring-1 ring-primary' : 'hover:border-primary/50'
-                }`}
-                onClick={() => setSelectedIssue(issue)}
-              >
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <Badge variant={issue.severity === 'high' ? 'destructive' : issue.severity === 'medium' ? 'default' : 'secondary'}>
-                      {issue.severity === 'high' ? 'Alto Risco' : issue.severity === 'medium' ? 'Médio Risco' : 'Baixo Risco'}
+      <div className="grid lg:grid-cols-12 gap-6 flex-1 min-h-0">
+        {/* Main Content Area - Editor */}
+        <Card className="lg:col-span-8 flex flex-col overflow-hidden border-border shadow-sm bg-background/50 backdrop-blur-sm">
+            <CardHeader className="pb-3 border-b bg-muted/30 px-6 py-4">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2 font-medium">
+                        <FileText className="h-4 w-4 text-emerald-500" />
+                        Editor de Contrato
+                    </CardTitle>
+                    <Badge variant="outline" className="bg-background/50 text-xs font-normal">
+                        Modo Edição
                     </Badge>
-                    {issue.resolved && <Badge variant="outline" className="text-green-600 border-green-600">Resolvido</Badge>}
-                  </div>
-                  <CardTitle className="text-sm font-medium mt-2">
-                    {issue.type}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2 space-y-3">
-                  <p className="text-xs text-muted-foreground">{issue.explanation}</p>
-                  
-                  {selectedIssue?.id === issue.id && !issue.resolved && (
-                    <div className="space-y-3 pt-3 border-t animate-in slide-in-from-top-2">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-red-500">Texto Original:</p>
-                            <p className="text-xs bg-red-50 p-2 rounded border border-red-100">{issue.originalText}</p>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-hidden relative bg-muted/10">
+                <ScrollArea className="h-full">
+                    <div className="p-8 lg:p-12 max-w-4xl mx-auto">
+                        <div className="bg-background shadow-sm border border-border min-h-[800px] p-8 lg:p-12 rounded-sm">
+                             {renderContent()}
                         </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-green-600">Sugestão:</p>
-                            <p className="text-xs bg-green-50 p-2 rounded border border-green-100">{issue.suggestion}</p>
-                        </div>
-                        <Button className="w-full no-print" size="sm" onClick={(e) => {
-                            e.stopPropagation()
-                            handleApplySuggestion(issue)
-                        }}>
-                            <Check className="h-4 w-4 mr-2" />
-                            Aplicar Sugestão
-                        </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
+                </ScrollArea>
+            </CardContent>
+        </Card>
+
+        {/* Sidebar - Issues */}
+        <Card className="lg:col-span-4 flex flex-col overflow-hidden border-border shadow-sm bg-background">
+            <CardHeader className="pb-3 border-b bg-muted/10 px-4 py-4">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                        <Split className="h-4 w-4 text-emerald-500" />
+                        Sugestões de Correção
+                    </CardTitle>
+                    <Badge variant="secondary" className="font-mono text-xs">
+                        {analysis?.issues?.filter((i:any) => !i.resolved).length || 0} pendentes
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-hidden bg-muted/5">
+                <ScrollArea className="h-full p-4">
+                    <div className="space-y-3">
+                        {analysis?.issues?.map((issue: Issue) => (
+                        <div 
+                            key={issue.id} 
+                            className={cn(
+                                "group rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md cursor-pointer relative overflow-hidden",
+                                issue.resolved ? "opacity-60 bg-muted border-border" : 
+                                selectedIssue?.id === issue.id ? "ring-1 ring-emerald-500 border-emerald-500" : "border-border hover:border-emerald-500/30",
+                                !issue.resolved && (
+                                    issue.severity === 'high' ? "border-l-[3px] border-l-rose-500" :
+                                    issue.severity === 'medium' ? "border-l-[3px] border-l-amber-500" :
+                                    "border-l-[3px] border-l-emerald-500"
+                                )
+                            )}
+                            onClick={() => setSelectedIssue(issue)}
+                        >
+                            <div className="flex items-start justify-between mb-2">
+                                <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                        "text-[10px] font-bold border-none px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider",
+                                        issue.severity === 'high' ? "bg-rose-500/10 text-rose-600 dark:text-rose-400" :
+                                        issue.severity === 'medium' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                                        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                    )}
+                                >
+                                    {issue.severity === 'high' ? 'Crítico' : issue.severity === 'medium' ? 'Atenção' : 'Info'}
+                                </Badge>
+                                {issue.resolved && (
+                                    <Badge variant="outline" className="text-emerald-600 border-emerald-600 bg-emerald-500/10 text-[10px] flex items-center gap-1">
+                                        <Check className="h-3 w-3" /> Resolvido
+                                    </Badge>
+                                )}
+                            </div>
+                            
+                            <h4 className="font-semibold text-sm mb-1.5 text-foreground leading-snug">{issue.type}</h4>
+                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{issue.explanation}</p>
+                            
+                            {selectedIssue?.id === issue.id && !issue.resolved && (
+                                <div className="space-y-3 pt-3 mt-3 border-t border-border animate-in slide-in-from-top-2">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-rose-500">
+                                            <X className="h-3 w-3" /> Original
+                                        </div>
+                                        <div className="text-xs bg-rose-500/5 p-2.5 rounded border border-rose-500/20 text-foreground leading-relaxed font-mono">
+                                            {issue.originalText}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                            <Check className="h-3 w-3" /> Sugestão
+                                        </div>
+                                        <div className="text-xs bg-emerald-500/5 p-2.5 rounded border border-emerald-500/20 text-foreground leading-relaxed font-mono">
+                                            {issue.suggestion}
+                                        </div>
+                                    </div>
+                                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs font-medium shadow-sm" onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleApplySuggestion(issue)
+                                    }}>
+                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                                        Aplicar Correção
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </CardContent>
+        </Card>
       </div>
     </div>
   )

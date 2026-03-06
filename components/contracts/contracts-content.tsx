@@ -16,9 +16,10 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Loader2, CheckCircle2, AlertTriangle, FileText, Plus, History, ShieldCheck } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface ContractsContentProps {
   initialContracts: any[]
@@ -161,22 +162,18 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
   }
 
   const handleReanalyze = async (contractId: string) => {
-    console.log(`Starting reanalysis for ${contractId}`)
     const toastId = toast.loading("Iniciando reanálise...")
     try {
         let content = ""
         let filename = "Contrato Reanalisado"
         
         // Try getting latest version first
-        console.log("Fetching versions...")
         const res = await fetch(`/api/contracts/${contractId}/versions`)
         if (res.ok) {
             const versions = await res.json()
-            console.log(`Versions found: ${versions?.length}`)
             if (versions && versions.length > 0) {
                 const latest = versions[0]
                 content = latest.content
-                console.log("Content found in latest version")
             }
         } else {
             if (res.status !== 404) {
@@ -186,7 +183,6 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
         
         // Fetch contract basic info if no version content or to get filename
         try {
-            console.log("Fetching contract details...")
             const contractRes = await fetch(`/api/contracts/${contractId}`)
             if (contractRes.ok) {
                 const contractData = await contractRes.json()
@@ -195,7 +191,6 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
                 // If we still don't have content (no versions), use original contract content
                 if (!content) {
                     content = contractData.content
-                    console.log(`Content found in original contract: ${!!content}`)
                 }
             } else {
                 console.error("Failed to fetch contract details")
@@ -205,7 +200,6 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
         }
 
         if (content) {
-            console.log("Starting analysis...")
             setActiveTab("upload")
             handleAnalysisStart(contractId, content, filename)
             toast.success("Contrato carregado para reanálise", { id: toastId })
@@ -286,18 +280,43 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
 
   return (
     <LayoutWrapper>
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Análise de Contratos</h1>
-        <p className="text-muted-foreground mt-1">Faça upload e analise contratos com IA jurídica</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                </div>
+                Análise de Contratos
+            </h1>
+            <p className="text-muted-foreground text-lg ml-[3.25rem]">
+                Central de inteligência jurídica para revisão e análise de documentos.
+            </p>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-          <TabsTrigger value="upload" disabled={viewState !== "idle"}>Nova Análise</TabsTrigger>
-          <TabsTrigger value="history" disabled={viewState !== "idle"}>Histórico</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <div className="flex items-center justify-between border-b border-border/40 pb-0">
+            <TabsList className="bg-transparent h-auto p-0 gap-6 -mb-[1px]">
+            <TabsTrigger 
+                value="upload" 
+                disabled={viewState !== "idle"}
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Análise
+            </TabsTrigger>
+            <TabsTrigger 
+                value="history" 
+                disabled={viewState !== "idle"}
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+                <History className="w-4 h-4 mr-2" />
+                Histórico de Análises
+            </TabsTrigger>
+            </TabsList>
+        </div>
 
-        <TabsContent value="upload" className="space-y-6 mt-6">
+        <TabsContent value="upload" className="space-y-6 mt-6 focus-visible:outline-none focus-visible:ring-0">
           {viewState === "idle" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <ContractUpload onAnalysisStart={handleAnalysisStart} />
@@ -305,26 +324,26 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
           )}
 
           {viewState === "processing" && (
-            <div className="flex flex-col items-center justify-center min-h-[500px] animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col items-center justify-center min-h-[500px] animate-in fade-in zoom-in-95 duration-500 py-12">
                 <div className="relative mb-8">
-                    <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse"></div>
-                    <div className="relative bg-black p-6 rounded-full border border-emerald-500/50 shadow-lg flex items-center justify-center">
+                    <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse"></div>
+                    <div className="relative bg-card p-6 rounded-full border border-emerald-500/30 shadow-xl flex items-center justify-center ring-1 ring-emerald-500/10">
                         <div className="relative h-20 w-20 animate-pulse">
                             <Image 
                                 src="/images/clausify-logo.png" 
                                 alt="Analisando..." 
                                 fill
-                                className="object-contain"
+                                className="object-contain drop-shadow-lg"
                             />
                         </div>
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold mb-2">Analisando Contrato</h2>
-                <p className="text-muted-foreground mb-8 text-center max-w-md">
+                <h2 className="text-2xl font-bold mb-2 text-foreground tracking-tight">Analisando Contrato</h2>
+                <p className="text-muted-foreground mb-8 text-center max-w-md text-sm leading-relaxed">
                    Nossa IA está lendo cada cláusula para identificar riscos e oportunidades de melhoria.
                 </p>
 
-                <div className="w-full max-w-md space-y-4">
+                <div className="w-full max-w-sm space-y-4 bg-card p-6 rounded-xl border border-border shadow-sm">
                     {[
                         "Lendo documento...",
                         "Identificando cláusulas...",
@@ -335,13 +354,18 @@ export function ContractsContent({ initialContracts }: ContractsContentProps) {
                     ].map((step, index) => (
                         <div key={index} className="flex items-center gap-3">
                             {index < processingStep ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
                             ) : index === processingStep ? (
-                                <Loader2 className="h-5 w-5 text-emerald-600 animate-spin" />
+                                <Loader2 className="h-5 w-5 text-emerald-500 animate-spin shrink-0" />
                             ) : (
-                                <div className="h-5 w-5 rounded-full border-2 border-muted" />
+                                <div className="h-5 w-5 rounded-full border border-muted-foreground/20 shrink-0" />
                             )}
-                            <span className={`text-sm ${index <= processingStep ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                            <span className={cn(
+                                "text-sm transition-colors duration-300",
+                                index <= processingStep ? "text-foreground font-medium" : "text-muted-foreground"
+                            )}>
                                 {step}
                             </span>
                         </div>

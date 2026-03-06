@@ -141,7 +141,7 @@ export function CalculosList({ calculators, categories }: CalculosListProps) {
     <LayoutWrapper>
       <div className="space-y-8 pb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Calculadoras Jurídicas</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Calculadoras Jurídicas</h1>
           <p className="text-muted-foreground mt-1">
             Ferramentas precisas para agilizar seus cálculos trabalhistas, cíveis e previdenciários.
           </p>
@@ -198,15 +198,15 @@ export function CalculosList({ calculators, categories }: CalculosListProps) {
             if (!isAllowed) {
               return (
                 <div key={calc.id} className="group relative h-full">
-                  <Card className="h-full border-border/40 bg-slate-50/50 dark:bg-slate-900/20 opacity-75 backdrop-blur-sm shadow-sm flex flex-col">
+                  <Card className="h-full border-border/40 bg-muted/20 backdrop-blur-sm shadow-sm flex flex-col opacity-75">
                     <CardHeader>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                          <Icon className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                        <div className="p-2 bg-muted rounded-lg">
+                          <Icon className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <Lock className="w-5 h-5 text-slate-300" />
+                        <Lock className="w-5 h-5 text-muted-foreground/50" />
                       </div>
-                      <CardTitle className="text-lg text-slate-500 dark:text-slate-400">
+                      <CardTitle className="text-lg text-muted-foreground">
                         {calc.name}
                       </CardTitle>
                       <CardDescription className="line-clamp-2">
@@ -214,13 +214,13 @@ export function CalculosList({ calculators, categories }: CalculosListProps) {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="mt-auto">
-                      <Badge variant="outline" className="bg-slate-100 dark:bg-slate-800 text-slate-500 border-border/40">
+                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border/40">
                         {categories.find(c => c.id === calc.category)?.name}
                       </Badge>
                     </CardContent>
                     
                     {/* Upgrade Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/60 dark:bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl">
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-xl">
                       <Link href="/configuracoes">
                         <Button variant="default" className="shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white border-0">
                           <Lock className="w-4 h-4 mr-2" />
@@ -264,7 +264,7 @@ export function CalculosList({ calculators, categories }: CalculosListProps) {
         </div>
 
         {filteredCalculators.length === 0 && (
-          <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/20 rounded-xl border border-dashed border-border/60">
+          <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border/60">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
               <Search className="h-6 w-6 text-muted-foreground" />
             </div>

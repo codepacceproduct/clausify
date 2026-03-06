@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2, CheckCircle2, FileText, BrainCircuit, AlertTriangle } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface ContractsClientPageProps {
   initialHistory: any[]
@@ -162,22 +163,18 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
   }
 
   const handleReanalyze = async (contractId: string) => {
-    console.log(`Starting reanalysis for ${contractId}`)
     const toastId = toast.loading("Iniciando reanálise...")
     try {
         let content = ""
         let filename = "Contrato Reanalisado"
         
         // Try getting latest version first
-        console.log("Fetching versions...")
         const res = await fetch(`/api/contracts/${contractId}/versions`)
         if (res.ok) {
             const versions = await res.json()
-            console.log(`Versions found: ${versions?.length}`)
             if (versions && versions.length > 0) {
                 const latest = versions[0]
                 content = latest.content
-                console.log("Content found in latest version")
             }
         } else {
             if (res.status !== 404) {
@@ -187,7 +184,6 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
         
         // Fetch contract basic info if no version content or to get filename
         try {
-            console.log("Fetching contract details...")
             const contractRes = await fetch(`/api/contracts/${contractId}`)
             if (contractRes.ok) {
                 const contractData = await contractRes.json()
@@ -196,7 +192,6 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
                 // If we still don't have content (no versions), use original contract content
                 if (!content) {
                     content = contractData.content
-                    console.log(`Content found in original contract: ${!!content}`)
                 }
             } else {
                 console.error("Failed to fetch contract details")
@@ -206,7 +201,6 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
         }
 
         if (content) {
-            console.log("Starting analysis...")
             setActiveTab("upload")
             handleAnalysisStart(contractId, content, filename)
             toast.success("Contrato carregado para reanálise", { id: toastId })
@@ -306,26 +300,26 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
           )}
 
           {viewState === "processing" && (
-            <div className="flex flex-col items-center justify-center min-h-[500px] animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex flex-col items-center justify-center min-h-[500px] animate-in fade-in zoom-in-95 duration-500 py-12">
                 <div className="relative mb-8">
-                    <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse"></div>
-                    <div className="relative bg-black p-6 rounded-full border border-emerald-500/50 shadow-lg flex items-center justify-center">
+                    <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse"></div>
+                    <div className="relative bg-card p-6 rounded-full border border-emerald-500/30 shadow-xl flex items-center justify-center ring-1 ring-emerald-500/10">
                         <div className="relative h-20 w-20 animate-pulse">
                             <Image 
                                 src="/images/clausify-logo.png" 
                                 alt="Analisando..." 
                                 fill
-                                className="object-contain"
+                                className="object-contain drop-shadow-lg"
                             />
                         </div>
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold mb-2">Analisando Contrato</h2>
-                <p className="text-muted-foreground mb-8 text-center max-w-md">
+                <h2 className="text-2xl font-bold mb-2 text-foreground tracking-tight">Analisando Contrato</h2>
+                <p className="text-muted-foreground mb-8 text-center max-w-md text-sm leading-relaxed">
                    Nossa IA está lendo cada cláusula para identificar riscos e oportunidades de melhoria.
                 </p>
 
-                <div className="w-full max-w-md space-y-4">
+                <div className="w-full max-w-sm space-y-4 bg-card p-6 rounded-xl border border-border shadow-sm">
                     {[
                         "Lendo documento...",
                         "Identificando cláusulas...",
@@ -336,13 +330,18 @@ export function ContractsClientPage({ initialHistory }: ContractsClientPageProps
                     ].map((step, index) => (
                         <div key={index} className="flex items-center gap-3">
                             {index < processingStep ? (
-                                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
                             ) : index === processingStep ? (
-                                <Loader2 className="h-5 w-5 text-emerald-600 animate-spin" />
+                                <Loader2 className="h-5 w-5 text-emerald-500 animate-spin shrink-0" />
                             ) : (
-                                <div className="h-5 w-5 rounded-full border-2 border-muted" />
+                                <div className="h-5 w-5 rounded-full border border-muted-foreground/20 shrink-0" />
                             )}
-                            <span className={`text-sm ${index <= processingStep ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                            <span className={cn(
+                                "text-sm transition-colors duration-300",
+                                index <= processingStep ? "text-foreground font-medium" : "text-muted-foreground"
+                            )}>
                                 {step}
                             </span>
                         </div>

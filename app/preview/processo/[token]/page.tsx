@@ -7,8 +7,6 @@ type PreviewRecord = {
 }
 
 async function getPreview(token: string): Promise<PreviewRecord | null> {
-  console.log("PublicProcessPreview:getPreview:start", { token })
-
   const supabase = await createClient()
   const now = new Date().toISOString()
 
@@ -22,20 +20,11 @@ async function getPreview(token: string): Promise<PreviewRecord | null> {
   if (error || !data) {
     console.error("PublicProcessPreview:getPreview:error_or_not_found", {
       token,
-      now,
       errorCode: error?.code,
-      errorMessage: error?.message,
-      errorDetails: error?.details,
-      errorHint: error?.hint,
-      hasData: !!data,
+      errorMessage: error?.message
     })
     return null
   }
-
-  console.log("PublicProcessPreview:getPreview:success", {
-    token,
-    expires_at: data.expires_at,
-  })
 
   return data as PreviewRecord
 }
@@ -43,12 +32,9 @@ async function getPreview(token: string): Promise<PreviewRecord | null> {
 export default async function PublicProcessPreviewPage(props: { params: Promise<{ token: string }> }) {
   const { token } = await props.params
 
-  console.log("PublicProcessPreview:page:request", { token })
-
   const preview = await getPreview(token)
 
   if (!preview) {
-    console.warn("PublicProcessPreview:page:no_preview", { token })
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">

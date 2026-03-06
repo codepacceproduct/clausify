@@ -1,7 +1,11 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { FileText, MoreHorizontal, ArrowUpRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
+
+import { cn } from "@/lib/utils"
 
 type Risk = "low" | "medium" | "high"
 
@@ -9,11 +13,10 @@ async function fetchRecentContracts() {
   const supabase = await createClient()
   const { data } = await supabase
     .from("contracts")
-    .select("name, type, created_at, risk_level, status")
+    .select("id, name, type, created_at, risk_level, status")
     .order("created_at", { ascending: false })
     .limit(5)
 
-  // Map DB statuses to risk tags heuristically
   const statusToRisk: Record<string, Risk> = {
     analyzed: "low",
     uploaded: "medium",
@@ -22,11 +25,11 @@ async function fetchRecentContracts() {
 
   return (
     data?.map((row) => ({
-      client: row.name ?? "Contrato",
-      type: row.type ?? "—",
+      id: row.id,
+      client: row.name ?? "Contrato Sem Nome",
+      type: row.type ?? "Geral",
       risk: (row.risk_level as Risk) || (statusToRisk[row.status ?? "uploaded"] ?? "medium"),
-      date: new Date(row.created_at).toLocaleString("pt-BR"),
-      value: "—",
+      date: new Date(row.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
       status: row.status === "analyzed" ? "Analisado" : row.status === "uploaded" ? "Pendente" : "Erro",
     })) ?? []
   )
@@ -34,52 +37,72 @@ async function fetchRecentContracts() {
 
 export async function RecentContracts() {
   const contracts = await fetchRecentContracts()
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl">Contratos Recentes</CardTitle>
-        <CardDescription className="text-sm">Últimas análises realizadas pela plataforma</CardDescription>
+    <Card className="h-full bg-card text-card-foreground border-border shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/50">
+        <div className="space-y-1">
+          <CardTitle className="text-xl font-semibold tracking-tight">Contratos Recentes</CardTitle>
+          <CardDescription>Últimas análises e uploads realizados</CardDescription>
+        </div>
+        <Button variant="outline" size="sm" className="hidden sm:flex" asChild>
+          <Link href="/contratos">
+            Ver todos <ArrowUpRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-1">
           {contracts.length === 0 && (
-            <p className="text-sm text-muted-foreground">No momento não há dados.</p>
+            <div className="py-8 text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+              <p>Nenhum contrato recente encontrado.</p>
+            </div>
           )}
           {contracts.map((contract, index) => (
             <div
-              key={index}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 border-b last:border-0"
+              key={contract.id || index}
+              className="group flex items-center justify-between p-4 hover:bg-muted/30 rounded-lg transition-all border border-transparent hover:border-border/50 hover:shadow-sm"
             >
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-sm">{contract.client}</p>
-                  <Badge
-                    variant={
-                      contract.risk === "low" ? "default" : contract.risk === "medium" ? "secondary" : "destructive"
-                    }
-                    className={
-                      contract.risk === "low"
-                        ? "bg-success/10 text-success hover:bg-success/20"
-                        : contract.risk === "medium"
-                          ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                          : "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                    }
-                  >
-                    {contract.risk === "low" ? "Baixo" : contract.risk === "medium" ? "Médio" : "Alto"}
-                  </Badge>
+              <div className="flex items-center gap-4 overflow-hidden">
+                <div className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border",
+                  contract.type === 'Geral' ? "bg-primary/10 text-primary border-primary/20" : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                )}>
+                  <FileText className="h-5 w-5" />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                  <span>{contract.type}</span>
-                  <span className="hidden sm:inline">•</span>
-                  <span>{contract.value}</span>
-                  <span className="hidden sm:inline">•</span>
-                  <span>{contract.status}</span>
+                <div className="space-y-1 overflow-hidden">
+                  <p className="truncate font-medium leading-none text-foreground group-hover:text-primary transition-colors">
+                    {contract.client}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium">{contract.type}</span>
+                    <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                    <span>{contract.date}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 justify-between sm:justify-end">
-                <span className="text-xs text-muted-foreground">{contract.date}</span>
-                <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
-                  Ver relatório
+              
+              <div className="flex items-center gap-4">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "capitalize shadow-sm",
+                    contract.risk === "low"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : contract.risk === "medium"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                  )}
+                >
+                  {contract.risk === "low" ? "Baixo Risco" : contract.risk === "medium" ? "Risco Médio" : "Alto Risco"}
+                </Badge>
+                
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+                  <Link href={`/contratos/${contract.id}`}>
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Ações</span>
+                  </Link>
                 </Button>
               </div>
             </div>
