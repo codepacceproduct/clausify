@@ -48,7 +48,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       })
       
-      if (!profRes.ok) throw new Error("Failed to fetch profile")
+      if (profRes.status === 401) {
+        console.warn("Token inválido ao buscar perfil, deslogando...")
+        await supabase.auth.signOut()
+        router.push("/login")
+        return
+      }
+
+      if (!profRes.ok) throw new Error(`Failed to fetch profile: ${profRes.status}`)
       
       const { profile } = await profRes.json()
       const userRole = String(profile?.role || "member").toLowerCase()

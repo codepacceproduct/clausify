@@ -20,7 +20,6 @@ import {
   Search,
   MessageSquare,
   Info,
-  User,
   Sparkles,
   MoreHorizontal,
 } from "lucide-react"
@@ -49,7 +48,6 @@ const navigation = [
   { name: "Contratos", href: "/contratos", icon: FileText },
   { name: "Consultas", href: "/consultas", icon: Search },
   { name: "ClausiChat", href: "/clausichat", icon: MessageSquare },
-  { name: "Harvey", href: "/harvey", icon: User },
   { name: "Calendário", href: "/calendario", icon: Calendar },
   { name: "Versionamento", href: "/versionamento", icon: GitBranch },
   { name: "Playbook", href: "/playbook", icon: BookOpen },

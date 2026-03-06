@@ -4,62 +4,79 @@ import { getAuthedEmail, getAuthedUser } from "@/lib/api-auth"
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const user = await getAuthedUser(req)
-  let email = user?.email || await getAuthedEmail(req)
-  
-  if (!email) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
-
-  email = email.toLowerCase()
-
-  let profile = null as any
-  {
-    const { data: profiles } = await supabaseServer
-      .from("profiles")
-      .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url, role, cpf, cnpj")
-      .eq("email", email)
-      .limit(1)
-    profile = profiles?.[0] ?? null
-  }
-
-  if (!profile && user) {
-    // Auto-create profile from auth user data if missing
-    const meta = user.user_metadata || {}
-    const fullName = meta.full_name || meta.name || ""
-    const parts = fullName.split(" ")
-    const name = parts[0] || ""
-    const surname = parts.slice(1).join(" ") || ""
-    const avatar_url = meta.avatar_url || meta.picture || ""
+  try {
+    const user = await getAuthedUser(req)
+    let email = user?.email || await getAuthedEmail(req)
     
-    const payload: any = {
-        id: user.id,
-        email: user.email,
-        phone: user.phone || null,
-        name,
-        surname,
-        avatar_url,
-        role: "member" // default role
+    if (!email) {
+      console.log("[Profile API] Unauthorized: No email found in token or cookies")
+      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
     }
-    
-    const { data: created } = await supabaseServer
+
+    email = email.toLowerCase()
+
+    let profile = null as any
+    {
+      const { data: profiles, error: profileError } = await supabaseServer
         .from("profiles")
-        .upsert(payload, { onConflict: "id" })
-        .select()
-        .single()
-        
-    if (created) profile = created
-  }
+        .select("id, email, phone, name, surname, regional_preferences, organization_id, avatar_url, role, cpf, cnpj")
+        .eq("email", email)
+        .limit(1)
+      
+      if (profileError) {
+        console.error("[Profile API] Error fetching profile:", profileError)
+      }
+      
+      profile = profiles?.[0] ?? null
+    }
 
-  let organization = null as any
-  if (profile?.organization_id) {
-    const { data: orgs } = await supabaseServer
-      .from("organizations")
-      .select("id, name, industry, size, timezone, locale")
-      .eq("id", profile.organization_id)
-      .limit(1)
-    organization = orgs?.[0] ?? null
-  }
+    if (!profile && user) {
+      // Auto-create profile from auth user data if missing
+      const meta = user.user_metadata || {}
+      const fullName = meta.full_name || meta.name || ""
+      const parts = fullName.split(" ")
+      const name = parts[0] || ""
+      const surname = parts.slice(1).join(" ") || ""
+      const avatar_url = meta.avatar_url || meta.picture || ""
+      
+      const payload: any = {
+          id: user.id,
+          email: user.email,
+          phone: user.phone || null,
+          name,
+          surname,
+          avatar_url,
+          role: "member" // default role
+      }
+      
+      const { data: created, error: createError } = await supabaseServer
+          .from("profiles")
+          .upsert(payload, { onConflict: "id" })
+          .select()
+          .single()
+          
+      if (createError) {
+          console.error("[Profile API] Error creating profile:", createError)
+      }
 
-  return Response.json({ profile, organization })
+      if (created) profile = created
+    }
+
+    let organization = null as any
+    if (profile?.organization_id) {
+      const { data: orgs } = await supabaseServer
+        .from("organizations")
+        .select("id, name, industry, size, timezone, locale")
+        .eq("id", profile.organization_id)
+        .limit(1)
+      organization = orgs?.[0] ?? null
+    }
+
+    return Response.json({ profile, organization })
+  } catch (error: any) {
+    console.error("[Profile API] Unexpected error:", error)
+    return new Response(JSON.stringify({ error: error.message || "Internal Server Error" }), { status: 500 })
+  }
 }
 
 export async function PUT(req: Request) {
