@@ -2,6 +2,7 @@ import { LandingHeader } from "@/components/landing/landing-header"
 import { LandingHero } from "@/components/landing/landing-hero"
 import { LandingFeatures } from "@/components/landing/landing-features"
 import { LandingStats } from "@/components/landing/landing-stats"
+import { LandingEcosystem } from "@/components/landing/landing-ecosystem"
 import { LandingBenefits } from "@/components/landing/landing-benefits"
 import { LandingTestimonials } from "@/components/landing/landing-testimonials"
 import { LandingPricing } from "@/components/landing/landing-pricing"
@@ -16,9 +17,10 @@ export default function HomePage() {
         <LandingHero />
         <LandingStats />
         <LandingFeatures />
+        <LandingEcosystem />
         <LandingBenefits />
-        <LandingTestimonials />
         <LandingPricing />
+        <LandingTestimonials />
         <LandingCTA />
       </main>
       <LandingFooter />

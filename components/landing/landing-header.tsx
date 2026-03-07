@@ -19,10 +19,11 @@ export function LandingHeader() {
   }, [])
 
   const navLinks = [
-    { href: "#features", label: "Funcionalidades" },
-    { href: "#benefits", label: "Benefícios" },
-    { href: "#testimonials", label: "Depoimentos" },
-    { href: "#pricing", label: "Preços" },
+    { href: "#features", label: "Recursos" },
+    { href: "#ecosystem", label: "Ecossistema" },
+    { href: "#benefits", label: "Vantagens" },
+    { href: "#pricing", label: "Planos" },
+    { href: "#testimonials", label: "Cases" },
   ]
 
   return (

@@ -1,117 +1,147 @@
 "use client"
 
-import { useState } from "react"
-import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import useEmblaCarousel from "embla-carousel-react"
+import { Quote, ChevronLeft, ChevronRight } from "lucide-react"
+import Image from "next/image"
+import { cn } from "@/lib/utils"
+import { testimonials } from "./testimonials-data"
 
-const testimonials = [
-  {
-    quote:
-      "A Clausify transformou completamente nossa rotina. O que antes levava dias para analisar, agora fazemos em horas. A precisão da IA é impressionante.",
-    author: "Dra. Marina Santos",
-    role: "Sócia - Santos & Advogados Associados",
-    avatar: "MS",
-    rating: 5,
-  },
-  {
-    quote:
-      "O workflow de aprovação e o versionamento de contratos nos deram um controle que nunca tivemos. Reduzimod erros em 90% e ganhamos agilidade.",
-    author: "Ricardo Almeida",
-    role: "Diretor Jurídico - TechCorp Brasil",
-    avatar: "RA",
-    rating: 5,
-  },
-  {
-    quote:
-      "A integração com calendário é game-changer. Nunca mais perdemos um prazo de renovação. O ROI foi positivo já no primeiro mês.",
-    author: "Dra. Carla Mendes",
-    role: "Head Legal - StartupX",
-    avatar: "CM",
-    rating: 5,
-  },
-  {
-    quote:
-      "Recomendo para qualquer escritório que queira modernizar. A curva de aprendizado é mínima e o suporte é excepcional.",
-    author: "Dr. Felipe Costa",
-    role: "Advogado Imobiliário",
-    avatar: "FC",
-    rating: 5,
-  },
+// Categories for the filter tabs
+const categories = [
+  "Todos",
+  "Família",
+  "Cível e Bancário",
+  "Trabalhista",
+  "Empresarial e Tributário",
+  "Previdenciário",
 ]
 
 export function LandingTestimonials() {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [activeCategory, setActiveCategory] = useState("Todos")
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    loop: true,
+    slidesToScroll: 1,
+    breakpoints: {
+      "(min-width: 768px)": { slidesToScroll: 1 },
+      "(min-width: 1024px)": { slidesToScroll: 1 },
+    },
+  })
 
-  const next = () => setCurrentIndex((prev) => (prev + 1) % testimonials.length)
-  const prev = () => setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+  // Filter testimonials based on category
+  const filteredTestimonials =
+    activeCategory === "Todos"
+      ? testimonials
+      : testimonials.filter((t) => t.category === activeCategory)
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev()
+  }, [emblaApi])
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext()
+  }, [emblaApi])
+
+  // Reset carousel when filter changes
+  useEffect(() => {
+    if (emblaApi) emblaApi.reInit()
+  }, [activeCategory, emblaApi])
 
   return (
-    <section id="testimonials" className="relative py-24 sm:py-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="text-emerald-400 font-medium mb-4">Depoimentos</p>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-balance">
-            O que nossos clientes dizem
+    <section id="testimonials" className="py-24 bg-[#050505] relative overflow-hidden">
+      <div className="container mx-auto px-4 relative z-10">
+        
+        {/* Header Section */}
+        <div className="text-center mb-16 space-y-4">
+          <p className="text-emerald-500 font-medium text-lg tracking-wide">
+            Cases
+          </p>
+          <h2 className="text-3xl md:text-5xl font-bold text-white max-w-4xl mx-auto leading-tight">
+            Mais de 5.000 escritórios já alcançaram receitas milionárias com a Clausify. O próximo pode ser o seu.
           </h2>
         </div>
 
-        {/* Testimonials Carousel */}
-        <div className="relative max-w-4xl mx-auto">
-          <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 sm:p-12 relative overflow-hidden">
-            {/* Quote Icon */}
-            <Quote className="absolute top-8 right-8 w-20 h-20 text-emerald-500/10" />
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={cn(
+                "px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 border",
+                activeCategory === cat
+                  ? "bg-[#0f1c2e] border-emerald-500/50 text-white shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]"
+                  : "bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
-            {/* Rating */}
-            <div className="flex gap-1 mb-6">
-              {[...Array(testimonials[currentIndex].rating)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 fill-emerald-400 text-emerald-400" />
+        {/* Carousel */}
+        <div className="relative max-w-7xl mx-auto px-4">
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex -ml-6">
+              {filteredTestimonials.map((testimonial) => (
+                <div
+                  key={testimonial.id}
+                  className="pl-6 min-w-full md:min-w-[50%] lg:min-w-[33.333%]"
+                >
+                  <div className="bg-[#080c14] border border-white/5 rounded-2xl p-8 h-full flex flex-col justify-between hover:border-emerald-500/20 transition-colors group min-h-[400px]">
+                    
+                    {/* Top Content */}
+                    <div>
+                      <Quote className="w-12 h-12 text-emerald-500 mb-6 fill-emerald-500/10" />
+                      <p className="text-gray-300 text-lg leading-relaxed mb-8">
+                        "{testimonial.quote}"
+                      </p>
+                    </div>
+
+                    {/* Author Info */}
+                    <div className="flex items-center gap-4 mt-auto pt-6 border-t border-white/5">
+                      <div className="relative w-12 h-12 rounded-full bg-gray-800 overflow-hidden shrink-0">
+                        <Image
+                          src={testimonial.image}
+                          alt={testimonial.author}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-base">
+                          {testimonial.author}
+                        </p>
+                        <p className="text-emerald-500/80 text-sm">
+                          {testimonial.role}
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
               ))}
             </div>
-
-            {/* Quote */}
-            <blockquote className="text-xl sm:text-2xl text-white leading-relaxed mb-8 relative z-10">
-              {testimonials[currentIndex].quote}
-            </blockquote>
-
-            {/* Author */}
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-lg">
-                {testimonials[currentIndex].avatar}
-              </div>
-              <div>
-                <p className="font-semibold text-white">{testimonials[currentIndex].author}</p>
-                <p className="text-gray-400 text-sm">{testimonials[currentIndex].role}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex items-center justify-center gap-4 mt-8">
-            <button
-              onClick={prev}
-              className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex gap-2">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentIndex ? "bg-emerald-400 w-6" : "bg-white/20"
-                  }`}
-                />
-              ))}
-            </div>
-            <button
-              onClick={next}
-              className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
           </div>
         </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-center gap-4 mt-12">
+          <button
+            onClick={scrollPrev}
+            className="w-12 h-12 rounded-full bg-[#0f1c2e] border border-white/10 flex items-center justify-center text-white hover:bg-emerald-500 hover:border-emerald-500 transition-all duration-300 group"
+          >
+            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="w-12 h-12 rounded-full bg-[#0f1c2e] border border-white/10 flex items-center justify-center text-white hover:bg-emerald-500 hover:border-emerald-500 transition-all duration-300 group"
+          >
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+
       </div>
     </section>
   )
