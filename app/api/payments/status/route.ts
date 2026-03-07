@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@supabase/supabase-js"
-import { cakto } from "@/lib/cakto"
 import { getAsaasClient } from "@/lib/asaas"
-import { mapCaktoStatus, mapAsaasStatus, updateSubscription } from "@/lib/billing"
+import { mapAsaasStatus, updateSubscription } from "@/lib/billing"
 
 // 🚨 REGRA CRÍTICA: Runtime Node.js obrigatório
 export const runtime = "nodejs";
@@ -44,11 +43,6 @@ export async function POST(req: Request) {
              const asaas = getAsaasClient();
              const transaction = await asaas.getTransaction(payment.external_id)
              currentStatus = await mapAsaasStatus(transaction.status)
-             rawResponse = transaction
-        } else {
-             // Fallback para Cakto (legado)
-             const transaction = await cakto.getTransaction(payment.external_id)
-             currentStatus = await mapCaktoStatus(transaction.status)
              rawResponse = transaction
         }
 

@@ -19,10 +19,10 @@ export function LandingHero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-black">
       {/* Video Background */}
-      <div className="absolute inset-0 w-full h-full z-0">
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
         <video
           ref={videoRef}
-          className="w-full h-full object-cover opacity-60"
+          className="absolute inset-0 w-full h-full object-cover"
           autoPlay
           loop
           muted
@@ -30,9 +30,10 @@ export function LandingHero() {
           preload="auto"
         >
           <source src="/hero-video.mp4" type="video/mp4" />
+          Seu navegador não suporta vídeos HTML5.
         </video>
-        {/* Overlay for transparency/readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/80" />
+        {/* Overlay for transparency/readability - Ajustado para melhor visibilidade do vídeo */}
+        <div className="absolute inset-0 bg-black/50 bg-gradient-to-b from-black/70 via-black/20 to-black/80" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

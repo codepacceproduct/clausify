@@ -40,27 +40,6 @@ export async function updateSubscription(supabase: SupabaseClient, orgId: string
     console.log(`Assinatura atualizada para org ${orgId}: ${dbPlan}`)
 }
 
-// Helper para mapear status da CAKTO
-export function mapCaktoStatus(caktoStatus: string): string {
-    switch (caktoStatus?.toLowerCase()) {
-        case 'paid':
-        case 'approved':
-        case 'succeeded':
-            return 'paid'
-        case 'pending':
-        case 'processing':
-            return 'pending'
-        case 'failed':
-        case 'refused':
-            return 'failed'
-        case 'canceled':
-        case 'cancelled':
-            return 'canceled'
-        default:
-            return 'pending'
-    }
-}
-
 // Helper para mapear status do ASAAS
 export function mapAsaasStatus(asaasStatus: string): string {
     // Status Asaas: PAYMENT_CREATED, PAYMENT_UPDATED, PAYMENT_CONFIRMED, PAYMENT_RECEIVED, PAYMENT_OVERDUE, etc.
